@@ -1,5 +1,5 @@
 <p align="center">
- <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/static/logo-192x192.png" height="96" />
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/static/logo-192x192.png" height="96" />
  <h1 align="center">
   colony
  </h1>
@@ -7,7 +7,20 @@
 
 ## Setup
 
-TODO
+Install NodeJS. Follow instructions for your OS. For Ubuntu variants:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
+sudo -E bash nodesource_setup.sh
+sudo apt-get install -y nodejs
+```
+
+Install dependencies:
+
+```bash
+cd colony
+npm install
+```
 
 ## Developing
 
