@@ -5,6 +5,11 @@
  </h1>
 </p>
 
+colony is a static site written in Svelte with the eventual goal of it being uploaded to the Autonomi network and also with the option to be self-hosted on a personal webserver. So far, it is a skeleton Svelte site and does nothing interesting, but it will soon!
+
+The colony application can be viewed on the web here: https://colonyapp.org/
+This site will be updated as features are added.
+
 ## Setup
 
 Install NodeJS. Follow instructions for your OS. For Ubuntu variants:
