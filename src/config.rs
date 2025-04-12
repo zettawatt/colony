@@ -15,9 +15,10 @@ pub struct Config {
 
 impl Config {
     fn new() -> Self {
-        let data_path: PathBuf = dirs::data_dir().unwrap();
-        let data_path: PathBuf = data_path.join("colony");
-        let downloads_path: PathBuf = dirs::download_dir().unwrap();
+        let mut data_path: PathBuf = dirs::data_dir().expect("the data directory path to your OS was not found");
+        //let data_path: PathBuf = data_path.join("colony");
+        data_path.push("colony");
+        let downloads_path: PathBuf = dirs::download_dir().unwrap_or(data_path.clone());
 
         Config {
             downloads_path: downloads_path.to_string_lossy().into_owned(),
