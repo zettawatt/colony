@@ -26,3 +26,10 @@ Right now it is simply a Slint skeleton and doesn't do anything functional excep
     ```
 
 It is highly recommended to use an IDE for development, along with the [LSP-based IDE integration for `.slint` files](https://github.com/slint-ui/slint/blob/master/tools/lsp/README.md). You can also load this project directly in [Visual Studio Code](https://code.visualstudio.com) and install the [Slint extension](https://marketplace.visualstudio.com/items?itemName=Slint.slint).
+
+## Screenshots
+
+Main search page:
+<p align="center">
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/search.png" height="480" />
+</p>
