@@ -1,0 +1,67 @@
+import {
+    GridBox, LineEdit, Button
+} from "std-widgets.slint";
+
+export component WalletView inherits GridBox {
+    Row {
+        GridLayout {
+            Row {
+                Text {
+                    text: "Address:";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                Text {
+                    text: "0x1234567890abcdef1234567890abcdef12345678";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+            }
+            Row {
+                Text {
+                    text: "ETH Balance:";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                Text {
+                    text: "0.12345678 ETH";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+            }
+            Row {
+                Text {
+                    text: "ANT Balance:";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                Text {
+                    text: "1.00000000 ANT";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+            }
+        }
+    }
+    Rectangle {
+        vertical_stretch: 1;
+        horizontal_stretch: 1;
+    }
+    Row {
+        HorizontalLayout {
+            Text {
+                text: "Import private key:";
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+            le_private_key := LineEdit {
+                horizontal_stretch: 1;
+                placeholder_text: "Private key";
+            }
+            Button {
+                text: "Import";
+                //clicked => { root.save(); }
+            }
+        }
+    }
+}

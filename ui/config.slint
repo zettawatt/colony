@@ -1,0 +1,115 @@
+import {
+    GridBox, LineEdit, Button
+} from "std-widgets.slint";
+
+
+export component ConfigView inherits GridBox {
+    // Public properties
+    callback save();
+    GridLayout {
+        Row {
+            Text {
+                text: "Downloads Path:";
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+            HorizontalLayout {
+                colspan: 3;
+                le_download_path := LineEdit {
+                    //accepted => { root.reload-manifest(le_manifest.text); }
+                    horizontal_stretch: 1;
+                }
+            }
+        }
+        Row {
+            Text {
+                text: "Colony Data Path:";
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+            HorizontalLayout {
+                colspan: 3;
+                le_data_path := LineEdit {
+                    //accepted => { root.reload-manifest(le_manifest.text); }
+                    horizontal_stretch: 1;
+                }
+            }
+        }
+        Row {
+            Text {
+                text: "Password Timeout:";
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+            HorizontalLayout {
+                colspan: 1;
+                le_password_timeout := LineEdit {
+                    //accepted => { root.reload-manifest(le_manifest.text); }
+                    input-type: number;
+                }
+            }
+        }
+    }
+    Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
+    Row {
+        Button {
+            text: "Save";
+            colspan: 1;
+            clicked => { root.save(); }
+        }
+    }
+    Row {
+        HorizontalLayout {
+            Text {
+            text: "Change Password:";
+            vertical-alignment: center;
+            horizontal-alignment: left;
+        }
+            le_change_password_1 := LineEdit {
+                horizontal_stretch: 1;
+                placeholder_text: "New Password";
+                input-type: password;
+            }
+            le_change_password_2 := LineEdit {
+                horizontal_stretch: 1;
+                placeholder_text: "Repeat Password";
+                input-type: password;
+            }
+            Button {
+                text: "Change";
+                clicked => { root.save(); }
+            }
+        }
+    }
+    Row {
+        HorizontalLayout {
+        Text {
+            text: "Enter password to view seed phrase:";
+            vertical-alignment: center;
+            horizontal-alignment: left;
+        }
+        le_password_view_seed := LineEdit {
+            horizontal_stretch: 1;
+            placeholder_text: "Password";
+            input-type: password;
+        }
+        Button {
+            text: "View Seed Phrase";
+            clicked => { root.save(); }
+        }
+    }
+    }
+    Row {
+        Text {
+            // Populate the seed phrase here only when this window is in focus and the password as entered
+            text: "";
+            vertical-alignment: center;
+            horizontal-alignment: left;
+        }
+    }
+}

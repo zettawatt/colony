@@ -1,0 +1,63 @@
+import { Button, VerticalBox, TabWidget } from "std-widgets.slint";
+
+import "fonts/HiBlack-n3a1.otf";
+
+// tabs
+import {
+    SearchView
+} from "search.slint";
+
+import {
+    UploadView
+} from "upload.slint";
+
+import {
+    DownloadView
+} from "download.slint";
+
+import {
+    ColoniesView
+} from "colonies.slint";
+
+import {
+    WalletView
+} from "wallet.slint";
+
+import {
+    ConfigView
+} from "config.slint";
+
+export component ColonyUI inherits Window {
+    title: "Colony";
+    icon: @image-url("images/logo-96x96.png");
+    preferred_width:  1024px;
+    preferred_height: 768px;
+    VerticalBox {
+        TabWidget {
+            Tab {
+                title: "Search";
+                search-view := SearchView {}
+            }
+            Tab {
+                title: "Uploads";
+                upload-view := UploadView {}
+            }
+            Tab {
+                title: "Downloads";
+                download-view := DownloadView {}
+            }
+            Tab {
+                title: "Colonies";
+                colonies-view := ColoniesView {}
+            }
+            Tab {
+                title: "Wallet";
+                wallet-view := WalletView {}
+            }
+            Tab {
+                title: "Configuration";
+                config-view := ConfigView {}
+            }
+        }
+    }    
+}

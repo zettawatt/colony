@@ -1,0 +1,30 @@
+import {
+    GridBox, LineEdit, Button
+} from "std-widgets.slint";
+
+export component UploadView inherits GridBox {
+    Row {
+        HorizontalLayout {
+            Text {
+                text: "Upload File:";
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+            le_password_view_seed := LineEdit {
+                horizontal_stretch: 1;
+                placeholder_text: "Path to file, press Enter to get upload quote...";
+            }
+            Button {
+                text: "File Picker";
+                //clicked => { root.save(); }
+            }
+        }
+    }
+    Row {
+        Rectangle {
+            colspan: 4;
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
+}

@@ -1,0 +1,56 @@
+import {
+    GridBox, ScrollView
+} from "std-widgets.slint";
+
+export component DownloadView inherits GridBox {
+    Row {
+        VerticalLayout {
+            horizontal-stretch: 1;
+            height: 100px;
+            Text {
+                text: "Pending Downloads:";
+            }
+            Rectangle {
+                border-width: 1px;
+                border-color: #e28743;
+                ScrollView {
+                    horizontal_stretch: 1;
+                }
+            }
+        }
+    }
+    Row {
+        HorizontalLayout {
+            vertical-stretch: 1;
+            VerticalLayout {
+                horizontal-stretch: 1;
+                Text {
+                    text: "Downloads:";
+                }
+                Rectangle {
+                    border-width: 1px;
+                    border-color: #e28743;
+                    ScrollView {
+                        vertical_stretch: 1;
+                        horizontal_stretch: 1;
+                    }
+                }
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                Text {
+                    text: "Info:";
+                }
+                Rectangle {
+                    border-width: 1px;
+                    border-color: #e28743;
+                    ScrollView {
+                        vertical_stretch: 1;
+                        horizontal_stretch: 1;
+                    }
+                }
+            }
+
+        }
+    }
+}
