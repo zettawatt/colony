@@ -8,9 +8,9 @@ use toml;
 // Configuration file struct
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    downloads_path: String,
-    data_path: String,
-    password_timeout: u64,
+    pub downloads_path: String,
+    pub data_path: String,
+    pub password_timeout: u64,
 }
 
 impl Config {
@@ -26,6 +26,13 @@ impl Config {
             password_timeout: 60,
         }
     }
+
+    pub fn set_config(&mut self, downloads_path: String, data_path: String, password_timeout: u64) {
+        self.downloads_path = downloads_path;
+        self.data_path = data_path;
+        self.password_timeout = password_timeout;
+        write_config(self).expect("Problem writing the config file");
+    }
 }
 
 fn get_config_path() -> PathBuf {
@@ -39,6 +46,13 @@ fn get_config_file_path() -> PathBuf {
     config_path.push("config");
     config_path.set_extension("toml");
     config_path
+}
+
+fn write_config(config: &Config) -> std::io::Result<()> {
+    let config_string: String = toml::to_string(config).unwrap();
+    let config_path: PathBuf = get_config_file_path();
+    write(&config_path,config_string.as_str())?;
+    Ok(())
 }
 
 // Function to read the configuration file
@@ -76,6 +90,6 @@ pub fn read_config() -> std::io::Result<Config> {
         panic!("Problem parsing the configuration information: {:?}", error);
     });
     
-    println!("With text:\n{contents}");
+    //println!("With text:\n{contents}");
     Ok(result)
 }

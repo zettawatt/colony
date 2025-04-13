@@ -2296,7 +2296,6 @@ dependencies = [
  "slint",
  "slint-build",
  "toml",
- "toml_edit 0.22.24",
 ]
 
 [[package]]

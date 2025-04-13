@@ -9,18 +9,22 @@ slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Load the config file
-    let _result: std::io::Result<config::Config> = config::read_config();
+    let mut config: config::Config  = config::read_config().unwrap();
 
     // Start the UI
     let ui = ColonyUI::new()?;
 
-//    ui.on_request_increase_value({
-//        let ui_handle = ui.as_weak();
-//        move || {
-//            let ui = ui_handle.unwrap();
-//            ui.set_counter(ui.get_counter() + 1);
-//        }
-//    });
+    // Set the initial values of the configuration fields
+    ui.global::<ConfigData>().set_download_path(config.downloads_path.clone().into());
+    ui.global::<ConfigData>().set_data_path(config.data_path.clone().into());
+    ui.global::<ConfigData>().set_password_timeout(config.password_timeout as i32);
+
+    // Save the configurattion fields
+    ui.global::<ConfigData>().on_save_config({
+       move |download_path, data_path, password_timeout| {
+           config.set_config(download_path.to_string(), data_path.to_string(), password_timeout.to_string().parse::<u64>().unwrap());
+       }
+    });
 
     ui.run()?;
 

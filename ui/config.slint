@@ -2,10 +2,18 @@ import {
     GridBox, LineEdit, Button
 } from "std-widgets.slint";
 
+export global ConfigData {
+    callback save_config(string, string, string);
+    callback change_password();
+    callback view_seed_phrase();
+    in-out property <int> password_timeout: 0;
+    in-out property <string> download_path: "";
+    in-out property <string> data_path: "";
+    in-out property <string> seed_phrase: "";
+}
 
 export component ConfigView inherits GridBox {
     // Public properties
-    callback save();
     GridLayout {
         Row {
             Text {
@@ -17,6 +25,7 @@ export component ConfigView inherits GridBox {
                 colspan: 3;
                 le_download_path := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
+                    text: ConfigData.download_path;
                     horizontal_stretch: 1;
                 }
             }
@@ -31,6 +40,7 @@ export component ConfigView inherits GridBox {
                 colspan: 3;
                 le_data_path := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
+                    text: ConfigData.data_path;
                     horizontal_stretch: 1;
                 }
             }
@@ -46,6 +56,7 @@ export component ConfigView inherits GridBox {
                 le_password_timeout := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
                     input-type: number;
+                    text: ConfigData.password_timeout;
                 }
             }
         }
@@ -60,7 +71,7 @@ export component ConfigView inherits GridBox {
         Button {
             text: "Save";
             colspan: 1;
-            clicked => { root.save(); }
+            clicked => { ConfigData.save_config(le_download_path.text, le_data_path.text, le_password_timeout.text); }
         }
     }
     Row {
@@ -82,7 +93,7 @@ export component ConfigView inherits GridBox {
             }
             Button {
                 text: "Change";
-                clicked => { root.save(); }
+                clicked => { ConfigData.change_password(); }
             }
         }
     }
@@ -100,7 +111,7 @@ export component ConfigView inherits GridBox {
         }
         Button {
             text: "View Seed Phrase";
-            clicked => { root.save(); }
+            clicked => { ConfigData.view_seed_phrase(); }
         }
     }
     }
