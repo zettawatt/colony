@@ -9,7 +9,7 @@ slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Load the config file
-    let mut config: config::Config  = config::read_config().unwrap();
+    let (mut config, initialized): (config::Config, bool) = config::read_config();
 
     // Start the UI
     let ui = ColonyUI::new()?;
@@ -19,10 +19,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.global::<ConfigData>().set_download_path(config.downloads_path.clone().into());
     ui.global::<ConfigData>().set_data_path(config.data_path.clone().into());
     ui.global::<ConfigData>().set_password_timeout(config.password_timeout as i32);
-//    if config::new_config {
-//        let ui = ui_handle.unwrap();
-//        ui.set_initial_setup(true);
-//    };
+    if !initialized {
+        let ui = ui_handle.unwrap();
+        ui.set_initialized(false);
+    };
 
     // Save the configuration fields
     ui.global::<ConfigData>().on_save_config({
@@ -44,6 +44,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui = ui_handle.unwrap();
         move || {
             ui.set_setup_step(ui.get_setup_step() - 1);
+        }
+     });
+ 
+    // Finish Setup
+    ui.global::<SetupData>().on_finish_setup({
+        let ui = ui_handle.unwrap();
+        move || {
+            ui.set_initialized(true);
         }
      });
  

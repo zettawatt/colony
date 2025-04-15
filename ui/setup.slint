@@ -5,6 +5,7 @@ import {
 export global SetupData {
     callback inc_setup_step();
     callback dec_setup_step();
+    callback finish_setup();
 }
 
 export component SetupStart inherits GridBox {
@@ -307,7 +308,7 @@ export component SetupFinish inherits GridBox {
             text: "Finish";
             height: 30px;
             width: 100px;
-            clicked => { SetupData.inc_setup_step(); }
+            clicked => { SetupData.finish_setup(); }
         }
     }
 

@@ -58,12 +58,13 @@ fn write_config(config: &Config) -> std::io::Result<()> {
 // Function to read the configuration file
 // If the file does not exist, create it with default values
 // If the file exists, read its contents
-pub fn read_config() -> std::io::Result<Config> {
+pub fn read_config() -> (Config, bool) {
 
     // Build the OS independent path to the configuration file
     let config_path: PathBuf = get_config_file_path();
 
     // Open the file, but if it doesn't exist, create it
+    let mut initialized: bool = true;
     let contents: String = read_to_string(&config_path)
         .unwrap_or_else( |error| -> String {
             if error.kind() == std::io::ErrorKind::NotFound {
@@ -77,6 +78,7 @@ pub fn read_config() -> std::io::Result<Config> {
                     }
                 });
                 // create a new config file with the default values
+                initialized = false;
                 let default_config_string: String = toml::to_string(&Config::new()).unwrap();
                 let _ = write(&config_path,default_config_string.as_str());
                 read_to_string(&config_path).unwrap()
@@ -91,5 +93,5 @@ pub fn read_config() -> std::io::Result<Config> {
     });
     
     //println!("With text:\n{contents}");
-    Ok(result)
+    (result, initialized)
 }
