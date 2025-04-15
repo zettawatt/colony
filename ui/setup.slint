@@ -2,6 +2,11 @@ import {
     GridBox, Button, LineEdit
 } from "std-widgets.slint";
 
+export global SetupData {
+    callback inc_setup_step();
+    callback dec_setup_step();
+}
+
 export component SetupStart inherits GridBox {
     Row {
         Image {
@@ -33,7 +38,7 @@ export component SetupStart inherits GridBox {
                 text: "Next";
                 height: 30px;
                 width: 100px;
-                //clicked => { root.setup-step + 1; }
+                clicked => { SetupData.inc_setup_step(); }
             }
         }
     }
@@ -99,13 +104,13 @@ export component CreateSeedPhrase inherits GridBox {
                 text: "Back";
                 height: 30px;
                 width: 100px;
-                //clicked => { root.setup-step - 1; }
+                clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Next";
                 height: 30px;
                 width: 100px;
-                //clicked => { root.setup-step + 1; }
+                clicked => { SetupData.inc_setup_step(); }
             }
         }
     }
@@ -153,13 +158,13 @@ export component ConfirmSeedPhrase inherits GridBox {
                 text: "Back";
                 height: 30px;
                 width: 100px;
-                //clicked => { root.setup-step - 1; }
+                clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Next";
                 height: 30px;
                 width: 100px;
-                //clicked => { root.setup-step + 1; }
+                clicked => { SetupData.inc_setup_step(); }
             }
         }
     }
@@ -198,13 +203,13 @@ export component ImportWallet inherits GridBox {
             text: "Back";
             height: 30px;
             width: 100px;
-            //clicked => { root.setup-step - 1; }
+            clicked => { SetupData.dec_setup_step(); }
         }
         next_button := Button {
             text: "Next";
             height: 30px;
             width: 100px;
-            //clicked => { root.setup-step + 1; }
+            clicked => { SetupData.inc_setup_step(); }
         }
     }
 
@@ -259,13 +264,13 @@ export component SetPassword inherits GridBox {
             text: "Back";
             height: 30px;
             width: 100px;
-            //clicked => { root.setup-step - 1; }
+            clicked => { SetupData.dec_setup_step(); }
         }
         next_button := Button {
             text: "Next";
             height: 30px;
             width: 100px;
-            //clicked => { root.setup-step + 1; }
+            clicked => { SetupData.inc_setup_step(); }
         }
     }
 
@@ -296,13 +301,13 @@ export component SetupFinish inherits GridBox {
             text: "Back";
             height: 30px;
             width: 100px;
-            //clicked => { root.setup-step - 1; }
+            clicked => { SetupData.dec_setup_step(); }
         }
         next_button := Button {
             text: "Finish";
             height: 30px;
             width: 100px;
-            //clicked => { root.initial-setup = false; }
+            clicked => { SetupData.inc_setup_step(); }
         }
     }
 

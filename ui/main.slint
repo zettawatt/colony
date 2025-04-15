@@ -4,7 +4,7 @@ import "fonts/HiBlack-n3a1.otf";
 
 // setup view
 import {
-    SetupStart, CreateSeedPhrase, ConfirmSeedPhrase, ImportWallet, SetPassword, SetupFinish
+    SetupStart, CreateSeedPhrase, ConfirmSeedPhrase, ImportWallet, SetPassword, SetupFinish, SetupData
 } from "setup.slint";
 
 // tabs
@@ -32,7 +32,7 @@ import {
     ConfigView, ConfigData
 } from "config.slint";
 
-export {ConfigData}
+export {ConfigData, SetupData}
 
 
 export component ColonyUI inherits Window {    
@@ -42,12 +42,12 @@ export component ColonyUI inherits Window {
     preferred_height: 768px;
 
     // Properties
-    in-out property <bool> initial-setup: false;
+    in-out property <bool> initialized: false;
     in-out property <int> setup-step: 0;
 
     // Main UI
     VerticalLayout {
-        if !root.initial-setup:
+        if root.initialized:
             TabWidget {
                 Tab {
                     title: "Search";
@@ -74,17 +74,17 @@ export component ColonyUI inherits Window {
                     config-view := ConfigView {}
                 }
             }
-        if root.initial-setup && root.setup-step == 0:
+        if !root.initialized && root.setup-step == 0:
             setup-start := SetupStart {}
-        if root.initial-setup && root.setup-step == 1:
+        if !root.initialized && root.setup-step == 1:
             create-seed-phrase := CreateSeedPhrase {}
-        if root.initial-setup && root.setup-step == 2:
+        if !root.initialized && root.setup-step == 2:
             confirm-seed-phrase := ConfirmSeedPhrase {}
-        if root.initial-setup && root.setup-step == 3:
+        if !root.initialized && root.setup-step == 3:
             import-wallet := ImportWallet {}
-        if root.initial-setup && root.setup-step == 4:
+        if !root.initialized && root.setup-step == 4:
             set-password := SetPassword {}
-        if root.initial-setup && root.setup-step == 5:
+        if !root.initialized && root.setup-step == 5:
             setup-finish := SetupFinish {}
     }  
 }
