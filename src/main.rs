@@ -2,12 +2,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::error::Error;
+use std::rc::Rc;
+//use cocoon::Cocoon;
+use config::SeedPhrase;
+use slint::{ModelRc, VecModel, SharedString};
 
 mod config;
 
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
+
     // Load the config file
     let (mut config, initialized): (config::Config, bool) = config::read_config();
 
@@ -49,6 +54,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         move |password1, password2| {
             let result: bool = config::initialize_password(password1.to_string(), password2.to_string());
             ui.global::<SetupData>().set_password_result(result);
+        }
+     });
+
+    // Generate seed phrase button
+    ui.global::<SetupData>().on_generate_seed_phrase({
+        let ui = ui_handle.unwrap();
+        move || {
+            let seed_phrase: SeedPhrase = config::generate_seed_phrase();
+            // A bunch of boilerplate to convert the Vec<String> to a Vec<SharedString>
+            // and then to a VecModel<SharedString> and finally to a ModelRc<SharedString>
+            // This is necessary because the UI needs a ModelRc<SharedString> to display the seed phrase
+            let seed_phrase_vec: Rc<VecModel<SharedString>> = Rc::new(VecModel::from(
+                seed_phrase.seed_words.into_iter().map(SharedString::from).collect::<Vec<_>>()
+            ));
+            let seed_phrase_modelrc = ModelRc::from(seed_phrase_vec);
+            ui.global::<SetupData>().set_seed_phrase(seed_phrase_modelrc);
         }
      });
  

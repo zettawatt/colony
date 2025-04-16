@@ -8,6 +8,10 @@ export global SetupData {
     callback finish_setup();
     callback set_password(string,string);
     in-out property <bool> password_result: false;
+    in-out property <[string]> seed_phrase: ["seed word 1", "seed word 2", "seed word 3", "seed word 4",
+                                            "seed word 5", "seed word 6", "seed word 7", "seed word 8",
+                                            "seed word 9", "seed word 10", "seed word 11", "seed word 12"];
+    callback generate_seed_phrase();
 }
 
 export component SetupStart inherits GridBox {
@@ -174,9 +178,9 @@ export component CreateSeedPhrase inherits GridBox {
         VerticalLayout {
             for i in [0,1,2]:
                 HorizontalLayout {
-                    for j in [1,2,3,4]:
+                    for j in [0,1,2,3]:
                         LineEdit {
-                            text: "seed phrase word " + (4*i + j);
+                            text: {SetupData.seed_phrase[i*4 + j]};
                             height: 30px;
                             horizontal_stretch: 1;
                         }
@@ -191,7 +195,7 @@ export component CreateSeedPhrase inherits GridBox {
                 text: "Regenerate";
                 height: 30px;
                 width: 100px;
-                //clicked => { root.setup-step - 1; }
+                clicked => { SetupData.generate_seed_phrase(); }
             }
         }
     }

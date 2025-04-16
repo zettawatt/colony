@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use std::fs::{File, create_dir_all, read_to_string, write};
 use std::path::PathBuf;
+use bip39::{Mnemonic, Language};
 use dirs;
 use toml;
 //use toml_edit::{DocumentMut, value};
@@ -33,6 +34,11 @@ impl Config {
         self.password_timeout = password_timeout;
         write_config(self).expect("Problem writing the config file");
     }
+}
+
+// Seed phrase struct
+pub struct SeedPhrase {
+    pub seed_words: Vec<String>,
 }
 
 fn get_config_path() -> PathBuf {
@@ -100,4 +106,13 @@ pub fn initialize_password(password1: String, password2: String) -> bool {
     let result: bool = password1 == password2;
     //FIXME: need to pass a handle to this newly created password to the UI for the key generation step
     result
+}
+
+pub fn generate_seed_phrase() -> SeedPhrase {
+    let m = Mnemonic::generate_in(Language::English, 12).unwrap();
+    let seed_phrase = m.words();
+    let seed_words: Vec<String> = seed_phrase.map(|s| s.to_string()).collect();
+    SeedPhrase {
+        seed_words,
+    }
 }
