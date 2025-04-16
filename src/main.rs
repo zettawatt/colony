@@ -24,13 +24,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         ui.set_initialized(false);
     };
 
-    // Save the configuration fields
-    ui.global::<ConfigData>().on_save_config({
-       move |download_path, data_path, password_timeout| {
-           config.set_config(download_path.to_string(), data_path.to_string(), password_timeout.to_string().parse::<u64>().unwrap());
-       }
-    });
-
+    /////////////////////////////////////////////
+    // Colony Installation Callbacks
+    /////////////////////////////////////////////
     // Go to next setup page
     ui.global::<SetupData>().on_inc_setup_step({
         let ui = ui_handle.unwrap();
@@ -47,6 +43,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
      });
  
+    // Set password button
+    ui.global::<SetupData>().on_set_password({
+        let ui = ui_handle.unwrap();
+        move |password1, password2| {
+            let result: bool = config::initialize_password(password1.to_string(), password2.to_string());
+            ui.global::<SetupData>().set_password_result(result);
+        }
+     });
+ 
     // Finish Setup
     ui.global::<SetupData>().on_finish_setup({
         let ui = ui_handle.unwrap();
@@ -55,7 +60,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
      });
  
-     ui.run()?;
+    /////////////////////////////////////////////
+    // Colony Configuration Tab Callbacks
+    /////////////////////////////////////////////
+    // Save the configuration fields
+    ui.global::<ConfigData>().on_save_config({
+        move |download_path, data_path, password_timeout| {
+            config.set_config(download_path.to_string(), data_path.to_string(), password_timeout.to_string().parse::<u64>().unwrap());
+        }
+     });
+ 
+    ui.run()?;
 
     Ok(())
 }

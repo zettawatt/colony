@@ -95,3 +95,9 @@ pub fn read_config() -> (Config, bool) {
     //println!("With text:\n{contents}");
     (result, initialized)
 }
+
+pub fn initialize_password(password1: String, password2: String) -> bool {
+    let result: bool = password1 == password2;
+    //FIXME: need to pass a handle to this newly created password to the UI for the key generation step
+    result
+}

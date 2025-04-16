@@ -38,8 +38,8 @@ export {ConfigData, SetupData}
 export component ColonyUI inherits Window {    
     title: "Colony";
     icon: @image-url("images/logo-96x96.png");
-    preferred_width:  1024px;
-    preferred_height: 768px;
+    preferred-width:  1024px;
+    preferred-height: 768px;
 
     // Properties
     in-out property <bool> initialized: true;
@@ -77,13 +77,13 @@ export component ColonyUI inherits Window {
         if !root.initialized && root.setup-step == 0:
             setup-start := SetupStart {}
         if !root.initialized && root.setup-step == 1:
-            create-seed-phrase := CreateSeedPhrase {}
-        if !root.initialized && root.setup-step == 2:
-            confirm-seed-phrase := ConfirmSeedPhrase {}
-        if !root.initialized && root.setup-step == 3:
-            import-wallet := ImportWallet {}
-        if !root.initialized && root.setup-step == 4:
             set-password := SetPassword {}
+        if !root.initialized && root.setup-step == 2:
+            create-seed-phrase := CreateSeedPhrase {}
+        if !root.initialized && root.setup-step == 3:
+            confirm-seed-phrase := ConfirmSeedPhrase {}
+        if !root.initialized && root.setup-step == 4:
+            import-wallet := ImportWallet {}
         if !root.initialized && root.setup-step == 5:
             setup-finish := SetupFinish {}
     }  

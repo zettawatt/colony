@@ -6,6 +6,8 @@ export global SetupData {
     callback inc_setup_step();
     callback dec_setup_step();
     callback finish_setup();
+    callback set_password(string,string);
+    in-out property <bool> password_result: false;
 }
 
 export component SetupStart inherits GridBox {
@@ -29,6 +31,7 @@ export component SetupStart inherits GridBox {
     }
     Row {
         HorizontalLayout {
+            horizontal-stretch: 1;
             Text {
                 text: "Welcome! Let's get setup...";
                 vertical-alignment: center;
@@ -45,6 +48,98 @@ export component SetupStart inherits GridBox {
     }
 }
 
+export component SetPassword inherits GridBox {
+    Row {
+        Text {
+            text: "Set   Password";
+            font-family: "Hi.";
+            font-weight: 800;
+            vertical-alignment: top;
+            horizontal-alignment: left;
+            font-size: 30px;
+            color: #e28743;
+        }
+    }
+    Row {
+        Text {
+            text: "Set a password to encrypt your seed phrase. This will be used to encrypt the seed phrase and private key on your computer. You will need to enter this password every time you want to upload or manage your wallet.";
+            wrap: word-wrap;
+            vertical-alignment: top;
+            horizontal-alignment: left;
+            font-size: 12px;
+        }
+    }
+    GridLayout {
+        horizontal-stretch: 1;
+        Row {
+            Text {
+                text: "Enter password:";
+                horizontal_stretch: 1;
+                height: 30px;
+            }
+            Text {
+                text: "Enter password again:";
+                horizontal_stretch: 1;
+                height: 30px;
+            }
+        }
+        Row {
+            le_password1 := LineEdit {
+                horizontal_stretch: 1;
+                input-type: password;
+                height: 30px;
+            }
+            le_password2 := LineEdit {
+                horizontal_stretch: 1;
+                input-type: password;
+                height: 30px;
+            }
+            Button {
+                text: "Set Password";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.set_password(le_password1.text, le_password2.text); }
+            }
+        }
+    }
+    Row {
+        HorizontalLayout {
+            if SetupData.password_result:
+                Text {
+                    text: "Password set successfully!";
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                    font-size: 20px;
+                    font-italic: true;
+                }
+            if !SetupData.password_result:
+                Text {
+                    text: "Passwords do not match!";
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                    font-size: 20px;
+                    font-italic: true;
+                }
+        }
+    }
+    Row {
+        HorizontalLayout {
+            back_button := Button {
+                text: "Back";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.dec_setup_step(); }
+            }
+            next_button := Button {
+                text: "Next";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.inc_setup_step(); }
+                enabled: { SetupData.password_result; }
+            }
+        }
+    }
+}
 export component CreateSeedPhrase inherits GridBox {
     Row {
         Text {
@@ -82,6 +177,7 @@ export component CreateSeedPhrase inherits GridBox {
                     for j in [1,2,3,4]:
                         LineEdit {
                             text: "seed phrase word " + (4*i + j);
+                            height: 30px;
                             horizontal_stretch: 1;
                         }
                     
@@ -146,11 +242,20 @@ export component ConfirmSeedPhrase inherits GridBox {
                     for j in [1,2,3,4]:
                         LineEdit {
                             text: "seed phrase word " + (4*i + j);
+                            height: 30px;
                             horizontal_stretch: 1;
                         }
                     
                 }
             
+        }
+    }
+    Row {
+        HorizontalLayout {
+            regenerate_button := Text {
+                text: "";
+                height: 30px;
+            }
         }
     }
     Row {
@@ -200,78 +305,19 @@ export component ImportWallet inherits GridBox {
         }
     }
     Row {
-        back_button := Button {
-            text: "Back";
-            height: 30px;
-            width: 100px;
-            clicked => { SetupData.dec_setup_step(); }
-        }
-        next_button := Button {
-            text: "Next";
-            height: 30px;
-            width: 100px;
-            clicked => { SetupData.inc_setup_step(); }
-        }
-    }
-
-}
-export component SetPassword inherits GridBox {
-    Row {
-        Text {
-            text: "Set   Password";
-            font-family: "Hi.";
-            font-weight: 800;
-            vertical-alignment: top;
-            horizontal-alignment: left;
-            font-size: 30px;
-            color: #e28743;
-        }
-    }
-    Row {
-        Text {
-            text: "Set a password to encrypt your seed phrase. This will be used to encrypt the seed phrase and private key on your computer. You will need to enter this password every time you want to upload or manage your wallet.";
-            wrap: word-wrap;
-            vertical-alignment: top;
-            horizontal-alignment: left;
-            font-size: 12px;
-        }
-    }
-    Row {
-        Text {
-            text: "Enter password:";
-            horizontal_stretch: 1;
-            height: 30px;
-        }
-        Text {
-            text: "Enter password again:";
-            horizontal_stretch: 1;
-            height: 30px;
-        }
-    }
-    Row {
-        LineEdit {
-            horizontal_stretch: 1;
-            input-type: password;
-            height: 30px;
-        }
-        LineEdit {
-            horizontal_stretch: 1;
-            input-type: password;
-            height: 30px;
-        }
-    }
-    Row {
-        back_button := Button {
-            text: "Back";
-            height: 30px;
-            width: 100px;
-            clicked => { SetupData.dec_setup_step(); }
-        }
-        next_button := Button {
-            text: "Next";
-            height: 30px;
-            width: 100px;
-            clicked => { SetupData.inc_setup_step(); }
+        HorizontalLayout{
+            back_button := Button {
+                text: "Back";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.dec_setup_step(); }
+            }
+            next_button := Button {
+                text: "Next";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.inc_setup_step(); }
+            }
         }
     }
 
@@ -298,17 +344,19 @@ export component SetupFinish inherits GridBox {
         }
     }
     Row {
-        back_button := Button {
-            text: "Back";
-            height: 30px;
-            width: 100px;
-            clicked => { SetupData.dec_setup_step(); }
-        }
-        next_button := Button {
-            text: "Finish";
-            height: 30px;
-            width: 100px;
-            clicked => { SetupData.finish_setup(); }
+        HorizontalLayout {
+            back_button := Button {
+                text: "Back";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.dec_setup_step(); }
+            }
+            next_button := Button {
+                text: "Finish";
+                height: 30px;
+                width: 100px;
+                clicked => { SetupData.finish_setup(); }
+            }
         }
     }
 
