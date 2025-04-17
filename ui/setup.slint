@@ -8,10 +8,13 @@ export global SetupData {
     callback finish_setup();
     callback set_password(string,string);
     in-out property <bool> password_result: false;
-    in-out property <[string]> seed_phrase: ["seed word 1", "seed word 2", "seed word 3", "seed word 4",
-                                            "seed word 5", "seed word 6", "seed word 7", "seed word 8",
-                                            "seed word 9", "seed word 10", "seed word 11", "seed word 12"];
+    in-out property <[string]> seed_phrase: ["","","","","","","","","","","",""];
+    in-out property <[string]> confirmation_seed_phrase: ["","","","","","","","","","","",""];
     callback generate_seed_phrase();
+    callback compare_seed_phrase([string], [string]);
+    in-out property <bool> compare_seed_phrase_result: false;
+    callback check_seed_phrase_validity([string]);
+    in-out property <bool> check_seed_phrase_validity_result: false;
 }
 
 export component SetupStart inherits GridBox {
@@ -53,6 +56,8 @@ export component SetupStart inherits GridBox {
 }
 
 export component SetPassword inherits GridBox {
+    preferred-width:  1024px;
+    preferred-height: 768px;
     Row {
         Text {
             text: "Set   Password";
@@ -62,6 +67,12 @@ export component SetPassword inherits GridBox {
             horizontal-alignment: left;
             font-size: 30px;
             color: #e28743;
+        }
+    }
+    Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
         }
     }
     Row {
@@ -181,8 +192,12 @@ export component CreateSeedPhrase inherits GridBox {
                     for j in [0,1,2,3]:
                         LineEdit {
                             text: {SetupData.seed_phrase[i*4 + j]};
+                            placeholder-text: "seed word " + (i*4 + j + 1);
                             height: 30px;
                             horizontal_stretch: 1;
+                            edited(text) => {
+                                SetupData.seed_phrase[i*4 + j] = text;
+                            }
                         }
                     
                 }
@@ -197,6 +212,28 @@ export component CreateSeedPhrase inherits GridBox {
                 width: 100px;
                 clicked => { SetupData.generate_seed_phrase(); }
             }
+            check_seed_button := Button {
+                text: "Check Seed Phrase";
+                height: 30px;
+                width: 150px;
+                clicked => { 
+                    SetupData.check_seed_phrase_validity(SetupData.seed_phrase);
+                }
+            }
+            if SetupData.check_seed_phrase_validity_result:
+                Text {
+                    text: "Seed phrase is valid!";
+                    font-italic: true;
+                    color: #00ff00;
+                    height: 30px;
+                }
+            if !SetupData.check_seed_phrase_validity_result:
+                Text {
+                    text: "Seed phrase contains invalid words or typos!";
+                    font-italic: true;
+                    color: #ff0000;
+                    height: 30px;
+                }
         }
     }
     Row {
@@ -211,6 +248,7 @@ export component CreateSeedPhrase inherits GridBox {
                 text: "Next";
                 height: 30px;
                 width: 100px;
+                enabled: { SetupData.check_seed_phrase_validity_result; }
                 clicked => { SetupData.inc_setup_step(); }
             }
         }
@@ -243,11 +281,15 @@ export component ConfirmSeedPhrase inherits GridBox {
         VerticalLayout {
             for i in [0,1,2]:
                 HorizontalLayout {
-                    for j in [1,2,3,4]:
+                    for j in [0,1,2,3]:
                         LineEdit {
-                            text: "seed phrase word " + (4*i + j);
+                            text: {SetupData.confirmation_seed_phrase[i*4 + j]};
+                            placeholder-text: "seed word " + (i*4 + j + 1);
                             height: 30px;
                             horizontal_stretch: 1;
+                            edited(text) => {
+                                SetupData.confirmation_seed_phrase[i*4 + j] = text;
+                            }
                         }
                     
                 }
@@ -256,10 +298,28 @@ export component ConfirmSeedPhrase inherits GridBox {
     }
     Row {
         HorizontalLayout {
-            regenerate_button := Text {
-                text: "";
+            check_seed_button := Button {
+                text: "Compare Seed Phrase";
                 height: 30px;
+                width: 150px;
+                clicked => { 
+                    SetupData.compare_seed_phrase(SetupData.seed_phrase, SetupData.confirmation_seed_phrase);
+                }
             }
+            if SetupData.compare_seed_phrase_result:
+                Text {
+                    text: "Seed phrase matches!";
+                    font-italic: true;
+                    color: #00ff00;
+                    height: 30px;
+                }
+            if !SetupData.compare_seed_phrase_result:
+                Text {
+                    text: "Seed phrase does not match!";
+                    font-italic: true;
+                    color: #ff0000;
+                    height: 30px;
+                }
         }
     }
     Row {
@@ -274,6 +334,7 @@ export component ConfirmSeedPhrase inherits GridBox {
                 text: "Next";
                 height: 30px;
                 width: 100px;
+                enabled: { SetupData.compare_seed_phrase_result; }
                 clicked => { SetupData.inc_setup_step(); }
             }
         }

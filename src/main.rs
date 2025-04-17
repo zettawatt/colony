@@ -5,7 +5,7 @@ use std::error::Error;
 use std::rc::Rc;
 //use cocoon::Cocoon;
 use config::SeedPhrase;
-use slint::{ModelRc, VecModel, SharedString};
+use slint::{ModelRc, VecModel, SharedString, Model};
 
 mod config;
 
@@ -70,6 +70,29 @@ fn main() -> Result<(), Box<dyn Error>> {
             ));
             let seed_phrase_modelrc = ModelRc::from(seed_phrase_vec);
             ui.global::<SetupData>().set_seed_phrase(seed_phrase_modelrc);
+        }
+    });
+
+    // Check seed phrase validity button
+    ui.global::<SetupData>().on_check_seed_phrase_validity({
+        let ui = ui_handle.unwrap();
+        move |seed_phrase| {
+            // Convert the ModelRc<SharedString> type to a Vec<String>
+            let seed_phrase_vec: Vec<String> = seed_phrase.iter().map(|s| s.to_string()).collect();
+            let result: bool = config::check_seed_phrase_validity(seed_phrase_vec);
+            ui.global::<SetupData>().set_check_seed_phrase_validity_result(result);
+        }
+     });
+ 
+    // Compare seed phrase button
+    ui.global::<SetupData>().on_compare_seed_phrase({
+        let ui = ui_handle.unwrap();
+        move |seed_phrase, confirmed_seed_phrase| {
+            // Convert the ModelRc<SharedString> type to a Vec<String>
+            let seed_phrase_vec: Vec<String> = seed_phrase.iter().map(|s| s.to_string()).collect();
+            let confirmed_seed_phrase_vec: Vec<String> = confirmed_seed_phrase.iter().map(|s| s.to_string()).collect();
+            let result: bool = config::compare_seed_phrase(seed_phrase_vec, confirmed_seed_phrase_vec);
+            ui.global::<SetupData>().set_compare_seed_phrase_result(result);
         }
      });
  

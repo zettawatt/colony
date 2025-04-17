@@ -116,3 +116,23 @@ pub fn generate_seed_phrase() -> SeedPhrase {
         seed_words,
     }
 }
+
+pub fn compare_seed_phrase(seed_phrase: Vec<String>, confirmed_seed_phrase: Vec<String>) -> bool {
+    let s: Vec<&str> = seed_phrase.iter().map(|s| s.as_str()).collect();
+    let s: String = s.join(" ");
+    let seed_phrase: &str = s.as_str();
+    let c: Vec<&str> = confirmed_seed_phrase.iter().map(|s| s.as_str()).collect();
+    let c: String = c.join(" ");
+    let confirmed_seed_phrase: &str = c.as_str();
+    // Check if the seed phrases match
+    let result: bool = seed_phrase == confirmed_seed_phrase;
+    result
+}
+
+pub fn check_seed_phrase_validity(seed_phrase: Vec<String>) -> bool {
+    let s: Vec<&str> = seed_phrase.iter().map(|s| s.as_str()).collect();
+    let s: String = s.join(" ");
+    let seed_phrase: &str = s.as_str();
+    let result: bool = Mnemonic::parse(&*seed_phrase).is_ok();
+    result
+}
