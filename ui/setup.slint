@@ -10,11 +10,17 @@ export global SetupData {
     in-out property <bool> password_result: false;
     in-out property <[string]> seed_phrase: ["","","","","","","","","","","",""];
     in-out property <[string]> confirmation_seed_phrase: ["","","","","","","","","","","",""];
+ //   in-out property <[string]> confirmation_seed_phrase <=> seed_phrase; // For debug
     callback generate_seed_phrase();
     callback compare_seed_phrase([string], [string]);
     in-out property <bool> compare_seed_phrase_result: false;
     callback check_seed_phrase_validity([string]);
     in-out property <bool> check_seed_phrase_validity_result: false;
+    in-out property <string> ethereum_private_key: "";
+    in-out property <string> eth_balance: "";
+    in-out property <string> ant_balance: "";
+    callback check_ethereum_private_key(string);
+    in-out property <bool> check_ethereum_private_key_result: false;
 }
 
 export component SetupStart inherits GridBox {
@@ -56,9 +62,13 @@ export component SetupStart inherits GridBox {
 }
 
 export component SetPassword inherits GridBox {
-    preferred-width:  1024px;
-    preferred-height: 768px;
     Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
+     Row {
         Text {
             text: "Set   Password";
             font-family: "Hi.";
@@ -67,12 +77,6 @@ export component SetPassword inherits GridBox {
             horizontal-alignment: left;
             font-size: 30px;
             color: #e28743;
-        }
-    }
-    Row {
-        Rectangle {
-            vertical_stretch: 1;
-            horizontal_stretch: 1;
         }
     }
     Row {
@@ -119,6 +123,7 @@ export component SetPassword inherits GridBox {
     }
     Row {
         HorizontalLayout {
+            horizontal-stretch: 1;
             if SetupData.password_result:
                 Text {
                     text: "Password set successfully!";
@@ -142,20 +147,27 @@ export component SetPassword inherits GridBox {
             back_button := Button {
                 text: "Back";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Next";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.inc_setup_step(); }
                 enabled: { SetupData.password_result; }
             }
+            Rectangle {
+                horizontal-stretch: 1;
+            }
         }
-    }
+    } 
 }
 export component CreateSeedPhrase inherits GridBox {
+    Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
     Row {
         Text {
             text: "Create   Seed   Phrase";
@@ -241,21 +253,28 @@ export component CreateSeedPhrase inherits GridBox {
             back_button := Button {
                 text: "Back";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Next";
                 height: 30px;
-                width: 100px;
                 enabled: { SetupData.check_seed_phrase_validity_result; }
                 clicked => { SetupData.inc_setup_step(); }
+            }
+            Rectangle {
+                horizontal-stretch: 1;
             }
         }
     }
 
 }
 export component ConfirmSeedPhrase inherits GridBox {
+    Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
     Row {
         Text {
             text: "Confirm   Seed   Phrase";
@@ -327,21 +346,28 @@ export component ConfirmSeedPhrase inherits GridBox {
             back_button := Button {
                 text: "Back";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Next";
                 height: 30px;
-                width: 100px;
                 enabled: { SetupData.compare_seed_phrase_result; }
                 clicked => { SetupData.inc_setup_step(); }
+            }
+            Rectangle {
+                horizontal-stretch: 1;
             }
         }
     }
 
 }
 export component ImportWallet inherits GridBox {
+    Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
     Row {
         Text {
             text: "Import   Ethereum   Wallet";
@@ -363,10 +389,53 @@ export component ImportWallet inherits GridBox {
         }
     }
     Row {
+        HorizontalLayout {
         LineEdit {
-            text: "Private key";
-            horizontal_stretch: 1;
+            text: { SetupData.ethereum_private_key };
+            placeholder-text: "Private key";
             height: 30px;
+            width: 550px;
+            edited(text) => {
+                SetupData.ethereum_private_key = text;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+        }
+    }
+    Row {
+        HorizontalLayout {
+            check_seed_button := Button {
+                text: "Check Balance";
+                height: 30px;
+                width: 150px;
+                clicked => { 
+                    SetupData.check_ethereum_private_key(SetupData.ethereum_private_key);
+                }
+            }
+            if SetupData.check_ethereum_private_key_result:
+                HorizontalLayout {
+                    Text {
+                        text: "ETH balance: " + SetupData.eth_balance;
+                        font-italic: true;
+                        color: #00ff00;
+                        height: 30px;
+                    }
+                    Text {
+                        text: "ANT balance: " + SetupData.ant_balance;
+                        font-italic: true;
+                        color: #00ff00;
+                        height: 30px;
+                    }
+                }
+            if !SetupData.check_ethereum_private_key_result:
+                Text {
+                    text: "Invalid private key!";
+                    font-italic: true;
+                    color: #ff0000;
+                    height: 30px;
+                }
         }
     }
     Row {
@@ -374,20 +443,27 @@ export component ImportWallet inherits GridBox {
             back_button := Button {
                 text: "Back";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Next";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.inc_setup_step(); }
+            }
+            Rectangle {
+                horizontal-stretch: 1;
             }
         }
     }
 
 }
 export component SetupFinish inherits GridBox {
+    Row {
+        Rectangle {
+            vertical_stretch: 1;
+            horizontal_stretch: 1;
+        }
+    }
     Row {
         Text {
             text: "Welcome   to   colony";
@@ -413,14 +489,15 @@ export component SetupFinish inherits GridBox {
             back_button := Button {
                 text: "Back";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.dec_setup_step(); }
             }
             next_button := Button {
                 text: "Finish";
                 height: 30px;
-                width: 100px;
                 clicked => { SetupData.finish_setup(); }
+            }
+            Rectangle {
+                horizontal-stretch: 1;
             }
         }
     }

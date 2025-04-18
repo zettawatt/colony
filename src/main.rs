@@ -95,6 +95,19 @@ fn main() -> Result<(), Box<dyn Error>> {
             ui.global::<SetupData>().set_compare_seed_phrase_result(result);
         }
      });
+
+     // Check ethereum ethereum private key button
+     ui.global::<SetupData>().on_check_ethereum_private_key({
+        let ui = ui_handle.unwrap();
+        move |private_key| {
+            let result: bool = config::check_ethereum_private_key(private_key.to_string());
+            if result {
+                ui.global::<SetupData>().set_ant_balance(0.0.to_string().into());
+                ui.global::<SetupData>().set_eth_balance(0.0.to_string().into());
+            }
+            ui.global::<SetupData>().set_check_ethereum_private_key_result(result);
+        }
+     });
  
     // Finish Setup
     ui.global::<SetupData>().on_finish_setup({

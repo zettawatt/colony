@@ -136,3 +136,20 @@ pub fn check_seed_phrase_validity(seed_phrase: Vec<String>) -> bool {
     let result: bool = Mnemonic::parse(&*seed_phrase).is_ok();
     result
 }
+
+pub fn check_ethereum_private_key(private_key: String) -> bool {
+    // convert String to str
+    let private_key: &str = private_key.as_str();
+    // Check if the private key is a valid hex string and is 64 characters long
+    private_key.chars().all(|c| c.is_ascii_hexdigit()) && private_key.len() == 64
+/*     if private_key.chars().all(|c| c.is_ascii_hexdigit()) {
+        // Check if the number fits within 256 bits
+        if private_key.len() == 64 {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        false
+     }    */
+}
