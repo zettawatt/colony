@@ -114,6 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui = ui_handle.unwrap();
         move || {
             ui.set_initialized(true);
+            //FIXME: need to create a cocoon here with the secrets
         }
      });
  

@@ -107,17 +107,17 @@ export component SetPassword inherits GridBox {
                 horizontal_stretch: 1;
                 input-type: password;
                 height: 30px;
+                edited(text) => {
+                    SetupData.set_password(le_password1.text, le_password2.text);
+                }
             }
             le_password2 := LineEdit {
                 horizontal_stretch: 1;
                 input-type: password;
                 height: 30px;
-            }
-            Button {
-                text: "Set Password";
-                height: 30px;
-                width: 100px;
-                clicked => { SetupData.set_password(le_password1.text, le_password2.text); }
+                edited(text) => {
+                    SetupData.set_password(le_password1.text, le_password2.text);
+                }
             }
         }
     }
@@ -130,14 +130,16 @@ export component SetPassword inherits GridBox {
                     vertical-alignment: center;
                     horizontal-alignment: center;
                     font-size: 20px;
+                    color: #00ff00;
                     font-italic: true;
                 }
             if !SetupData.password_result:
                 Text {
-                    text: "Passwords do not match!";
+                    text: "Passwords do not match or is not long enough!";
                     vertical-alignment: center;
                     horizontal-alignment: center;
                     font-size: 20px;
+                    color: #ff0000;
                     font-italic: true;
                 }
         }
@@ -209,6 +211,7 @@ export component CreateSeedPhrase inherits GridBox {
                             horizontal_stretch: 1;
                             edited(text) => {
                                 SetupData.seed_phrase[i*4 + j] = text;
+                                SetupData.check_seed_phrase_validity(SetupData.seed_phrase);
                             }
                         }
                     
@@ -222,13 +225,8 @@ export component CreateSeedPhrase inherits GridBox {
                 text: "Regenerate";
                 height: 30px;
                 width: 100px;
-                clicked => { SetupData.generate_seed_phrase(); }
-            }
-            check_seed_button := Button {
-                text: "Check Seed Phrase";
-                height: 30px;
-                width: 150px;
                 clicked => { 
+                    SetupData.generate_seed_phrase();
                     SetupData.check_seed_phrase_validity(SetupData.seed_phrase);
                 }
             }
@@ -236,6 +234,9 @@ export component CreateSeedPhrase inherits GridBox {
                 Text {
                     text: "Seed phrase is valid!";
                     font-italic: true;
+                    font-size: 20px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                     color: #00ff00;
                     height: 30px;
                 }
@@ -243,6 +244,9 @@ export component CreateSeedPhrase inherits GridBox {
                 Text {
                     text: "Seed phrase contains invalid words or typos!";
                     font-italic: true;
+                    font-size: 20px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                     color: #ff0000;
                     height: 30px;
                 }
@@ -308,6 +312,7 @@ export component ConfirmSeedPhrase inherits GridBox {
                             horizontal_stretch: 1;
                             edited(text) => {
                                 SetupData.confirmation_seed_phrase[i*4 + j] = text;
+                                SetupData.compare_seed_phrase(SetupData.seed_phrase, SetupData.confirmation_seed_phrase);
                             }
                         }
                     
@@ -317,18 +322,13 @@ export component ConfirmSeedPhrase inherits GridBox {
     }
     Row {
         HorizontalLayout {
-            check_seed_button := Button {
-                text: "Compare Seed Phrase";
-                height: 30px;
-                width: 150px;
-                clicked => { 
-                    SetupData.compare_seed_phrase(SetupData.seed_phrase, SetupData.confirmation_seed_phrase);
-                }
-            }
             if SetupData.compare_seed_phrase_result:
                 Text {
                     text: "Seed phrase matches!";
                     font-italic: true;
+                    font-size: 20px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                     color: #00ff00;
                     height: 30px;
                 }
@@ -336,6 +336,9 @@ export component ConfirmSeedPhrase inherits GridBox {
                 Text {
                     text: "Seed phrase does not match!";
                     font-italic: true;
+                    font-size: 20px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                     color: #ff0000;
                     height: 30px;
                 }
@@ -397,6 +400,7 @@ export component ImportWallet inherits GridBox {
             width: 550px;
             edited(text) => {
                 SetupData.ethereum_private_key = text;
+                SetupData.check_ethereum_private_key(SetupData.ethereum_private_key);
             }
         }
         Rectangle {
@@ -406,14 +410,6 @@ export component ImportWallet inherits GridBox {
     }
     Row {
         HorizontalLayout {
-            check_seed_button := Button {
-                text: "Check Balance";
-                height: 30px;
-                width: 150px;
-                clicked => { 
-                    SetupData.check_ethereum_private_key(SetupData.ethereum_private_key);
-                }
-            }
             if SetupData.check_ethereum_private_key_result:
                 HorizontalLayout {
                     Text {
@@ -448,6 +444,7 @@ export component ImportWallet inherits GridBox {
             next_button := Button {
                 text: "Next";
                 height: 30px;
+                enabled: { SetupData.check_ethereum_private_key_result; }
                 clicked => { SetupData.inc_setup_step(); }
             }
             Rectangle {

@@ -103,9 +103,12 @@ pub fn read_config() -> (Config, bool) {
 }
 
 pub fn initialize_password(password1: String, password2: String) -> bool {
-    let result: bool = password1 == password2;
-    //FIXME: need to pass a handle to this newly created password to the UI for the key generation step
-    result
+    // Check that passwords match and are not terrible
+    password1 == password2 && password1.len() >= 8
+        // && password1.chars().any(|c| c.is_ascii_uppercase())
+        // && password1.chars().any(|c| c.is_ascii_lowercase())
+        // && password1.chars().any(|c| c.is_ascii_digit())
+        //&& password1.chars().any(|c| "!@#$%^&*()_+-=[]{}|;':\",.<>?/`~".contains(c))
 }
 
 pub fn generate_seed_phrase() -> SeedPhrase {
@@ -142,14 +145,4 @@ pub fn check_ethereum_private_key(private_key: String) -> bool {
     let private_key: &str = private_key.as_str();
     // Check if the private key is a valid hex string and is 64 characters long
     private_key.chars().all(|c| c.is_ascii_hexdigit()) && private_key.len() == 64
-/*     if private_key.chars().all(|c| c.is_ascii_hexdigit()) {
-        // Check if the number fits within 256 bits
-        if private_key.len() == 64 {
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        false
-     }    */
 }
