@@ -7,6 +7,7 @@ export global SetupData {
     callback dec_setup_step();
     callback finish_setup();
     callback set_password(string,string);
+    in-out property <string> password: "";
     in-out property <bool> password_result: false;
     in-out property <[string]> seed_phrase: ["","","","","","","","","","","",""];
     in-out property <[string]> confirmation_seed_phrase: ["","","","","","","","","","","",""];
@@ -104,11 +105,13 @@ export component SetPassword inherits GridBox {
         }
         Row {
             le_password1 := LineEdit {
+                text: { SetupData.password };
                 horizontal_stretch: 1;
                 input-type: password;
                 height: 30px;
                 edited(text) => {
-                    SetupData.set_password(le_password1.text, le_password2.text);
+                    SetupData.password = text;
+                    SetupData.set_password(SetupData.password, le_password2.text);
                 }
             }
             le_password2 := LineEdit {
@@ -116,7 +119,7 @@ export component SetPassword inherits GridBox {
                 input-type: password;
                 height: 30px;
                 edited(text) => {
-                    SetupData.set_password(le_password1.text, le_password2.text);
+                    SetupData.set_password(SetupData.password, le_password2.text);
                 }
             }
         }
@@ -491,7 +494,9 @@ export component SetupFinish inherits GridBox {
             next_button := Button {
                 text: "Finish";
                 height: 30px;
-                clicked => { SetupData.finish_setup(); }
+                clicked => {
+                    SetupData.finish_setup();
+                }
             }
             Rectangle {
                 horizontal-stretch: 1;

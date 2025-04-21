@@ -34,6 +34,16 @@ impl Config {
         self.password_timeout = password_timeout;
         write_config(self).expect("Problem writing the config file");
     }
+
+    pub fn get_data_path(&self) -> String {
+        self.data_path.clone()
+    }
+    pub fn get_downloads_path(&self) -> String {
+        self.downloads_path.clone()
+    }
+    pub fn get_password_timeout(&self) -> u64 {
+        self.password_timeout
+    }
 }
 
 // Seed phrase struct

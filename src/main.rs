@@ -8,6 +8,7 @@ use config::SeedPhrase;
 use slint::{ModelRc, VecModel, SharedString, Model};
 
 mod config;
+mod data;
 
 slint::include_modules!();
 
@@ -112,9 +113,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Finish Setup
     ui.global::<SetupData>().on_finish_setup({
         let ui = ui_handle.unwrap();
+        let data_path = config.get_data_path();
         move || {
             ui.set_initialized(true);
-            //FIXME: need to create a cocoon here with the secrets
+            let seed_phrase_vec: Vec<String> = ui.global::<SetupData>().get_seed_phrase().iter().map(|s| s.to_string()).collect();
+            let seed_phrase: String = seed_phrase_vec.join(" ");
+            let secret_data = data::SecretData::from_mnemonic(seed_phrase).unwrap();
+            let data_path_clone = data_path.clone();
+            println!("Data path: {}", data_path_clone);
+            println!("password: {}", ui.global::<SetupData>().get_password());
+            secret_data.to_file(&mut std::fs::File::create(data_path_clone + "/secrets.db").unwrap(), ui.global::<SetupData>().get_password().as_str()).unwrap();
+            //secret_data.to_file(&mut std::fs::File::create(data_path_clone + "/secrets.db").unwrap(), "password").unwrap();
         }
      });
  
