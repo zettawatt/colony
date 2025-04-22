@@ -2,9 +2,9 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use bip39::{Mnemonic, Language};
 use autonomi::client::key_derivation::{DerivationIndex, MainSecretKey};
 use autonomi::{SecretKey, PublicKey};
-use cocoon::{Cocoon, Error};
-
+use cocoon::Cocoon;
 use std::collections::HashMap;
+use std::io::Error;
 
 #[derive(BorshDeserialize, BorshSerialize)] // Ensure BorshSerialize is derived
 struct SerializedSecretData {
@@ -62,14 +62,14 @@ pub struct SecretData {
 }
 
 impl SecretData {
-    pub fn from_file<R: std::io::Read>(file: &mut R, password: &str) -> Result<Self, Error> {
+    pub fn from_file<R: std::io::Read>(file: &mut R, password: &str) -> Result<Self, cocoon::Error> {
         let cocoon = Cocoon::new(&password.as_bytes());
         let encoded = cocoon.parse(file)?;
         let deserialized = SerializedSecretData::try_from_slice(&encoded).unwrap();
         let secret_data: SecretData = deserialized.into();
         Ok(secret_data)
     }
-    pub fn to_file<W: std::io::Write>(&self, file: &mut W, password: &str) -> Result<(), Error> {
+    pub fn to_file<W: std::io::Write>(&self, file: &mut W, password: &str) -> Result<(), cocoon::Error> {
         let mut cocoon = Cocoon::new(&password.as_bytes());
         let serialized: SerializedSecretData = SerializedSecretData::from((*self).clone());
         let encoded = borsh::to_vec(&serialized).unwrap();
@@ -82,10 +82,17 @@ impl SecretData {
         let mnemonic = Mnemonic::parse_in_normalized(Language::English, mnemonic.as_str()).unwrap();
 
         // Convert the mnemonic to a seed
-        let seed = mnemonic.to_seed("");
+        let seed = mnemonic.to_seed_normalized("");
 
         // Convert the seed to a BLS secret key
-        let secret_key = SecretKey::from_bytes(seed[..32].try_into().unwrap()).unwrap();
+        let secret_key = SecretKey::from_bytes(seed[..32].try_into().unwrap_or_else(
+            |error | {
+                panic!("Problem grabbing the first 32 bytes of the seed: {:?}", error);
+            }
+        )).unwrap_or_else(|error| {
+                panic!("Problem creating the secret key. Try running initialize again: {:?}", error);
+            }
+        );
 
         // Generate a new main keys from the mnemonic
         let main_sk: MainSecretKey = MainSecretKey::new(secret_key);

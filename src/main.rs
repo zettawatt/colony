@@ -119,11 +119,22 @@ fn main() -> Result<(), Box<dyn Error>> {
             let seed_phrase_vec: Vec<String> = ui.global::<SetupData>().get_seed_phrase().iter().map(|s| s.to_string()).collect();
             let seed_phrase: String = seed_phrase_vec.join(" ");
             let secret_data = data::SecretData::from_mnemonic(seed_phrase).unwrap();
-            let data_path_clone = data_path.clone();
-            println!("Data path: {}", data_path_clone);
-            println!("password: {}", ui.global::<SetupData>().get_password());
-            secret_data.to_file(&mut std::fs::File::create(data_path_clone + "/secrets.db").unwrap(), ui.global::<SetupData>().get_password().as_str()).unwrap();
-            //secret_data.to_file(&mut std::fs::File::create(data_path_clone + "/secrets.db").unwrap(), "password").unwrap();
+            let data_path_clone: String = data_path.clone();
+            let data_path_full: String = data_path.clone() + "/secrets.db";
+            let data_path_full_clone = data_path_full.clone();
+            let mut secrets_file = std::fs::File::create(data_path_full).unwrap_or_else(
+                |error| {
+                    if error.kind() == std::io::ErrorKind::NotFound {
+                        std::fs::create_dir_all(&data_path_clone).unwrap();
+                        println!("Creating directory: {:?}", data_path_clone);
+                        std::fs::File::create(data_path_full_clone).unwrap()
+                    } else {
+                        panic!("Problem creating the secrets file: {:?}", error);
+                    }
+                }
+            );
+            let password = ui.global::<SetupData>().get_password();
+            secret_data.to_file(&mut secrets_file, password.as_str()).unwrap();
         }
      });
  
