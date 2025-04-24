@@ -5,6 +5,8 @@ use autonomi::{SecretKey, PublicKey};
 use cocoon::Cocoon;
 use std::collections::HashMap;
 use std::io::Error;
+use sn_bls_ckd::derive_master_sk;
+use sn_curv::elliptic::curves::ECScalar;
 
 #[derive(BorshDeserialize, BorshSerialize)] // Ensure BorshSerialize is derived
 struct SerializedSecretData {
@@ -80,37 +82,17 @@ impl SecretData {
 
         // Generate a new mnemonic from the given phrase
         let mnemonic = Mnemonic::parse_in_normalized(Language::English, mnemonic.as_str()).unwrap();
+        let seed = mnemonic.to_seed_normalized("");
 
-        // Convert the mnemonic to a seed
-        let mut seed: [u8; 32] = mnemonic.to_seed_normalized("")[..32].try_into().unwrap();
+        // Derive BLS12-381 master secret key from seed using EIP-2333 standard.
+        // Guarantees a valid, non-zero scalar represented as 32 Big-Endian bytes.
+        let key_bytes: [u8; 32] = derive_master_sk(&seed)
+            .expect("derive_master_sk failed; seed length requirement is >= 32 bytes")
+            .serialize() // Get the 32-byte Big-Endian representation
+            .into(); // Convert GenericArray<u8, 32> to [u8; 32]
 
-        // --- SHAVING STEP (Big-Endian) ---
-        // Context:
-        // BLS12-381 scalar field elements must be in a 'canonical' range [0, q-1],
-        // where q is the scalar field modulus.
-        // The modulus q is a large prime, slightly less than 2^255.
-        // The 32 bytes derived from the seed represent a 256-bit number (2^256 - 1 max value).
-        // This number *could* be >= q, which is not allowed by SecretKey::from_bytes
-        // (it expects the number represented by the bytes to be < q).
-
-        // Action:
-        // To ensure the 256-bit number is overwhelmingly likely to be < q,
-        // we force its highest possible bit (the 2^255 position) to zero.
-        // In a 32-byte big-endian representation, the 2^255 bit is the
-        // most significant bit (MSB) of the first byte (index 0).
-        // The bitmask 0x7F (binary 01111111) is applied using bitwise AND (&).
-        // This clears the MSB (bit 7) while leaving bits 0-6 unchanged.
-
-        // Why:
-        // By clearing the 2^255 bit, the resulting 256-bit number is mathematically
-        // guaranteed to be strictly less than 2^255. Since q is only slightly
-        // less than 2^255, any number < 2^255 is almost certainly also < q.
-        // This satisfies the canonical requirement for SecretKey::from_bytes
-        // with extremely high probability (~1 - 2^-128 failure rate).
-        seed[0] &= 0x7F; // Ensure the first byte is not 0x80 to avoid invalid BLS key
-
-        // Convert the seed to a BLS secret key
-        let secret_key = SecretKey::from_bytes(seed).unwrap_or_else(|error| {
+        // Create a SecretKey from the 32-byte array
+        let secret_key = SecretKey::from_bytes(key_bytes).unwrap_or_else(|error| {
                 panic!("Problem creating the secret key. Try running initialize again: {:?}", error);
             }
         );

@@ -1,28 +1,30 @@
 import {
-    GridBox, LineEdit, Button
+    GridBox, LineEdit, Button, VerticalBox
 } from "std-widgets.slint";
 
 export global ConfigData {
     callback save_config(string, string, string);
-    callback change_password();
-    callback view_seed_phrase();
+    callback change_password(string, string);
+    callback view_seed_phrase(string);
     in-out property <int> password_timeout: 0;
     in-out property <string> download_path: "";
     in-out property <string> data_path: "";
     in-out property <string> seed_phrase: "";
+    in-out property <bool> password_correct: false;
+    in-out property <string> password_change_status: "";
+    in-out property <bool> password_correct_again: false;
 }
 
-export component ConfigView inherits GridBox {
+export component ConfigView inherits VerticalBox {
     // Public properties
-    GridLayout {
-        Row {
+    VerticalLayout {
+        HorizontalLayout {
             Text {
                 text: "Downloads Path:";
                 vertical-alignment: center;
                 horizontal-alignment: left;
             }
             HorizontalLayout {
-                colspan: 3;
                 le_download_path := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
                     text: ConfigData.download_path;
@@ -30,14 +32,13 @@ export component ConfigView inherits GridBox {
                 }
             }
         }
-        Row {
+        HorizontalLayout {
             Text {
                 text: "Colony Data Path:";
                 vertical-alignment: center;
                 horizontal-alignment: left;
             }
             HorizontalLayout {
-                colspan: 3;
                 le_data_path := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
                     text: ConfigData.data_path;
@@ -45,14 +46,13 @@ export component ConfigView inherits GridBox {
                 }
             }
         }
-        Row {
+        HorizontalLayout {
             Text {
                 text: "Password Timeout:";
                 vertical-alignment: center;
                 horizontal-alignment: left;
             }
             HorizontalLayout {
-                colspan: 1;
                 le_password_timeout := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
                     input-type: number;
@@ -61,66 +61,90 @@ export component ConfigView inherits GridBox {
             }
         }
     }
-    Row {
+    HorizontalLayout {
         Rectangle {
             vertical_stretch: 1;
             horizontal_stretch: 1;
         }
     }
-    Row {
+    HorizontalLayout {
         Button {
             text: "Save";
-            colspan: 1;
             clicked => { ConfigData.save_config(le_download_path.text, le_data_path.text, le_password_timeout.text); }
         }
     }
-    Row {
-        HorizontalLayout {
+    VerticalLayout {
+        if ConfigData.password_correct: VerticalLayout {
+            HorizontalLayout {
+                Text {
+                text: "Change Password:";
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                }
+                le_change_password_1 := LineEdit {
+                    horizontal_stretch: 1;
+                    placeholder_text: "New Password";
+                    input-type: password;
+                }
+                le_change_password_2 := LineEdit {
+                    horizontal_stretch: 1;
+                    placeholder_text: "Repeat Password";
+                    input-type: password;
+                }
+                Button {
+                    text: "Change";
+                    clicked => { ConfigData.change_password(le_change_password_1.text, le_change_password_2.text); }
+                }
+            }
+            HorizontalLayout {
+                Text {
+                    text: {ConfigData.password_change_status};
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+
+            HorizontalLayout {
+                Text {
+                    text: "Enter password again to view seed phrase:";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                le_password_view_seed := LineEdit {
+                    horizontal_stretch: 1;
+                    placeholder_text: "Password";
+                    input-type: password;
+                }
+                Button {
+                    text: "View Seed Phrase";
+                    clicked => { ConfigData.view_seed_phrase(le_password_view_seed.text);
+                                 le_password_view_seed.text = ""; }
+                }
+            }
             Text {
-            text: "Change Password:";
-            vertical-alignment: center;
-            horizontal-alignment: left;
-        }
-            le_change_password_1 := LineEdit {
-                horizontal_stretch: 1;
-                placeholder_text: "New Password";
-                input-type: password;
-            }
-            le_change_password_2 := LineEdit {
-                horizontal_stretch: 1;
-                placeholder_text: "Repeat Password";
-                input-type: password;
-            }
-            Button {
-                text: "Change";
-                clicked => { ConfigData.change_password(); }
+                text: { ConfigData.seed_phrase };
+                vertical-alignment: center;
+                horizontal-alignment: left;
             }
         }
-    }
-    Row {
-        HorizontalLayout {
-        Text {
-            text: "Enter password to view seed phrase:";
-            vertical-alignment: center;
-            horizontal-alignment: left;
-        }
-        le_password_view_seed := LineEdit {
-            horizontal_stretch: 1;
-            placeholder_text: "Password";
-            input-type: password;
-        }
-        Button {
-            text: "View Seed Phrase";
-            clicked => { ConfigData.view_seed_phrase(); }
-        }
-    }
-    }
-    Row {
-        Text {
-            // Populate the seed phrase here only when this window is in focus and the password as entered
-            text: "";
-            vertical-alignment: center;
-            horizontal-alignment: left;
+        if !ConfigData.password_correct: VerticalLayout {
+            HorizontalLayout {
+                Text {
+                    text: "Enter current password to change the password:";
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                le_enter_password := LineEdit {
+                    horizontal_stretch: 1;
+                    placeholder_text: "Password";
+                    input-type: password;
+                }
+                Button {
+                    text: "Submit";
+                    clicked => { ConfigData.view_seed_phrase(le_enter_password.text); }
+                }
+            }
+
         }
     }
 }
