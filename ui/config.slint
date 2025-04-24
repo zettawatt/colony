@@ -21,6 +21,17 @@ export global ConfigData {
 
 export component ConfigView inherits VerticalBox {
     // Public properties
+    property <int> value: { ConfigData.password_timeout };
+    timer := Timer {
+        interval: 1s;
+        triggered() => {
+            value -= 1;
+            if (value == 0) {
+                self.running = false;
+                ConfigData.password_correct = false;
+            }
+        }
+    }    
     VerticalLayout {
         HorizontalLayout {
             Text {
@@ -158,7 +169,11 @@ export component ConfigView inherits VerticalBox {
                 Button {
                     text: "Submit";
                     clicked => { ConfigData.unlock_password(le_enter_password.text);
-                                 le_enter_password.text = ""; }
+                                 le_enter_password.text = "";
+                                 if ConfigData.password_correct {
+                                     timer.running = true;
+                                 }
+                                }
                 }
                 Text {
                     text: { ConfigData.password_status };
