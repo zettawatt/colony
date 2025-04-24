@@ -4,15 +4,19 @@ import {
 
 export global ConfigData {
     callback save_config(string, string, string);
-    callback change_password(string, string);
+    callback change_password(string);
+    callback check_password(string, string);
     callback view_seed_phrase(string);
+    callback unlock_password(string);
+    in-out property <string> password: "";
     in-out property <int> password_timeout: 0;
     in-out property <string> download_path: "";
     in-out property <string> data_path: "";
     in-out property <string> seed_phrase: "";
     in-out property <bool> password_correct: false;
     in-out property <string> password_change_status: "";
-    in-out property <bool> password_correct_again: false;
+    in-out property <bool> password_match: false;
+    in-out property <string> password_status: "";
 }
 
 export component ConfigView inherits VerticalBox {
@@ -81,19 +85,30 @@ export component ConfigView inherits VerticalBox {
                 vertical-alignment: center;
                 horizontal-alignment: left;
                 }
-                le_change_password_1 := LineEdit {
+                le_password1 := LineEdit {
+                    text: { ConfigData.password };
                     horizontal_stretch: 1;
-                    placeholder_text: "New Password";
                     input-type: password;
+                    height: 30px;
+                    edited(text) => {
+                        ConfigData.password = text;
+                        ConfigData.check_password(ConfigData.password, le_password2.text);
+                    }
                 }
-                le_change_password_2 := LineEdit {
+                le_password2 := LineEdit {
                     horizontal_stretch: 1;
-                    placeholder_text: "Repeat Password";
                     input-type: password;
+                    height: 30px;
+                    edited(text) => {
+                        ConfigData.check_password(ConfigData.password, le_password2.text);
+                    }
                 }
                 Button {
                     text: "Change";
-                    clicked => { ConfigData.change_password(le_change_password_1.text, le_change_password_2.text); }
+                    enabled: { ConfigData.password_match }
+                    clicked => { ConfigData.change_password(ConfigData.password); 
+                                 le_password1.text = "";
+                                 le_password2.text = ""; }
                 }
             }
             HorizontalLayout {
@@ -130,7 +145,7 @@ export component ConfigView inherits VerticalBox {
         if !ConfigData.password_correct: VerticalLayout {
             HorizontalLayout {
                 Text {
-                    text: "Enter current password to change the password:";
+                    text: "Enter current password to change the password or view the seed phrase:";
                     vertical-alignment: center;
                     horizontal-alignment: left;
                 }
@@ -138,10 +153,17 @@ export component ConfigView inherits VerticalBox {
                     horizontal_stretch: 1;
                     placeholder_text: "Password";
                     input-type: password;
+                    accepted(text) => {ConfigData.unlock_password(text);}
                 }
                 Button {
                     text: "Submit";
-                    clicked => { ConfigData.view_seed_phrase(le_enter_password.text); }
+                    clicked => { ConfigData.unlock_password(le_enter_password.text);
+                                 le_enter_password.text = ""; }
+                }
+                Text {
+                    text: { ConfigData.password_status };
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                 }
             }
 

@@ -15,16 +15,20 @@ slint::include_modules!();
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Load the config file
-    let (mut config, initialized): (config::Config, bool) = config::read_config();
+    let config = Rc::new(std::cell::RefCell::new(config::read_config().0));
+    let initialized = config::read_config().1;
 
     // Start the UI
     let ui = ColonyUI::new()?;
     let ui_handle = ui.as_weak();
 
     // Set the initial values of the configuration fields
-    ui.global::<ConfigData>().set_download_path(config.downloads_path.clone().into());
-    ui.global::<ConfigData>().set_data_path(config.data_path.clone().into());
-    ui.global::<ConfigData>().set_password_timeout(config.password_timeout as i32);
+    let download_path: String = config.borrow().get_downloads_path().clone();
+    ui.global::<ConfigData>().set_download_path(download_path.into());
+    let data_path: String = config.borrow().get_data_path().clone();
+    ui.global::<ConfigData>().set_data_path(data_path.into());
+    let password_timeout: i32 = config.borrow().get_password_timeout() as i32;
+    ui.global::<ConfigData>().set_password_timeout(password_timeout);
     if !initialized {
         let ui = ui_handle.unwrap();
         ui.set_initialized(false);
@@ -113,7 +117,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Finish Setup
     ui.global::<SetupData>().on_finish_setup({
         let ui = ui_handle.unwrap();
-        let data_path = config.get_data_path();
+        let data_path = config.borrow().get_data_path();
         move || {
             ui.set_initialized(true);
             let seed_phrase_vec: Vec<String> = ui.global::<SetupData>().get_seed_phrase().iter().map(|s| s.to_string()).collect();
@@ -143,8 +147,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     /////////////////////////////////////////////
     // Save the configuration fields
     ui.global::<ConfigData>().on_save_config({
+        let config = Rc::clone(&config);
         move |download_path, data_path, password_timeout| {
-            config.set_config(download_path.to_string(), data_path.to_string(), password_timeout.to_string().parse::<u64>().unwrap());
+            let download_path = download_path.to_string();
+            let data_path = data_path.to_string();
+            let password_timeout = password_timeout.to_string().parse::<u64>().unwrap();
+            config.borrow_mut().set_config(download_path, data_path, password_timeout);
+        }
+     });
+
+     // unlock the password
+     ui.global::<ConfigData>().on_unlock_password({
+        let ui = ui_handle.unwrap();
+        let data_path = config.borrow().get_data_path().clone();
+        //let data_path = config.get_data_path().clone();
+        move |password| {
+            let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
+            let mut file = std::fs::File::open(data_path_full).unwrap();
+            ui.global::<ConfigData>().set_password_correct(data::SecretData::from_file(&mut file, password.as_str()).is_ok());
+            if !ui.global::<ConfigData>().get_password_correct() {
+                ui.global::<ConfigData>().set_password_status("Password is incorrect".into());
+            } else {
+                ui.global::<ConfigData>().set_password_status("".into());
+            }
         }
      });
  

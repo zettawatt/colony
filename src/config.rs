@@ -7,7 +7,7 @@ use toml;
 //use toml_edit::{DocumentMut, value};
 
 // Configuration file struct
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub downloads_path: String,
     pub data_path: String,
@@ -19,6 +19,7 @@ impl Config {
         let mut data_path: PathBuf = dirs::data_dir().expect("the data directory path to your OS was not found");
         //let data_path: PathBuf = data_path.join("colony");
         data_path.push("colony");
+        
         let downloads_path: PathBuf = dirs::download_dir().unwrap_or(data_path.clone());
 
         Config {
