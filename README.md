@@ -1,5 +1,5 @@
 <p align="center">
- <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/ui/images/splash_screen.png" height="300" />
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/ui/images/splash_screen.png" height="250" />
 </p>
 
 ## Why do I care?
