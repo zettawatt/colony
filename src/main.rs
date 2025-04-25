@@ -173,11 +173,31 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
      });
 
+    // Check password matches
+    ui.global::<ConfigData>().on_check_password({
+        let ui = ui_handle.unwrap();
+        move |password1, password2| {
+            let result: bool = config::initialize_password(password1.to_string(), password2.to_string());
+            ui.global::<ConfigData>().set_password_match(result);
+        }
+     });
+
+    // Change password button
+     ui.global::<ConfigData>().on_change_password({
+        let ui = ui_handle.unwrap();
+        let data_path = config.borrow().get_data_path().clone();
+        move |current_password, new_password| {
+            let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
+            config::change_password(data_path_full, current_password.to_string(), new_password.to_string());
+            ui.global::<ConfigData>().set_change_password_status("Password changed successfully".into());
+        }
+     });     
+
      // view the seed phrase
      ui.global::<ConfigData>().on_view_seed_phrase({
         let ui = ui_handle.unwrap();
+        let data_path = config.borrow().get_data_path().clone();
         move |password: SharedString| {
-            let data_path = config.borrow().get_data_path().clone();
             let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
             let mut file = std::fs::File::open(data_path_full).unwrap();
             let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(

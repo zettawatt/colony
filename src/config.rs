@@ -6,6 +6,8 @@ use dirs;
 use toml;
 //use toml_edit::{DocumentMut, value};
 
+use crate::data::SecretData;
+
 // Configuration file struct
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -120,6 +122,13 @@ pub fn initialize_password(password1: String, password2: String) -> bool {
         // && password1.chars().any(|c| c.is_ascii_lowercase())
         // && password1.chars().any(|c| c.is_ascii_digit())
         //&& password1.chars().any(|c| "!@#$%^&*()_+-=[]{}|;':\",.<>?/`~".contains(c))
+}
+
+pub fn change_password(secrets_path: String, current_password: String, new_password: String) {
+    let mut file = std::fs::File::open(&secrets_path).unwrap();
+    let secrets = SecretData::from_file(&mut file, current_password.as_str()).unwrap();
+    let mut file = std::fs::File::create(secrets_path).unwrap();
+    secrets.to_file(&mut file, new_password.as_str()).unwrap();
 }
 
 pub fn generate_seed_phrase() -> SeedPhrase {
