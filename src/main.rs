@@ -154,14 +154,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             let password_timeout = password_timeout.to_string().parse::<u64>().unwrap();
             config.borrow_mut().set_config(download_path, data_path, password_timeout);
         }
-     });
+    });
 
      // unlock the password
      ui.global::<ConfigData>().on_unlock_password({
         let ui = ui_handle.unwrap();
         let data_path = config.borrow().get_data_path().clone();
         //let data_path = config.get_data_path().clone();
-        move |password| {
+        move |password: SharedString| {
             let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
             let mut file = std::fs::File::open(data_path_full).unwrap();
             ui.global::<ConfigData>().set_password_correct(data::SecretData::from_file(&mut file, password.as_str()).is_ok());
@@ -170,6 +170,32 @@ fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 ui.global::<ConfigData>().set_password_status("".into());
             }
+        }
+     });
+
+     // view the seed phrase
+     ui.global::<ConfigData>().on_view_seed_phrase({
+        let ui = ui_handle.unwrap();
+        move |password: SharedString| {
+            let data_path = config.borrow().get_data_path().clone();
+            let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
+            let mut file = std::fs::File::open(data_path_full).unwrap();
+            let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(
+                |error| {
+                    panic!("Incorrect password given. Open colony again and enter the correct password to get seed phrase: {:?}", error);
+                }
+            );
+            let seed_phrase: String = secret_data.get_seed_phrase();
+            ui.global::<ConfigData>().set_seed_phrase(seed_phrase.into());
+            // FIXME: want to handle this gracefully, but get a TooShort error when the following code is used. Come back to this later.
+            // let check_password: bool = data::SecretData::from_file(&mut file, password.as_str()).is_ok();
+            // if check_password {
+            //     let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap();
+            //     let seed_phrase: String = secret_data.get_seed_phrase();
+            //     ui.global::<ConfigData>().set_seed_phrase(seed_phrase.into());
+            // } else {
+            //     ui.global::<ConfigData>().set_seed_phrase("Incorrect password".into());
+            // }
         }
      });
  
