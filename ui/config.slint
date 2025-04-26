@@ -63,6 +63,7 @@ export component ConfigView inherits VerticalBox {
             HorizontalLayout {
                 le_data_path := LineEdit {
                     //accepted => { root.reload-manifest(le_manifest.text); }
+                    enabled: false;
                     text: ConfigData.data_path;
                     horizontal_stretch: 1;
                 }

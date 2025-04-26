@@ -2,6 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use bip39::{Mnemonic, Language};
 use autonomi::client::key_derivation::{DerivationIndex, MainSecretKey};
 use autonomi::{SecretKey, PublicKey};
+use autonomi::Wallet;
 use cocoon::Cocoon;
 use std::collections::HashMap;
 use std::io::Error;
@@ -10,6 +11,7 @@ use sn_curv::elliptic::curves::ECScalar;
 
 #[derive(BorshDeserialize, BorshSerialize)] // Ensure BorshSerialize is derived
 struct SerializedSecretData {
+    wallet_key: String,
     mnemonic: String,
     main_sk: Vec<u8>,
     pods: HashMap<Vec<u8>, Vec<u8>>,
@@ -17,6 +19,9 @@ struct SerializedSecretData {
 
 impl From<SerializedSecretData> for SecretData {
     fn from(serialized: SerializedSecretData) -> Self {
+        let wallet_key = serialized.wallet_key.clone();
+        let network = autonomi::Network::ArbitrumSepoliaTest; //FIXME: need to make this a configuration option
+        let wallet = Wallet::new_from_private_key(network, serialized.wallet_key.as_str()).unwrap();
         let mnemonic = Mnemonic::parse_in_normalized(Language::English, &serialized.mnemonic.as_str()).unwrap();
         let secret_key = SecretKey::from_bytes(serialized.main_sk.try_into().unwrap()).unwrap();
         let main_sk = MainSecretKey::new(secret_key);
@@ -31,6 +36,8 @@ impl From<SerializedSecretData> for SecretData {
             .collect();
 
         SecretData {
+            wallet_key,
+            wallet,
             mnemonic,
             main_sk,
             pods,
@@ -40,6 +47,7 @@ impl From<SerializedSecretData> for SecretData {
 
 impl From<SecretData> for SerializedSecretData {
     fn from(secret_data: SecretData) -> Self {
+        let wallet_key = secret_data.wallet_key;
         let mnemonic = secret_data.mnemonic.to_string();
         let main_sk = secret_data.main_sk.to_bytes().to_vec();
         let pods = secret_data
@@ -49,6 +57,7 @@ impl From<SecretData> for SerializedSecretData {
             .collect();
 
         SerializedSecretData {
+            wallet_key,
             mnemonic,
             main_sk,
             pods,
@@ -58,6 +67,8 @@ impl From<SecretData> for SerializedSecretData {
 
 #[derive(Clone)]
 pub struct SecretData {
+    wallet_key: String,
+    wallet: Wallet,
     mnemonic: Mnemonic,
     main_sk: MainSecretKey,
     pods: HashMap<PublicKey, SecretKey>,
@@ -105,9 +116,15 @@ impl SecretData {
         let mut pods: HashMap<PublicKey, SecretKey> = HashMap::new();
         let pod_key: SecretKey = main_sk.derive_key(&index(0)).into();
         let pod_pubkey: PublicKey = pod_key.public_key();
-        pods.insert(pod_pubkey, pod_key);
+        pods.insert(pod_pubkey, pod_key.clone());
+
+        //FIXME: continue here
+        let network = autonomi::Network::ArbitrumSepoliaTest; //FIXME: need to make this a configuration option
+        let wallet = Wallet::new_from_private_key(network, pod_key.to_hex().as_str()).unwrap();
 
         Ok(SecretData {
+            wallet_key: pod_key.to_hex(),
+            wallet: wallet,
             mnemonic: mnemonic,
             main_sk: main_sk,
             pods: pods,
