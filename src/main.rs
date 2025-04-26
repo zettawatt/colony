@@ -15,8 +15,8 @@ slint::include_modules!();
 fn main() -> Result<(), Box<dyn Error>> {
 
     // Load the config file
-    let config = Rc::new(std::cell::RefCell::new(config::read_config().0));
-    let initialized = config::read_config().1;
+    let initialized = config::check_config();
+    let config = Rc::new(std::cell::RefCell::new(config::read_config()));
 
     // Start the UI
     let ui = ColonyUI::new()?;
@@ -105,11 +105,7 @@ fn main() -> Result<(), Box<dyn Error>> {
      ui.global::<SetupData>().on_check_ethereum_private_key({
         let ui = ui_handle.unwrap();
         move |private_key| {
-            let result: bool = config::check_ethereum_private_key(private_key.to_string());
-            if result {
-                ui.global::<SetupData>().set_ant_balance(0.0.to_string().into());
-                ui.global::<SetupData>().set_eth_balance(0.0.to_string().into());
-            }
+            let result: bool = config::check_ethereum_private_key(private_key.clone().to_string());
             ui.global::<SetupData>().set_check_ethereum_private_key_result(result);
         }
      });
@@ -122,7 +118,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             ui.set_initialized(true);
             let seed_phrase_vec: Vec<String> = ui.global::<SetupData>().get_seed_phrase().iter().map(|s| s.to_string()).collect();
             let seed_phrase: String = seed_phrase_vec.join(" ");
-            let secret_data = data::SecretData::from_mnemonic(seed_phrase).unwrap();
+            let mut secret_data = data::SecretData::from_mnemonic(seed_phrase).unwrap();
+            secret_data.set_wallet(ui.global::<SetupData>().get_ethereum_private_key().to_string());
             let data_path_clone: String = data_path.clone();
             let data_path_full: String = data_path.clone() + "/secrets.db";
             let data_path_full_clone = data_path_full.clone();
@@ -200,22 +197,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         move |password: SharedString| {
             let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
             let mut file = std::fs::File::open(data_path_full).unwrap();
+            let correct = true;
             let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(
                 |error| {
-                    panic!("Incorrect password given. Open colony again and enter the correct password to get seed phrase: {:?}", error);
+                    data::SecretData::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string()).unwrap()
                 }
             );
             let seed_phrase: String = secret_data.get_seed_phrase();
-            ui.global::<ConfigData>().set_seed_phrase(seed_phrase.into());
-            // FIXME: want to handle this gracefully, but get a TooShort error when the following code is used. Come back to this later.
-            // let check_password: bool = data::SecretData::from_file(&mut file, password.as_str()).is_ok();
-            // if check_password {
-            //     let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap();
-            //     let seed_phrase: String = secret_data.get_seed_phrase();
-            //     ui.global::<ConfigData>().set_seed_phrase(seed_phrase.into());
-            // } else {
-            //     ui.global::<ConfigData>().set_seed_phrase("Incorrect password".into());
-            // }
+            if seed_phrase.clone() == "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" {
+                ui.global::<ConfigData>().set_seed_phrase("Password is incorrect".into());
+            } else {
+                ui.global::<ConfigData>().set_seed_phrase(seed_phrase.into());
+            }
         }
      });
  

@@ -118,7 +118,6 @@ impl SecretData {
         let pod_pubkey: PublicKey = pod_key.public_key();
         pods.insert(pod_pubkey, pod_key.clone());
 
-        //FIXME: continue here
         let network = autonomi::Network::ArbitrumSepoliaTest; //FIXME: need to make this a configuration option
         let wallet = Wallet::new_from_private_key(network, pod_key.to_hex().as_str()).unwrap();
 
@@ -136,7 +135,21 @@ impl SecretData {
     }
 
     pub fn get_seed_phrase(&self) -> String {
-        self.mnemonic.to_string()
+        self.mnemonic.clone().to_string()
+    }
+
+    pub fn set_wallet(&mut self, wallet_key: String) {
+        self.wallet_key = wallet_key.clone();
+        let network = autonomi::Network::ArbitrumSepoliaTest; //FIXME: need to make this a configuration option
+        self.wallet = Wallet::new_from_private_key(network, wallet_key.as_str()).unwrap();
+    }
+
+    pub fn get_wallet(&self) -> Wallet {
+        self.wallet.clone()
+    }
+
+    pub fn get_wallet_key(&self) -> String {
+        self.wallet_key.clone()
     }
 
 }

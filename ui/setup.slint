@@ -18,8 +18,6 @@ export global SetupData {
     callback check_seed_phrase_validity([string]);
     in-out property <bool> check_seed_phrase_validity_result: false;
     in-out property <string> ethereum_private_key: "";
-    in-out property <string> eth_balance: "";
-    in-out property <string> ant_balance: "";
     callback check_ethereum_private_key(string);
     in-out property <bool> check_ethereum_private_key_result: false;
 }
@@ -414,19 +412,11 @@ export component ImportWallet inherits GridBox {
     Row {
         HorizontalLayout {
             if SetupData.check_ethereum_private_key_result:
-                HorizontalLayout {
-                    Text {
-                        text: "ETH balance: " + SetupData.eth_balance;
-                        font-italic: true;
-                        color: #00ff00;
-                        height: 30px;
-                    }
-                    Text {
-                        text: "ANT balance: " + SetupData.ant_balance;
-                        font-italic: true;
-                        color: #00ff00;
-                        height: 30px;
-                    }
+                Text {
+                    text: "Valid private key!";
+                    font-italic: true;
+                    color: #00ff00;
+                    height: 30px;
                 }
             if !SetupData.check_ethereum_private_key_result:
                 Text {
