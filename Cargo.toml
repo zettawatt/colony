@@ -25,10 +25,12 @@ bip39 = {version = "2.1.0", features = ["rand"]}
 borsh = {version = "1.5.7", features = ["derive", "borsh-derive"]}
 cocoon = "0.4.3"
 dirs = "6.0.0"
+futures = "0.3.31"
 serde = "1.0.219"
 slint = "1.8.0"
 sn_bls_ckd = "0.2.1"
 sn_curv = { version = "0.10.1", default-features = false, features = ["num-bigint"] }
+tokio = "1.44.2"
 toml = "0.8.20"
 
 [build-dependencies]

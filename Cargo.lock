@@ -2393,11 +2393,13 @@ dependencies = [
  "borsh",
  "cocoon",
  "dirs",
+ "futures",
  "serde",
  "slint",
  "slint-build",
  "sn_bls_ckd",
  "sn_curv",
+ "tokio",
  "toml",
 ]
 

@@ -9,6 +9,7 @@ use slint::{ModelRc, VecModel, SharedString, Model};
 
 mod config;
 mod data;
+mod network;
 
 slint::include_modules!();
 
@@ -21,6 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Start the UI
     let ui = ColonyUI::new()?;
     let ui_handle = ui.as_weak();
+    let network_worker = network::NetworkWorker::new(&ui);
 
     // Set the initial values of the configuration fields
     let download_path: String = config.borrow().get_downloads_path().clone();
