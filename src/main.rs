@@ -6,6 +6,7 @@ use std::rc::Rc;
 //use cocoon::Cocoon;
 use config::SeedPhrase;
 use slint::{ModelRc, VecModel, SharedString, Model};
+pub const BAD_MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 mod config;
 mod data;
@@ -15,6 +16,9 @@ slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
 
+    // Initialize the SecretData struct
+    let secret_data = Rc::new(std::cell::RefCell::new(data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap()));
+
     // Load the config file
     let initialized = config::check_config();
     let config = Rc::new(std::cell::RefCell::new(config::read_config()));
@@ -22,6 +26,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Start the UI
     let ui = ColonyUI::new()?;
     let ui_handle = ui.as_weak();
+
+    // Setup worker to handle async network calls
     let network_worker = network::NetworkWorker::new(&ui);
 
     // Set the initial values of the configuration fields
@@ -138,6 +144,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             let password = ui.global::<SetupData>().get_password();
             secret_data.to_file(&mut secrets_file, password.as_str()).unwrap();
+            ui.global::<WalletData>().set_wallet_address(secret_data.get_wallet().address().to_string().into());
         }
      });
  
@@ -160,8 +167,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui = ui_handle.unwrap();
         let data_path = config.borrow().get_data_path().clone();
         //let data_path = config.get_data_path().clone();
+        let secret_data = Rc::clone(&secret_data);
         move |password: SharedString| {
-            let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
+            let data_path_full: String = format!("{}/{}", data_path, "secrets.db");
             let mut file = std::fs::File::open(data_path_full).unwrap();
             ui.global::<ConfigData>().set_password_correct(data::SecretData::from_file(&mut file, password.as_str()).is_ok());
             if !ui.global::<ConfigData>().get_password_correct() {
@@ -169,6 +177,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 ui.global::<ConfigData>().set_password_status("".into());
             }
+            *secret_data.borrow_mut() = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(|_error| {
+                ui.global::<ConfigData>().set_password_status("Password is incorrect".into());
+                data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap()
+            });
+        }
+     });
+
+     // lock from password timeout
+     ui.global::<ConfigData>().on_lock_password({
+        let secret_data = Rc::clone(&secret_data);
+        move || {
+            *secret_data.borrow_mut() = data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap();
         }
      });
 
@@ -202,11 +222,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             let correct = true;
             let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(
                 |error| {
-                    data::SecretData::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string()).unwrap()
+                    data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap()
                 }
             );
             let seed_phrase: String = secret_data.get_seed_phrase();
-            if seed_phrase.clone() == "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" {
+            if seed_phrase.clone() == BAD_MNEMONIC {
                 ui.global::<ConfigData>().set_seed_phrase("Password is incorrect".into());
             } else {
                 ui.global::<ConfigData>().set_seed_phrase(seed_phrase.into());

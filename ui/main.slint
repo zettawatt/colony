@@ -25,15 +25,17 @@ import {
 } from "colonies.slint";
 
 import {
-    WalletView
+    WalletView, WalletData
 } from "wallet.slint";
 
 import {
     ConfigView, ConfigData
 } from "config.slint";
 
-export {ConfigData, SetupData}
+export {ConfigData, SetupData, WalletData}
 
+export global MainData {
+}
 
 export component ColonyUI inherits Window {    
     title: "Colony";

@@ -4,8 +4,7 @@ use futures::future::{Fuse, FusedFuture, FutureExt};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 pub enum NetworkMessage {
-    GetAntBalance,
-    GetGasBalance,
+    GetBalance,
     Quit,
 }
 
@@ -43,18 +42,13 @@ async fn network_worker_loop(
     handle: slint::Weak<ColonyUI>,
 ) -> tokio::io::Result<()> {
 
-    let get_ant_balance_future = get_ant_balance(handle.clone()).fuse();
-    let get_gas_balance_future = get_gas_balance(handle.clone()).fuse();
+    let get_balance_future = get_balance(handle.clone()).fuse();
     futures::pin_mut!(
-        get_ant_balance_future,
-        get_gas_balance_future,
+        get_balance_future,
     );
     loop {
         let m = futures::select! {
-            _ = get_ant_balance_future => {
-                continue;
-            }
-            _ = get_gas_balance_future => {
+            _ = get_balance_future => {
                 continue;
             }
             m = r.recv().fuse() => {
@@ -67,16 +61,12 @@ async fn network_worker_loop(
 
         match m {
             NetworkMessage::Quit => return Ok(()),
-            NetworkMessage::GetAntBalance => return Ok(()),
-            NetworkMessage::GetGasBalance => return Ok(()),
+            NetworkMessage::GetBalance => return Ok(()),
         }
     }
 }
 
-async fn get_ant_balance(handle: slint::Weak<ColonyUI>) {
+async fn get_balance(handle: slint::Weak<ColonyUI>) {
 
 }
 
-async fn get_gas_balance(handle: slint::Weak<ColonyUI>) {
-
-}

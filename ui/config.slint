@@ -8,6 +8,7 @@ export global ConfigData {
     callback check_password(string, string);
     callback view_seed_phrase(string);
     callback unlock_password(string);
+    callback lock_password();
     in-out property <string> new_password: "";
     in-out property <string> current_password: "";
     in-out property <int> password_timeout: 0;
@@ -19,16 +20,18 @@ export global ConfigData {
     in-out property <bool> password_match: false;
     in-out property <string> password_status: "";
     in-out property <string> change_password_status: "";
+    in-out property <bool> timer_running: false;
 }
 
 export component ConfigView inherits VerticalBox {
-    // Public properties
-    property <int> value: { ConfigData.password_timeout };
-    timer := Timer {
+    
+    property <int> timeout: { ConfigData.password_timeout };
+    Timer {
         interval: 1s;
+        running: { ConfigData.timer_running };
         triggered() => {
-            value -= 1;
-            if (value == 0) {
+            timeout -= 1;
+            if (timeout == 0) {
                 self.running = false;
                 ConfigData.current_password = "";
                 ConfigData.new_password = "";
@@ -36,9 +39,12 @@ export component ConfigView inherits VerticalBox {
                 ConfigData.seed_phrase = "";
                 ConfigData.password_status = "";
                 ConfigData.change_password_status = "";
+                ConfigData.lock_password();
             }
         }
-    }    
+    }
+
+    // Public properties
     VerticalLayout {
         HorizontalLayout {
             Text {
@@ -185,7 +191,7 @@ export component ConfigView inherits VerticalBox {
                     text: "Submit";
                     clicked => { ConfigData.unlock_password(ConfigData.current_password);
                                  if ConfigData.password_correct {
-                                     timer.running = true;
+                                     ConfigData.timer_running = true;
                                  }
                                 }
                 }

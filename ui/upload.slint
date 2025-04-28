@@ -1,9 +1,13 @@
 import {
-    GridBox, LineEdit, Button
+    VerticalBox, LineEdit, Button
 } from "std-widgets.slint";
 
-export component UploadView inherits GridBox {
-    Row {
+import {
+    ConfigData
+} from "config.slint";
+
+export component UploadView inherits VerticalBox {
+    if ConfigData.password_correct: VerticalLayout {
         HorizontalLayout {
             Text {
                 text: "Upload File:";
@@ -19,12 +23,43 @@ export component UploadView inherits GridBox {
                 //clicked => { root.save(); }
             }
         }
-    }
-    Row {
         Rectangle {
-            colspan: 4;
             vertical_stretch: 1;
             horizontal_stretch: 1;
         }
     }
+    if !ConfigData.password_correct: VerticalLayout {
+        alignment: center;
+            Text {
+                text: "Enter password to unlock wallet:";
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+            LineEdit {
+                text: { ConfigData.current_password };
+                height: 30px;
+                horizontal_stretch: 1;
+                placeholder_text: "Password";
+                input-type: password;
+                edited(text) => {
+                    ConfigData.current_password = text;
+                }
+                accepted(text) => {ConfigData.unlock_password(text);}
+            }
+            Button {
+                text: "Submit";
+                height: 30px;
+                clicked => { ConfigData.unlock_password(ConfigData.current_password);
+                             if ConfigData.password_correct {
+                                 ConfigData.timer_running = true;
+                             }
+                            }
+            }
+            Text {
+                text: { ConfigData.password_status };
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+    }
+
 }
