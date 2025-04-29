@@ -2392,6 +2392,7 @@ dependencies = [
  "cocoon",
  "dirs",
  "futures",
+ "ruint",
  "serde",
  "slint",
  "slint-build",

@@ -8,6 +8,8 @@ use config::SeedPhrase;
 use slint::{ModelRc, VecModel, SharedString, Model};
 use std::ops::Deref;
 pub const BAD_MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+pub const ENVIRONMENTS: [&str; 3] = ["local", "autonomi", "alpha"];
+pub const DEFAULT_ENVIRONMENT: &str = "alpha";
 
 mod config;
 mod data;
@@ -193,7 +195,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             ui.global::<WalletData>().set_wallet_address(secret_data_clone.borrow().get_wallet().address().to_string().into());
             network_channel.send(network::NetworkMessage::ClientInit).unwrap();
-            network_channel.send(network::NetworkMessage::GetBalance).unwrap();
+            network_channel.send(network::NetworkMessage::GetBalance{secret_data: secret_data_clone.borrow().clone()}).unwrap();
         }
      });
 
