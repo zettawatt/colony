@@ -1,11 +1,12 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::error::Error;
+use std::{error::Error, ops::DerefMut};
 use std::rc::Rc;
 //use cocoon::Cocoon;
 use config::SeedPhrase;
 use slint::{ModelRc, VecModel, SharedString, Model};
+use std::ops::Deref;
 pub const BAD_MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 mod config;
@@ -37,10 +38,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.global::<ConfigData>().set_data_path(data_path.into());
     let password_timeout: i32 = config.borrow().get_password_timeout() as i32;
     ui.global::<ConfigData>().set_password_timeout(password_timeout);
+
     if !initialized {
         let ui = ui_handle.unwrap();
         ui.set_initialized(false);
-    };
+    }
 
     /////////////////////////////////////////////
     // Colony Installation Callbacks
@@ -122,12 +124,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.global::<SetupData>().on_finish_setup({
         let ui = ui_handle.unwrap();
         let data_path = config.borrow().get_data_path();
+        let secret_data_clone = Rc::clone(&secret_data);
         move || {
             ui.set_initialized(true);
             let seed_phrase_vec: Vec<String> = ui.global::<SetupData>().get_seed_phrase().iter().map(|s| s.to_string()).collect();
             let seed_phrase: String = seed_phrase_vec.join(" ");
-            let mut secret_data = data::SecretData::from_mnemonic(seed_phrase).unwrap();
-            secret_data.set_wallet(ui.global::<SetupData>().get_ethereum_private_key().to_string());
+            *secret_data_clone.borrow_mut().deref_mut() = data::SecretData::from_mnemonic(seed_phrase).unwrap();
+            secret_data_clone.borrow_mut().set_wallet(ui.global::<SetupData>().get_ethereum_private_key().to_string());
+            println!("key: {}",secret_data_clone.borrow().get_wallet_key().clone());
             let data_path_clone: String = data_path.clone();
             let data_path_full: String = data_path.clone() + "/secrets.db";
             let data_path_full_clone = data_path_full.clone();
@@ -143,8 +147,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             );
             let password = ui.global::<SetupData>().get_password();
-            secret_data.to_file(&mut secrets_file, password.as_str()).unwrap();
-            ui.global::<WalletData>().set_wallet_address(secret_data.get_wallet().address().to_string().into());
+            secret_data_clone.borrow().to_file(&mut secrets_file, password.as_str()).unwrap();
+            ui.global::<WalletData>().set_wallet_address(secret_data_clone.borrow().get_wallet().address().to_string().into());
         }
      });
  
@@ -165,30 +169,39 @@ fn main() -> Result<(), Box<dyn Error>> {
      // unlock the password
      ui.global::<ConfigData>().on_unlock_password({
         let ui = ui_handle.unwrap();
+        let network_channel = network_worker.channel.clone();
         let data_path = config.borrow().get_data_path().clone();
         //let data_path = config.get_data_path().clone();
-        let secret_data = Rc::clone(&secret_data);
+        let secret_data_clone = Rc::clone(&secret_data);
         move |password: SharedString| {
             let data_path_full: String = format!("{}/{}", data_path, "secrets.db");
             let mut file = std::fs::File::open(data_path_full).unwrap();
-            ui.global::<ConfigData>().set_password_correct(data::SecretData::from_file(&mut file, password.as_str()).is_ok());
-            if !ui.global::<ConfigData>().get_password_correct() {
+
+            let mut correct = true;
+            *secret_data_clone.borrow_mut().deref_mut() = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(|_error| {
+                println!("error loading file");
+                ui.global::<ConfigData>().set_password_correct(false);
                 ui.global::<ConfigData>().set_password_status("Password is incorrect".into());
-            } else {
-                ui.global::<ConfigData>().set_password_status("".into());
-            }
-            *secret_data.borrow_mut() = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(|_error| {
-                ui.global::<ConfigData>().set_password_status("Password is incorrect".into());
+                correct = false;
                 data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap()
             });
+
+            if correct {
+                ui.global::<ConfigData>().set_password_correct(true);
+                ui.global::<ConfigData>().set_password_status("".into());
+            }
+
+            ui.global::<WalletData>().set_wallet_address(secret_data_clone.borrow().get_wallet().address().to_string().into());
+            network_channel.send(network::NetworkMessage::ClientInit).unwrap();
+            network_channel.send(network::NetworkMessage::GetBalance).unwrap();
         }
      });
 
      // lock from password timeout
      ui.global::<ConfigData>().on_lock_password({
-        let secret_data = Rc::clone(&secret_data);
+        let secret_data_clone = Rc::clone(&secret_data);
         move || {
-            *secret_data.borrow_mut() = data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap();
+            *secret_data_clone.borrow_mut().deref_mut() = data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap();
         }
      });
 
@@ -205,9 +218,18 @@ fn main() -> Result<(), Box<dyn Error>> {
      ui.global::<ConfigData>().on_change_password({
         let ui = ui_handle.unwrap();
         let data_path = config.borrow().get_data_path().clone();
+        let secret_data_clone = Rc::clone(&secret_data);
         move |current_password, new_password| {
             let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
-            config::change_password(data_path_full, current_password.to_string(), new_password.to_string());
+
+            // Read secrets file with original password
+            let mut file = std::fs::File::open(data_path_full.clone()).unwrap();
+            *secret_data_clone.borrow_mut().deref_mut() = data::SecretData::from_file(&mut file, current_password.as_str()).unwrap();
+
+            // Write secrets file with new password
+            let mut file = std::fs::File::create(data_path_full).unwrap();
+            secret_data_clone.borrow().to_file(&mut file, new_password.as_str()).unwrap();
+        
             ui.global::<ConfigData>().set_change_password_status("Password changed successfully".into());
         }
      });     
@@ -219,13 +241,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         move |password: SharedString| {
             let data_path_full:String  = format!("{}/{}",data_path,"secrets.db");
             let mut file = std::fs::File::open(data_path_full).unwrap();
-            let correct = true;
-            let secret_data: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(
+            let secrets: data::SecretData = data::SecretData::from_file(&mut file, password.as_str()).unwrap_or_else(
                 |error| {
                     data::SecretData::from_mnemonic(BAD_MNEMONIC.to_string()).unwrap()
                 }
             );
-            let seed_phrase: String = secret_data.get_seed_phrase();
+            let seed_phrase: String = secrets.get_seed_phrase();
             if seed_phrase.clone() == BAD_MNEMONIC {
                 ui.global::<ConfigData>().set_seed_phrase("Password is incorrect".into());
             } else {
@@ -235,6 +256,7 @@ fn main() -> Result<(), Box<dyn Error>> {
      });
  
     ui.run()?;
+    network_worker.join().unwrap();
 
     Ok(())
 }

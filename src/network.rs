@@ -1,9 +1,15 @@
+use autonomi::Client;
 use super::ColonyUI;
 use slint::ComponentHandle;
-use futures::future::{Fuse, FusedFuture, FutureExt};
+use futures::future::FutureExt;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use crate::WalletData;
+
+//pub const ENVIRONMENTS: [&str; 3] = ["local", "autonomi", "alpha"];
+//pub const DEFAULT_ENVIRONMENT: &str = "alpha";
 
 pub enum NetworkMessage {
+    ClientInit,
     GetBalance,
     Quit,
 }
@@ -43,12 +49,19 @@ async fn network_worker_loop(
 ) -> tokio::io::Result<()> {
 
     let get_balance_future = get_balance(handle.clone()).fuse();
+    let client_init_future = client_init(handle.clone()).fuse();
     futures::pin_mut!(
+        client_init_future,
         get_balance_future,
     );
     loop {
         let m = futures::select! {
-            _ = get_balance_future => {
+            res = get_balance_future => {
+                res?;
+                continue;
+            }
+            res = client_init_future => {
+                res?;
                 continue;
             }
             m = r.recv().fuse() => {
@@ -61,12 +74,26 @@ async fn network_worker_loop(
 
         match m {
             NetworkMessage::Quit => return Ok(()),
-            NetworkMessage::GetBalance => return Ok(()),
+            NetworkMessage::GetBalance => get_balance_future
+            .set(get_balance(handle.clone()).fuse()),
+            NetworkMessage::ClientInit => client_init_future.set(client_init(handle.clone()).fuse()),
         }
     }
 }
 
-async fn get_balance(handle: slint::Weak<ColonyUI>) {
-
+async fn get_balance(handle: slint::Weak<ColonyUI>) -> tokio::io::Result<()> {
+    let balance: String = "1000".to_string(); // Placeholder for actual balance fetching logic
+    let _ = handle
+        .clone()
+        .upgrade_in_event_loop(|h| {
+            h.global::<WalletData>().set_eth_balance(balance.clone().into());
+            h.global::<WalletData>().set_ant_balance(balance.into());
+        }).unwrap();
+    Ok(())
 }
 
+async fn client_init(handle: slint::Weak<ColonyUI>) -> tokio::io::Result<Client> {
+    let client = Client::init().await.unwrap();
+    println!("Client initialized");
+    Ok(client)
+}
