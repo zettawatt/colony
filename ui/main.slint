@@ -1,4 +1,4 @@
-import { Button, VerticalBox, GridBox, TabWidget } from "std-widgets.slint";
+import { Button, VerticalBox, GridBox, TabWidget, LineEdit } from "std-widgets.slint";
 
 import "fonts/HiBlack-n3a1.otf";
 
@@ -88,5 +88,26 @@ export component ColonyUI inherits Window {
             import-wallet := ImportWallet {}
         if !root.initialized && root.setup-step == 5:
             setup-finish := SetupFinish {}
+        HorizontalLayout {
+            Text {
+                text: "Like Colony? Donate ETH or ANT to support development here:";
+                vertical-alignment: center;
+                font-size: 8px;
+                height: 10px;
+            }
+            donate := LineEdit {
+                text: "0xc6e3a7a770656B8473DedCc3d4565b6D507afACE";
+                opacity: 0.7;
+                read-only: true;
+                font-size: 8px;
+                height: 10px;
+                visible: true;
+                width: 220px;
+            }
+            Rectangle {
+                height: 10px;
+                horizontal-stretch: 1;
+            }
+        }
     }  
 }
