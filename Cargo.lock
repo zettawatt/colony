@@ -908,9 +908,9 @@ dependencies = [
 
 [[package]]
 name = "ant-bootstrap"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f90d114a686e5deff69783736ce2b689f6bfd767a5e7e3abd75896b1ba86a2a"
+checksum = "ac50b4bfbe534d8f033fed695e23f4f0aa516eb3c46045eb35ddbe09ee57346c"
 dependencies = [
  "ant-logging",
  "ant-protocol",
@@ -982,9 +982,9 @@ dependencies = [
 
 [[package]]
 name = "ant-networking"
-version = "0.3.10"
+version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b762b760d6bbeded5456853043f976aaae90f0f37104682fe4a78d0863dd82ee"
+checksum = "aab975a932c4eba0a6aa4e080b8d986c2938995460aa9122dab4390d67536941"
 dependencies = [
  "aes-gcm-siv",
  "ant-bootstrap",
@@ -1570,9 +1570,9 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "autonomi"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdda2d62bc4d7fbb5a1e6157d666c35016e4c622e47fb31f063fd93cf4cf6ab0"
+checksum = "975174c28589f07d2e9af8a25c2b389359743fef38a15b02f3943b62aea9b564"
 dependencies = [
  "ant-bootstrap",
  "ant-evm",
@@ -1705,8 +1705,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33415e24172c1b7d6066f6d999545375ab8e1d95421d6784bdfff9496f292387"
 dependencies = [
  "bitcoin_hashes",
- "rand 0.6.5",
- "rand_core 0.4.2",
+ "rand 0.7.3",
+ "rand_core 0.5.1",
  "serde",
  "unicode-normalization",
 ]
@@ -6649,7 +6649,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
 dependencies = [
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate 2.0.0",
  "proc-macro2",
  "quote",
  "syn 2.0.100",

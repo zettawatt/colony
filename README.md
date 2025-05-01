@@ -20,7 +20,7 @@ The end goal for Colony isn’t to be the end-all app for [Autonomi](https://aut
 
 ## Current Status
 
-Colony has the installation GUI in place that will create a configuration file, generate a BIP39 compliant 12 word seen phrase, and a main BLS secret key for generating pod file addresses, all stored in a password protected [cocoon](https://docs.rs/cocoon/latest/cocoon/index.html). Next up is creating the pod infrastructure and support file uploads.
+Colony has the installation GUI in place that will create a configuration file, generate a BIP39 compliant 12 word seen phrase, and a main BLS secret key for generating pod file addresses, all stored in a password protected [cocoon](https://docs.rs/cocoon/latest/cocoon/index.html). Colony can query the balance from your provided ETH address. Next up is creating the pod infrastructure and support file uploads.
 
 ## Setup
 
@@ -44,3 +44,7 @@ Main search page:
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/search.png" height="480" />
 </p>
+
+## Want to help?
+
+Support Colony by donating ETH or ANT tokens here: 0xc6e3a7a770656B8473DedCc3d4565b6D507afACE
