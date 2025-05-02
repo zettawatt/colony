@@ -1,10 +1,14 @@
 import {
-    VerticalBox, LineEdit, Button
+    VerticalBox, LineEdit, Button, ScrollView, ComboBox
 } from "std-widgets.slint";
 
 import {
     ConfigData
 } from "config.slint";
+
+import {
+    Item
+} from "item.slint";
 
 export component UploadView inherits VerticalBox {
     if ConfigData.password_correct: VerticalLayout {
@@ -14,7 +18,7 @@ export component UploadView inherits VerticalBox {
                 vertical-alignment: center;
                 horizontal-alignment: left;
             }
-            le_password_view_seed := LineEdit {
+            LineEdit {
                 horizontal_stretch: 1;
                 placeholder_text: "Path to file, press Enter to get upload quote...";
             }
@@ -22,10 +26,121 @@ export component UploadView inherits VerticalBox {
                 text: "File Picker";
                 //clicked => { root.save(); }
             }
+            Button {
+                text: "Create Entry";
+                //clicked => { root.save(); }
+            }
         }
-        Rectangle {
-            vertical_stretch: 1;
-            horizontal_stretch: 1;
+        HorizontalLayout{
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+            Button {
+                text: "Upload All";
+            }
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+        }
+        HorizontalLayout {
+            VerticalLayout {
+                width: 415px;
+                Text {
+                    text: "Files";
+                }
+                Rectangle {
+                    border-width: 1px;
+                    border-color: #e28743;
+                    ScrollView {
+                        VerticalLayout {
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                            Item {}
+                        }
+                    }
+                }
+            }
+            VerticalLayout {
+                min-width: 415px;
+                Text {
+                    text: "File Data";
+                }
+                Rectangle {
+                    border-width: 1px;
+                    border-color: #e28743;
+                    VerticalLayout {
+                        HorizontalLayout {
+                            Text {
+                                text: "Name:";
+                            }
+                            LineEdit {
+                                placeholder-text: "Enter the filename...";
+                            }
+                        }
+                        HorizontalLayout {
+                            Text {
+                                text: "Size:";
+                            }
+                            Text {
+                                text: "100MB";
+                            }
+                        }
+                        HorizontalLayout {
+                            Text {
+                                text: "Select pods:";
+                            }
+                            ComboBox {
+                                current-value: "Default";
+                                model: ["Default","Music","Videos","Pictures","Documents"];
+                            }
+                            Button {
+                                text: "Add";
+                            }
+                        }
+                        HorizontalLayout{
+                            min-height: 400px;
+                            ScrollView {
+                                min-width: 415px;
+                                Item {
+                                    name: "Default";
+                                }
+                            }
+                            VerticalLayout {
+                                Button {
+                                    text: "Remove";
+                                }
+                                Rectangle {
+                                    vertical-stretch: 1;
+                                }
+                            }
+
+                        }
+                        HorizontalLayout {
+                            Rectangle {
+                                horizontal-stretch: 1;
+                            }
+                            Button {
+                                text: "Undo Changes";
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     if !ConfigData.password_correct: VerticalLayout {
