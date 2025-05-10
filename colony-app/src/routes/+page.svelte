@@ -1,6 +1,6 @@
 <script>
   // import Welcome from "../pages/welcome.svelte";
-  import Intro from "../pages/welcome-intro.svelte";
+  import Intro from "./welcome-intro/+page.svelte";
 
 </script>
 
