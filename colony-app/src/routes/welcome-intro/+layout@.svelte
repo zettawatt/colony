@@ -1,13 +1,11 @@
 <script>
-  // import Welcome from "../pages/welcome.svelte";
-  import Intro from "../pages/welcome-intro.svelte";
-
+  export const prerender = true;
+  export const ssr = false;
+  import "../../app.css";
 </script>
 
-<main>
-  <div class="container">
-    <Intro/>
-  </div>
+<main class="container">
+  <slot />
 </main>
 
 <style>
