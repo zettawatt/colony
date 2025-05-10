@@ -1,6 +1,11 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
 
+  let newPassword = $state("");
+  let confirmPassword = $state("");
+  let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
+  let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
+
   let name = $state("");
   let greetMsg = $state("");
 
@@ -22,14 +27,20 @@
     <img src="/splash_screen.png" alt="Colony logo" width="70%"/>
   </div>
   <div class="row pt-3 pb-3">
-    <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
+    <p>Before you get started, you must first create a password that will be used to encrypt and decrypt your seed phrase.</p>
     <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
+    <label class="label">New Password: </label>
+    <input bind:value={newPassword} type="password" class="input" placeholder="Password" />
+  </div>
+  <div class="row pt-3 pb-3">
+    <label class="label">Confirm Password:</label>
+    <input bind:value={confirmPassword} type="password" class="input {confirmClass}" placeholder="Password" />
+  </div>
+  <div>
     <button onclick={() => reroute("/screens/")}>done</button>
   </div>
-
-
 
   <!-- <form class="row" onsubmit={greet}>
     <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
@@ -39,6 +50,13 @@
 </main>
 
 <style>
+  .label {
+    /* display: inline-block; */
+    width: 140px; /* Fixed width for both labels */
+    text-align: right;
+    margin-right: 10px;
+  }
+
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -102,7 +120,6 @@ h1 {
   text-align: center;
 }
 
-input,
 button {
   border-radius: 8px;
   border: 1px solid transparent;

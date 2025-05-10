@@ -5,7 +5,7 @@
 </script>
 
 <main>
-  <div class="container">
+  <div class="">
     <Intro/>
   </div>
 </main>
