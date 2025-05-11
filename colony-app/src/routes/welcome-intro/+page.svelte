@@ -1,5 +1,8 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import SeedPhrase from "../../components/seedPhrase.svelte";
+
+  let seedPhraseRef: SeedPhrase;
 
   let newPassword = $state("");
   let confirmPassword = $state("");
@@ -13,6 +16,11 @@
     window.location.href = href;
   }
 
+  async function handleGenerate() {
+    // Call the generate function from the SeedPhrase component
+    await seedPhraseRef.generate(new Event('click'));
+  }
+
   async function greet(event: Event) {
     event.preventDefault();
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -20,8 +28,9 @@
   }
 </script>
 
+
 <main class="container">
-  <h1>Welcome!</h1>
+  <h3 class="text-3xl font-extrabold dark:text-white">Welcome!</h3>
 
   <div class="row pt-3 pb-3">
     <img src="/splash_screen.png" alt="Colony logo" width="70%"/>
@@ -37,6 +46,20 @@
   <div class="row pt-3 pb-3">
     <label class="label">Confirm Password:</label>
     <input bind:value={confirmPassword} type="password" class="input {confirmClass}" placeholder="Password" />
+  </div>
+
+  <h3 class="text-3xl font-extrabold dark:text-white pt-3 pb-3">12 Word Seed Phrase</h3>
+
+  <div class="row pt-3 pb-3">
+    <p>If you have an existing 12 word seed phrase, please enter it here. <br> Otherwise, press the 'Generate' button to generate a new seed phrase.</p>
+    <!-- <button class="btn">Default</button> -->
+  </div>
+
+  <div class="row pt-3 pb-3">
+    <SeedPhrase bind:this={seedPhraseRef} />
+  </div>
+  <div class="row pt-3 pb-3">
+    <button onclick={handleGenerate}>Generate</button>
   </div>
   <div>
     <button onclick={() => reroute("/screens/")}>done</button>
@@ -88,6 +111,18 @@
   flex-direction: column;
   justify-content: center;
   text-align: center;
+  overflow-y: auto;
+  /* Set a fixed max-width that accounts for scrollbar */
+  max-width: 64rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Remove the responsive breakpoints that cause the shift */
+@media (width >= 48rem) {
+  .container {
+    max-width: 64rem; /* Keep the same max-width as the larger breakpoint */
+  }
 }
 
 .logo {
