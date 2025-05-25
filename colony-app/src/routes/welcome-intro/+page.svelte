@@ -62,7 +62,7 @@
     <button onclick={handleGenerate}>Generate</button>
   </div>
   <div>
-    <button onclick={() => reroute("/screens/")}>done</button>
+    <button onclick={() => reroute("/screens/search")}>done</button>
   </div>
 
   <!-- <form class="row" onsubmit={greet}>

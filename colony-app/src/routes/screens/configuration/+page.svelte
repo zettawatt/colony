@@ -1,8 +1,24 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+
 
   let name = $state("");
   let greetMsg = $state("");
+  let downloadPath = $state("");
+
+  async function toast() {
+    let permissionGranted = await isPermissionGranted();
+    console.log('here', permissionGranted)
+    if (!permissionGranted) {
+      const permission = await requestPermission();
+      permissionGranted = permission === 'granted';
+    }
+    if (permissionGranted) {
+      sendNotification('Tauri is awesome!');
+      sendNotification({ title: 'TAURI', body: 'Tauri is awesome!' });
+    }
+  }
 
   async function greet(event: Event) {
     event.preventDefault();
@@ -11,24 +27,28 @@
   }
 </script>
 
-<main class="info-container">
-  <h3 class="text-3xl font-extrabold dark:text-white">App Information</h3>
-  <p>Developed by: So and so</p>
-  <p>Using the following technologies:</p>
-
+<main>
   <div class="row">
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a>
-    <a href="https://tauri.app" target="_blank">
-      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-    </a>
-    <a href="https://kit.svelte.dev" target="_blank">
-      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-    </a>
+    <h4 class="h4">Configuration Settings</h4>
   </div>
-  <p>Version: 1.0.0</p>
-  <p>Thank you for checking out Colony!</p>
+  <div class="row">
+    <div class="row pt-3">
+      <label class="">Download Path:</label>
+      <input bind:value={downloadPath} type="text" class="input" placeholder="/home/usr/downloads" />
+    </div>
+    <div class="row pt-3">
+      <label class="">Colony Application Data Path:</label>
+      <input bind:value={downloadPath} type="text" class="input" disabled placeholder="/home/usr/downloads" />
+    </div>
+    <div class="row pt-3">
+      <label class="">Auto-Lock Timeout (Minutes):</label>
+      <input bind:value={downloadPath} type="text" class="input" placeholder=10 />
+      <div style="" class="pt-3">
+        <button class="btn btn-primary" onclick={toast}>Save</button>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <style>
@@ -56,19 +76,14 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.info-container {
+.container {
+  margin: 0;
   padding-top: 10vh;
-  /* justify-content: center; */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: center;
-  overflow-y: auto;
-  /* Set a fixed max-width that accounts for scrollbar */
-  /* max-width: 64rem;
-  width: 100%;
-  box-sizing: border-box; */
 }
-
-/* Remove the responsive breakpoints that cause the shift */
-
 
 .logo {
   height: 6em;
@@ -83,7 +98,9 @@
 
 .row {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  margin-left: 2%;
+  /* justify-content: center; */
 }
 
 a {
@@ -96,40 +113,6 @@ a:hover {
   color: #535bf2;
 }
 
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
 
 #greet-input {
   margin-right: 5px;

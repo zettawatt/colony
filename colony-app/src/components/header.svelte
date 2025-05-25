@@ -21,7 +21,8 @@
         <li><a>Downloads</a></li>
         <li><a>Colonies</a></li>
         <li><a>Wallet</a></li>
-        <li><a href="/welcome-intro">Configuration</a></li>
+        <li><a href="/screens/configuration">Configuration</a></li>
+        <li><a href="/welcome-intro">Intro</a></li>
       </ul>
     </div>
     <div class="flex-1"></div>  <!-- Added this empty div for balance -->

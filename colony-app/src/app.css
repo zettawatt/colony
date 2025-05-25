@@ -1,2 +1,18 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+.h1 {
+  @apply text-5xl font-extrabold dark:text-white;
+}
+
+.h2 {
+  @apply text-4xl font-bold dark:text-white;
+}
+
+.h3 {
+  @apply text-3xl font-bold dark:text-white;
+}
+
+.h4 {
+  @apply text-2xl font-bold dark:text-white;
+}

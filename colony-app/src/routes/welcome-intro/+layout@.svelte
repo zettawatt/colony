@@ -4,7 +4,7 @@
   import "../../app.css";
 </script>
 
-<main class="container">
+<main class="">
   <slot />
 </main>
 
@@ -16,5 +16,7 @@
     flex-direction: column;
     justify-content: center;
     text-align: center;
+    overflow-y: scroll;
+    /* Add these lines to prevent layout shift */
   }
 </style>

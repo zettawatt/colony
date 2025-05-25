@@ -11,60 +11,30 @@
   }
 </script>
 
-<main class="search-container">
-  <!-- <h1>Welcome to Colony</h1> -->
+<main class="container">
+  <h1>Welcome to Tauri + Svelte</h1>
 
   <div class="row">
-    <img src="/logo-192x192.png" alt="Colony logo"/>
-    <!-- <img src="/splash_screen.png" alt="Colony logo" width="75%" class="p-5"/> -->
-    <!-- <a href="https://vitejs.dev" target="_blank">
+    <a href="https://vitejs.dev" target="_blank">
       <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a> -->
+    </a>
+    <a href="https://tauri.app" target="_blank">
+      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
+    </a>
+    <a href="https://kit.svelte.dev" target="_blank">
+      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
+    </a>
   </div>
-  <div class="row">
-    <label class="input">
-      <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <g
-          stroke-linejoin="round"
-          stroke-linecap="round"
-          stroke-width="2.5"
-          fill="none"
-          stroke="currentColor"
-        >
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.3-4.3"></path>
-        </g>
-      </svg>
-      <input type="search" required placeholder="Search"/>
-    </label>
-  </div>
-  <!-- <form class="row" onsubmit={greet}>
+  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
+
+  <form class="row" onsubmit={greet}>
     <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
     <button type="submit">Greet</button>
   </form>
-  <p>{greetMsg}</p> -->
+  <p>{greetMsg}</p>
 </main>
 
 <style>
-.search-container {
-  /* margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column; */
-  justify-content: center;
-  text-align: center;
-  overflow-y: auto;
-  /* Set a fixed max-width that accounts for scrollbar */
-  /* max-width: 64rem;
-  width: 100%;
-  box-sizing: border-box; */
-}
-
-.input {
-  width: 60%;
-  max-width: 600px;
-}
-
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -96,21 +66,9 @@
   flex-direction: column;
   justify-content: center;
   text-align: center;
-  overflow-y: auto;
-  /* Set a fixed max-width that accounts for scrollbar */
-  max-width: 64rem;
-  width: 100%;
-  box-sizing: border-box;
 }
 
-/* Remove the responsive breakpoints that cause the shift */
-@media (width >= 48rem) {
-  .container {
-    max-width: 64rem; /* Keep the same max-width as the larger breakpoint */
-  }
-}
-
-/* .logo {
+.logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
@@ -119,7 +77,7 @@
 
 .logo.tauri:hover {
   filter: drop-shadow(0 0 2em #24c8db);
-} */
+}
 
 .row {
   display: flex;
@@ -140,7 +98,8 @@ h1 {
   text-align: center;
 }
 
-/* button {
+input,
+button {
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
@@ -168,12 +127,12 @@ button:active {
 input,
 button {
   outline: none;
-} */
+}
 
 #greet-input {
   margin-right: 5px;
 }
-/* 
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -192,6 +151,6 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
-} */
+}
 
 </style>

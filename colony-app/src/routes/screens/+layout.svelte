@@ -12,7 +12,7 @@
 <div class="layout-container">
   <Header />
   
-  <main class="content">
+  <main class="container">
     <slot />
   </main>
   
@@ -26,7 +26,24 @@
     min-height: 100vh;
   }
 
-  .content {
+  .container {
+    margin: 0;
     flex: 1;
+    padding-top: 10vh;
+    display: flex;
+    flex-direction: column;
+    /* justify-content: center; */
+    /* text-align: center; */
+    overflow-y: auto;
+    max-width: 64rem;
+    width: 100%;
+    box-sizing: border-box;
   }
+
+  @media (width >= 48rem) {
+    .container {
+      max-width: 64rem;
+    }
+  }
+  
 </style>
