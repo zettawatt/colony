@@ -12,7 +12,7 @@
 <div class="layout-container">
   <Header />
   
-  <main class="container">
+  <main class="app-content-container">
     <slot />
   </main>
   
@@ -26,24 +26,29 @@
     min-height: 100vh;
   }
 
-  .container {
+  .app-content-container {
+    flex: 1;
+    padding-top: 10vh;
+    overflow-y: auto;
+  }
+  /* .container {
     margin: 0;
     flex: 1;
     padding-top: 10vh;
     display: flex;
     flex-direction: column;
-    /* justify-content: center; */
-    /* text-align: center; */
+    justify-content: center;
+    text-align: center;
     overflow-y: auto;
     max-width: 64rem;
     width: 100%;
     box-sizing: border-box;
-  }
+  } */
 
-  @media (width >= 48rem) {
+  /* @media (width >= 48rem) {
     .container {
       max-width: 64rem;
     }
-  }
+  } */
   
 </style>

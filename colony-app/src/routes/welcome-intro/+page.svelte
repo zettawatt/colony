@@ -29,7 +29,7 @@
 </script>
 
 
-<main class="container">
+<main class="intro-container">
   <h3 class="text-3xl font-extrabold dark:text-white">Welcome!</h3>
 
   <div class="row pt-3 pb-3">
@@ -104,26 +104,23 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
+.intro-container {
   margin: 0;
   padding-top: 10vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   text-align: center;
   overflow-y: auto;
-  /* Set a fixed max-width that accounts for scrollbar */
-  max-width: 64rem;
   width: 100%;
-  box-sizing: border-box;
 }
 
 /* Remove the responsive breakpoints that cause the shift */
-@media (width >= 48rem) {
+/* Keep the same max-width as the larger breakpoint */
+/* @media (width >= 48rem) {
   .container {
-    max-width: 64rem; /* Keep the same max-width as the larger breakpoint */
+    max-width: 64rem; 
   }
-}
+} */
 
 .logo {
   height: 6em;
