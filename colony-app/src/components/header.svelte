@@ -9,16 +9,16 @@
     <div class="flex-3 flex justifiy-center">
       <ul class="menu menu-horizontal px-1 flex justify-between w-full">
         <li><a href="/screens/search">Search</a></li>
+        <li><a href="/screens/pod-management/uploads">Pod Management</a></li>
         <li>
           <details>
-            <summary>Uploads</summary>
+            <summary>Pod Management (dropdown)</summary>
             <ul class="bg-base-100 rounded-t-none p-2">
-              <li><a>Link 1</a></li>
-              <li><a>Link 2</a></li>
+              <li><a>Uploads</a></li>
+              <li><a>Downloads</a></li>
             </ul>
           </details>
         </li>
-        <li><a>Downloads</a></li>
         <li><a>Colonies</a></li>
         <li><a>Wallet</a></li>
         <li><a href="/screens/configuration">Configuration</a></li>
