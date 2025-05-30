@@ -28,7 +28,7 @@
 
   .app-content-container {
     flex: 1;
-    padding-top: 10vh;
+    /* padding-top: 5vh; */
     overflow-y: auto;
   }
   /* .container {
