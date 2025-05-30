@@ -31,12 +31,12 @@
   <!-- <div class="row">
     <h2 class="h2" style="text-align: center;">Your Pods</h2>
   </div> -->
-  <div class="drawer drawer-open">
+  <div class="drawer drawer-open" style="padding-top:1vh;">
     <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
     <div class="drawer-content flex flex-col">
-      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:5vh;">
+      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
-        <button class="btn btn-warning">Create New Pod</button>
+        <button class="btn btn-warning" onclick={my_modal_1.showModal()}>Create New Pod</button>
       </div>
       <div class="row">
         <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
@@ -49,6 +49,7 @@
                   <th>Pod Name</th>
                   <th>Pod Address</th>
                   <th>Created Date</th>
+                  <th>Last Modified</th>
                   <th>Operations</th>
                 </tr>
               </thead>
@@ -57,6 +58,7 @@
                   <th>1</th>
                   <td>Cy Ganderton</td>
                   <td>Quality Control Specialist</td>
+                  <td>Blue</td>
                   <td>Blue</td>
                   <td>
                     <button class="btn btn-accent">u</button>
@@ -69,6 +71,7 @@
                   <td>Hart Hagerty</td>
                   <td>Desktop Support Technician</td>
                   <td>Purple</td>
+                  <td>Blue</td>
                   <td>
                     <button class="btn btn-disabled btn-accent">u</button>
                     <button class="btn btn-warning">e</button>
@@ -80,6 +83,7 @@
                   <td>Brice Swyre</td>
                   <td>Tax Accountant</td>
                   <td>Red</td>
+                  <td>Blue</td>
                   <td>
                     <button class="btn btn-accent">u</button>
                     <button class="btn btn-warning">e</button>
@@ -98,7 +102,7 @@
     </div>
     <div class="drawer-side" style="height: 90vh;">
       <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
-      <ul class="menu bg-base-100 text-base-content min-h-full w-60 p-5">
+      <ul class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
         <!-- Sidebar content here -->
         <li><a>Your Pods</a></li>
         <li><a>Uploads</a></li>
@@ -106,6 +110,18 @@
       </ul>
     </div>
   </div>
+  <dialog id="my_modal_1" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold">Hello!</h3>
+      <p class="py-4">Press ESC key or click the button below to close</p>
+      <div class="modal-action">
+        <form method="dialog">
+          <!-- if there is a button in form, it will close the modal -->
+          <button class="btn">Close</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
   <!-- <div class="row" style="">
     <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
       <div class="card-body items-center text-center">
