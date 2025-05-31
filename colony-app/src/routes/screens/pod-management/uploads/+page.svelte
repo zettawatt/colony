@@ -36,11 +36,11 @@
     <div class="drawer-content flex flex-col">
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
-        <button class="btn btn-warning" onclick={my_modal_1.showModal()}>Create New Pod</button>
+        <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
       </div>
       <div class="row">
         <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
-          <div class="card-body items-center text-center">
+          <div class="card-body items-center text-center p-4">
             <!-- <h2 class="card-title h2">Your Pods</h2> -->
             <table class="table table-zebra">
               <thead>
@@ -61,9 +61,9 @@
                   <td>Blue</td>
                   <td>Blue</td>
                   <td>
-                    <button class="btn btn-accent">u</button>
+                    <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
                     <button class="btn btn-warning">e</button>
-                    <button class="btn btn-error">d</button>
+                    <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
                   </td>
                 </tr>
                 <tr>
@@ -110,73 +110,60 @@
       </ul>
     </div>
   </div>
-  <dialog id="my_modal_1" class="modal">
+  <dialog id="createNewPodModal" class="modal">
     <div class="modal-box">
-      <h3 class="text-lg font-bold">Hello!</h3>
-      <p class="py-4">Press ESC key or click the button below to close</p>
+      <h3 class="text-lg font-bold">Create New Pod</h3>
+      <div class="py-4">
+        <input type="text" placeholder="Please enter a name for your pod..." class="input" />
+      </div>
       <div class="modal-action">
         <form method="dialog">
           <!-- if there is a button in form, it will close the modal -->
-          <button class="btn">Close</button>
+          <button class="btn btn-primary">Create</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
     </div>
   </dialog>
-  <!-- <div class="row" style="">
-    <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
-      <div class="card-body items-center text-center">
-        <h2 class="card-title h2">Your Pods</h2>
-        <table class="table table-zebra">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Pod Name</th>
-              <th>Pod Address</th>
-              <th>Created Date</th>
-            </tr>
-          </thead>
+  <dialog id="uploadPodModal" class="modal">
+    <div class="modal-box w-8/12 max-w-xl">
+      <h3 class="text-lg font-bold">Upload Preview</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p class="pb-3">This is a preview of how much it might cost to upload your pod:</p>
+        <table class="table">
           <tbody>
             <tr>
-              <th>1</th>
-              <td>Cy Ganderton</td>
-              <td>Quality Control Specialist</td>
-              <td>Blue</td>
-            </tr>
-            <tr>
-              <th>2</th>
-              <td>Hart Hagerty</td>
-              <td>Desktop Support Technician</td>
-              <td>Purple</td>
-            </tr>
-            <tr>
-              <th>3</th>
-              <td>Brice Swyre</td>
-              <td>Tax Accountant</td>
-              <td>Red</td>
+              <td>[pod name here]</td>
+              <td><span class="loading loading-dots"></span> [some ant denomination here 100 ANT]</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
-  </div> -->
-  <!-- <div class="row">
-    <div class="row pt-3">
-      <label class="">Download Path:</label>
-      <input bind:value={downloadPath} type="text" class="input" placeholder="/home/usr/downloads" />
-    </div>
-    <div class="row pt-3">
-      <label class="">Colony Application Data Path:</label>
-      <input bind:value={downloadPath} type="text" class="input" disabled placeholder="/home/usr/downloads" />
-    </div>
-    <div class="row pt-3">
-      <label class="">Auto-Lock Timeout (Minutes):</label>
-      <input bind:value={downloadPath} type="text" class="input" placeholder=10 />
-      <div style="" class="pt-3">
-        <button class="btn btn-primary" onclick={toast}>Save</button>
+      <div class="modal-action modal-backdrop">
+        <form method="dialog">
+          <button class="btn btn-primary btn-disabled">
+            <span class="loading loading-spinner"></span>
+            Checking price
+          </button>
+          <button class="btn btn-soft btn-error">Cancel Upload</button>
+        </form>
       </div>
     </div>
-  </div> -->
-
+  </dialog>
+    <dialog id="deletePodModal" class="modal">
+    <div class="modal-box w-8/12 max-w-xl">
+      <h3 class="text-lg font-bold">Pod Deletion</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p class="pb-3">Are you use you want to delete your pod?</p>
+      </div>
+      <div class="modal-action modal-backdrop">
+        <form method="dialog">
+          <button class="btn btn-error">Delete</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
 </main>
 
 <style>
