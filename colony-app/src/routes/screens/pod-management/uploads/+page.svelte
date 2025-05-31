@@ -62,7 +62,7 @@
                   <td>Blue</td>
                   <td>
                     <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
-                    <button class="btn btn-warning">e</button>
+                    <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
                     <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
                   </td>
                 </tr>
@@ -139,7 +139,7 @@
           </tbody>
         </table>
       </div>
-      <div class="modal-action modal-backdrop">
+      <div class="modal-action">
         <form method="dialog">
           <button class="btn btn-primary btn-disabled">
             <span class="loading loading-spinner"></span>
@@ -150,13 +150,146 @@
       </div>
     </div>
   </dialog>
-    <dialog id="deletePodModal" class="modal">
+  <dialog id="deletePodModal" class="modal">
     <div class="modal-box w-8/12 max-w-xl">
       <h3 class="text-lg font-bold">Pod Deletion</h3>
       <div class="py-4" style="justify-content: center;">
         <p class="pb-3">Are you use you want to delete your pod?</p>
       </div>
-      <div class="modal-action modal-backdrop">
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-error">Delete</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="editPodModal" class="modal">
+    <div class="modal-box w-10/12 max-w-3xl max-h-lg">
+      <h3 class="text-lg font-bold">Pod Editing</h3>
+      <div class="py-2" style="justify-content: center;">
+        <div class="">
+          <input type="file" class="file-input" />
+          <button class="btn btn-soft btn-primary">Add File</button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>File name</th>
+              <th>File size</th>
+              <th>File type</th>
+              <th>File Metadata</th>
+              <th>Operations</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>[file name here]</td>
+              <td>[file size here]</td>
+              <td>
+                <select class="select select-neutral">
+                  <option disabled selected>File Type</option>
+                  <option>Music</option>
+                  <option>Video</option>
+                  <option>Document</option>
+                  <option>Pictures</option>
+                  <option>Other</option>
+                </select>
+              </td>
+              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
+              <td><button class="btn btn-outline btn-error">d</button></td>
+            </tr>
+            <tr>
+              <td>[file name here]</td>
+              <td>[file size here]</td>
+              <td>
+                <select class="select select-neutral">
+                  <option disabled selected>File Type</option>
+                  <option>Music</option>
+                  <option>Video</option>
+                  <option>Document</option>
+                  <option>Pictures</option>
+                  <option>Other</option>
+                </select>
+              </td>
+              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
+              <td><button class="btn btn-outline btn-error">d</button></td>
+            </tr>
+            <tr>
+              <td>[file name here]</td>
+              <td>[file size here]</td>
+              <td>
+                <select class="select select-neutral">
+                  <option disabled selected>File Type</option>
+                  <option>Music</option>
+                  <option>Video</option>
+                  <option>Document</option>
+                  <option>Pictures</option>
+                  <option>Other</option>
+                </select>
+              </td>
+              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
+              <td><button class="btn btn-outline btn-error">d</button></td>
+            </tr>
+            <tr>
+              <td>[file name here]</td>
+              <td>[file size here]</td>
+              <td>
+                <select class="select select-neutral">
+                  <option disabled selected>File Type</option>
+                  <option>Music</option>
+                  <option>Video</option>
+                  <option>Document</option>
+                  <option>Pictures</option>
+                  <option>Other</option>
+                </select>
+              </td>
+              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
+              <td><button class="btn btn-outline btn-error">d</button></td>
+            </tr>
+            <tr>
+              <td>[file name here]</td>
+              <td>[file size here]</td>
+              <td>
+                <select class="select select-neutral">
+                  <option disabled selected>File Type</option>
+                  <option>Music</option>
+                  <option>Video</option>
+                  <option>Document</option>
+                  <option>Pictures</option>
+                  <option>Other</option>
+                </select>
+              </td>
+              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
+              <td><button class="btn btn-outline btn-error">d</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-primary">Save Pod</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="editFileMetadataModal" class="modal">
+    <div class="modal-box w-5/12 max-w-xl">
+      <h3 class="text-lg font-bold">File Metadata</h3>
+      <div class="py-4" style="justify-content: center;">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Title</legend>
+          <input type="text" class="input" placeholder="Media Title" />
+          <legend class="fieldset-legend">Artist</legend>
+          <input type="text" class="input" placeholder="Artist" />
+          <legend class="fieldset-legend">Album</legend>
+          <input type="text" class="input" placeholder="Album" />
+          <legend class="fieldset-legend">Release Date</legend>
+          <input type="text" class="input" placeholder="mm/dd/yyyy" />
+        </fieldset>
+      </div>
+      <div class="modal-action">
         <form method="dialog">
           <button class="btn btn-error">Delete</button>
           <button class="btn btn-soft btn-error">Cancel</button>
