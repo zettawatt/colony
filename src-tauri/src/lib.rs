@@ -1,5 +1,5 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use colony::config::generate_seed_phrase;
+//use colony::config::generate_seed_phrase;
 use serde::Serialize;
 
 #[tauri::command]
@@ -8,8 +8,10 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn get_new_seed_phrase() -> Result<colony::config::SeedPhrase, String> {
-    Ok(generate_seed_phrase())
+fn get_new_seed_phrase() -> Result<String, String> {
+    //Ok(generate_seed_phrase())
+    let seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
+    Ok(seed_phrase)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

@@ -1,18 +1,13 @@
 [package]
-name = "colony-app"
+name = "colony"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "A GUI frontend to the Autonomi network with a client side search engine"
+authors = ["Chuck McClish", "Maxx Rodriguez"]
 edition = "2021"
+homepage = "https://github.com/zettawatt/colony"
+license = "GPL-3.0-only"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "colony_app_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -22,7 +17,16 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-colony = { path = "../../" }
 tauri-plugin-notification = "2"
-# colony = { git = "https://github.com/zettawatt/colony" }
+colonylib = "0.2.0"
+tracing = "0.1.41"
 
+[profile.dev]
+opt-level = 0
+incremental = true
+
+[dev-dependencies]
+tempfile = "3.8"
+tokio-test = "0.4"
+ruint = "1.12.3"
+tracing-subscriber = "0.3.18"
