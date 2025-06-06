@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //use colony::config::generate_seed_phrase;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::sync::Mutex;
 use tauri::State;
 use autonomi::{Client, Wallet, AddressParseError, Bytes};
@@ -110,7 +111,6 @@ pub struct AppState {
 // Data structures for Tauri commands
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PodInfo {
-    pub name: String,
     pub address: String,
 }
 
@@ -120,14 +120,52 @@ pub struct CreatePodRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct CreatePodRefRequest {
+    pub pod_address: String,
+    pub pod_ref_address: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UploadFileRequest {
     pub file_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RefreshRefRequest {
+    pub depth: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DownloadFileRequest {
     pub address: String,
     pub destination_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SearchRequest {
+    pub query: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PutSubjectDataRequest {
+    pub pod_address: String,
+    pub subject_address: String,
+    pub data: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GetSubjectDataRequest {
+    pub subject_address: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SearchResult {
+    pub results: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SubjectDataResult {
+    pub data: String,
 }
 
 #[tauri::command]
@@ -282,6 +320,7 @@ async fn initialize_pod_manager(
         return Err(Error::Message("Graph not initialized".to_string()));
     }
 
+    info!("PodManager components verified - ready for operations");
     Ok("PodManager components verified - ready for operations".to_string())
 }
 
@@ -337,9 +376,406 @@ async fn add_pod(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
+    info!("Added pod {} with address {}", &request.name, &pod_address);
     Ok(PodInfo {
-        name: request.name,
         address: pod_address,
+    })
+}
+
+#[tauri::command]
+async fn add_pod_ref(
+    state: State<'_, Mutex<AppState>>,
+    request: CreatePodRefRequest
+) -> Result<PodInfo, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    podman.add_pod_ref(&request.pod_address, &request.pod_ref_address)?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Added pod reference {} to pod {}", &request.pod_ref_address, &request.pod_address);
+    Ok(PodInfo {
+        address: request.pod_address,
+    })
+}
+
+#[tauri::command]
+async fn upload_all(
+    state: State<'_, Mutex<AppState>>,
+) -> Result<String, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    podman.upload_all().await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Uploaded all updated pods to Autonomi");
+    Ok(format!("Successfully uploaded all updated pods to Autonomi"))
+}
+
+#[tauri::command]
+async fn refresh_cache(
+    state: State<'_, Mutex<AppState>>,
+) -> Result<String, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    podman.refresh_cache().await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Refreshed local pod cache");
+    Ok(format!("Successfully efreshed local pod cache"))
+}
+
+#[tauri::command]
+async fn refresh_ref(
+    state: State<'_, Mutex<AppState>>,
+    request: RefreshRefRequest
+) -> Result<String, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    let depth: u64 = request.depth.clone().parse().map_err(|_| Error::from("Invalid depth"))?;
+    podman.refresh_ref(depth).await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Refreshed all local pods and pod reference to cache to depth {}", &request.depth);
+    Ok(format!("Successfully refreshed all local pods and pod reference to cache to depth {}", &request.depth))
+}
+
+#[tauri::command]
+async fn search(
+    state: State<'_, Mutex<AppState>>,
+    request: SearchRequest
+) -> Result<SearchResult, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    let search_results = podman.search(request.query.clone()).await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Search completed");
+    Ok(SearchResult {
+        results: search_results,
+    })
+}
+
+#[tauri::command]
+async fn put_subject_data(
+    state: State<'_, Mutex<AppState>>,
+    request: PutSubjectDataRequest
+) -> Result<String, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    podman.put_subject_data(&request.pod_address, &request.subject_address, &request.data).await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Put data for subject {} in pod {}", &request.subject_address, &request.pod_address);
+    Ok(format!("Successfully put data for subject {} in pod {}", &request.subject_address, &request.pod_address))
+}
+
+#[tauri::command]
+async fn get_subject_data(
+    state: State<'_, Mutex<AppState>>,
+    request: GetSubjectDataRequest
+) -> Result<SubjectDataResult, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    let subject_data = podman.get_subject_data(&request.subject_address).await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Retrieved data for subject {}", &request.subject_address);
+    Ok(SubjectDataResult {
+        data: subject_data,
     })
 }
 
@@ -472,6 +908,13 @@ pub fn run() {
             get_new_seed_phrase,
             initialize_pod_manager,
             add_pod,
+            add_pod_ref,
+            upload_all,
+            refresh_cache,
+            refresh_ref,
+            search,
+            put_subject_data,
+            get_subject_data,
             initialize_autonomi_client,
             initialize_datastore,
             create_keystore_from_seed_phrase,
