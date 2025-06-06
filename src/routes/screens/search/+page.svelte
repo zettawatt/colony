@@ -3,11 +3,100 @@
 
   let name = $state("");
   let greetMsg = $state("");
+  let statusMessage = $state("");
+  let isLoading = $state(false);
+
+  // Type definitions for Tauri commands
+  interface CreatePodRequest {
+    name: string;
+  }
+
+  interface PodInfo {
+    name: string;
+    address: string;
+  }
 
   async function greet(event: Event) {
     event.preventDefault();
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
     greetMsg = await invoke("greet", { name });
+  }
+
+  async function handleInitializeAutonomiClient() {
+    // const walletKey = prompt("Enter wallet key:");
+    // if (!walletKey) {
+    //   statusMessage = "Wallet key is required";
+    //   return;
+    // }
+
+    const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    isLoading = true;
+    statusMessage = "Initializing Autonomi client...";
+
+    try {
+      const result = await invoke("initialize_autonomi_client", { walletKey });
+      statusMessage = `Success: ${result}`;
+    } catch (error) {
+      statusMessage = `Error: ${error}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function handleInitializePodManager() {
+    const password = prompt("Enter keystore password:");
+    if (!password) {
+      statusMessage = "Password is required";
+      return;
+    }
+
+    isLoading = true;
+
+    try {
+      // Step 1: Initialize datastore
+      statusMessage = "Initializing datastore...";
+      await invoke("initialize_datastore");
+
+      // Step 2: Open keystore
+      statusMessage = "Opening keystore...";
+      await invoke("open_keystore", { password });
+
+      // Step 3: Initialize graph
+      statusMessage = "Initializing graph...";
+      await invoke("initialize_graph");
+
+      // Step 4: Initialize pod manager
+      statusMessage = "Initializing pod manager...";
+      const result = await invoke("initialize_pod_manager");
+
+      statusMessage = `Success: Pod Manager fully initialized - ${result}`;
+    } catch (error) {
+      statusMessage = `Error: ${error}`;
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function handleAddPod() {
+    const podName = prompt("Enter pod name:");
+    if (!podName) {
+      statusMessage = "Pod name is required";
+      return;
+    }
+
+    isLoading = true;
+    statusMessage = "Adding pod...";
+
+    try {
+      const request: CreatePodRequest = { name: podName };
+      const result: PodInfo = await invoke("add_pod", { request });
+      statusMessage = `Success: Pod "${result.name}" created with address: ${result.address}`;
+    } catch (error) {
+      statusMessage = `Error: ${error}`;
+    } finally {
+      isLoading = false;
+    }
   }
 </script>
 
@@ -38,6 +127,39 @@
       <input type="search" required placeholder="Search"/>
     </label>
   </div>
+
+  <!-- Action buttons -->
+  <div class="button-row">
+    <button
+      class="action-button"
+      onclick={handleInitializeAutonomiClient}
+      disabled={isLoading}
+    >
+      Initialize Autonomi Client
+    </button>
+    <button
+      class="action-button"
+      onclick={handleInitializePodManager}
+      disabled={isLoading}
+    >
+      Initialize Pod Manager
+    </button>
+    <button
+      class="action-button"
+      onclick={handleAddPod}
+      disabled={isLoading}
+    >
+      Add Pod
+    </button>
+  </div>
+
+  <!-- Status message -->
+  {#if statusMessage}
+    <div class="status-message" class:loading={isLoading}>
+      {statusMessage}
+    </div>
+  {/if}
+
   <!-- <form class="row" onsubmit={greet}>
     <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
     <button type="submit">Greet</button>
@@ -63,6 +185,61 @@
 .input {
   width: 60%;
   max-width: 600px;
+}
+
+.button-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  color: #0f0f0f;
+  background-color: #ffffff;
+  transition: border-color 0.25s;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.action-button:hover:not(:disabled) {
+  border-color: #396cd8;
+}
+
+.action-button:active:not(:disabled) {
+  border-color: #396cd8;
+  background-color: #e8e8e8;
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status-message {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.status-message.loading {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+  color: #1976d2;
 }
 
 .logo.vite:hover {
