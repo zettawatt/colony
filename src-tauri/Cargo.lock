@@ -2150,9 +2150,9 @@ dependencies = [
 
 [[package]]
 name = "colonylib"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3b60c91638fea8c116bf347a28799606e89122cb399452f60bfd2dd99cdcc47"
+checksum = "9e1faff03378bac74ea735bf3d9de26c6d8ca7e7ef5811b396656b259bf93122"
 dependencies = [
  "autonomi",
  "bip39",
@@ -2164,6 +2164,7 @@ dependencies = [
  "hex 0.4.3",
  "oxigraph",
  "oxjsonld",
+ "oxttl",
  "serde",
  "serde_json",
  "sn_bls_ckd",
