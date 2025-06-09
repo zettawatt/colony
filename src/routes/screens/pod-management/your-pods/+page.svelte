@@ -99,9 +99,9 @@
       </div>
     </div>
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
-      <li><a class="menu-active">Your Pods</a></li>
-      <li><a>Uploads</a></li>
-      <li><a>Downloads</a></li>
+      <li><a href="#" class="menu-active">Your Pods</a></li>
+      <li><a href="/screens/pod-management/uploads">Uploads</a></li>
+      <li><a href="/screens/pod-management/downloads">Downloads</a></li>
     </ul>
   </Drawer>
   <dialog id="createNewPodModal" class="modal">
