@@ -424,7 +424,65 @@ async fn add_pod_ref(
     ).await?;
 
     // Use the PodManager
-    podman.add_pod_ref(&request.pod_address, &request.pod_ref_address)?;
+    podman.add_pod_ref(&request.pod_address, &request.pod_ref_address).await?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("Added pod reference {} to pod {}", &request.pod_ref_address, &request.pod_address);
+    Ok(PodInfo {
+        address: request.pod_address,
+    })
+}
+
+#[tauri::command]
+async fn remove_pod_ref(
+    state: State<'_, Mutex<AppState>>,
+    request: CreatePodRefRequest
+) -> Result<PodInfo, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state.client.lock().unwrap().as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state.wallet.lock().unwrap().as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state.datastore.lock().unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state.keystore.lock().unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state.graph.lock().unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let mut podman = PodManager::new(
+        client,
+        &wallet,
+        &mut datastore,
+        &mut keystore,
+        &mut graph
+    ).await?;
+
+    // Use the PodManager
+    podman.remove_pod_ref(&request.pod_address, &request.pod_ref_address).await?;
 
     // Put the components back
     {
@@ -909,6 +967,7 @@ pub fn run() {
             initialize_pod_manager,
             add_pod,
             add_pod_ref,
+            remove_pod_ref,
             upload_all,
             refresh_cache,
             refresh_ref,
