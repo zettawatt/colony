@@ -79,7 +79,7 @@
 
 <main>
   {#if showToast}
-    <div class="toast toast-end toast-bottom">
+    <div class="toast toast-end toast-bottom" style="max-width: 50%;">
       <div class={"alert alert-" + toastType} onclick={() => (showToast = false)}>
         <span>{toastMessage}</span>
       </div>
@@ -108,7 +108,7 @@
                 <tr>
                   <th></th>
                   <th>Name</th>
-                  <th>Address</th>
+                  <th>Upload Address</th>
                   <th>Size</th>
                 </tr>
               </thead>
