@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Drawer from "../../../../components/drawer.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 
@@ -31,9 +32,10 @@
   <!-- <div class="row">
     <h2 class="h2" style="text-align: center;">Your Pods</h2>
   </div> -->
-  <div class="drawer drawer-open" style="padding-top:1vh;">
-    <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
-    <div class="drawer-content flex flex-col">
+  <Drawer>
+    <div slot="main">
+      <!-- Your primary page content, e.g., the "Your Pods" table and modals -->
+      <!-- ... main content ... -->
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
@@ -95,21 +97,13 @@
           </div>
         </div>
       </div>
-      <!-- Page content here -->
-      <!-- <label for="my-drawer-2" class="btn btn-primary drawer-button lg:hidden">
-        Open drawer
-      </label> -->
     </div>
-    <div class="drawer-side" style="height: 90vh;">
-      <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
-      <ul class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
-        <!-- Sidebar content here -->
-        <li><a class="menu-active">Your Pods</a></li>
-        <li><a>Uploads</a></li>
-        <li><a>Downloads</a></li>
-      </ul>
-    </div>
-  </div>
+    <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
+      <li><a class="menu-active">Your Pods</a></li>
+      <li><a>Uploads</a></li>
+      <li><a>Downloads</a></li>
+    </ul>
+  </Drawer>
   <dialog id="createNewPodModal" class="modal">
     <div class="modal-box">
       <h3 class="text-lg font-bold">Create New Pod</h3>
