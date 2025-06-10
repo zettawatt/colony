@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import SeedPhrase from "../../components/seedPhrase.svelte";
+  import SeedPhrase from "../../components/SeedPhrase.svelte";
+
 
   let seedPhraseRef: SeedPhrase;
 
@@ -8,23 +9,28 @@
   let confirmPassword = $state("");
   let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
   let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
-
-  let name = $state("");
-  let greetMsg = $state("");
+  let words = "";
 
   function reroute(href:string) {
     window.location.href = href;
   }
 
-  async function handleGenerate() {
-    // Call the generate function from the SeedPhrase component
-    await seedPhraseRef.generate(new Event('click'));
+  function handleGenerate() {
+    words = seedPhraseRef.generateNewSeedPhrase();
+    console.log(words)
   }
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+  async function initDatastore() {
+    try {
+      const datastore = await invoke("initialize_datastore"); 
+      const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: words})
+      const writtenKeystore = await invoke("write_keystore_to_file", {password: confirmPassword})
+      reroute("/screens/search")
+      return true;
+    } catch (error) {
+      console.log(error)
+      return false;
+    }
   }
 </script>
 
@@ -62,14 +68,8 @@
     <button onclick={handleGenerate}>Generate</button>
   </div>
   <div>
-    <button onclick={() => reroute("/screens/search")}>done</button>
+    <button onclick={initDatastore}>done</button>
   </div>
-
-  <!-- <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p> -->
 </main>
 
 <style>
