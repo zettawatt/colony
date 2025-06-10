@@ -24,7 +24,7 @@
   };
 </script>
 
-<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
   {#each items as toast (toast.id)}
     <div
       class={`alert shadow-lg ${toastClass(toast.type)}`}
