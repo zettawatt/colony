@@ -6,10 +6,12 @@
   export const ssr = false;
 
   import "../app.css";
+    import Toast from '../components/toast.svelte';
 </script>
 
 <div class="">
   <slot/>
+  <Toast />
 </div>
 
 <style>
