@@ -1,31 +1,47 @@
 <script lang="ts">
   import Drawer from "../../../../components/drawer.svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+  import { addToast }  from '../../../../stores/toast';
+  import { onMount } from "svelte";
 
+  let isLoading = $state(false);
+  let newPodName = $state("");
 
-  let name = $state("");
-  let greetMsg = $state("");
-  let downloadPath = $state("");
+  type PodInfo = {
+    address: string
+  }
 
-  async function toast() {
-    let permissionGranted = await isPermissionGranted();
-    console.log('here', permissionGranted)
-    if (!permissionGranted) {
-      const permission = await requestPermission();
-      permissionGranted = permission === 'granted';
-    }
-    if (permissionGranted) {
-      sendNotification('Tauri is awesome!');
-      sendNotification({ title: 'TAURI', body: 'Tauri is awesome!' });
+  async function initPodManager() {
+    try {
+      await invoke("initialize_graph");
+      const result = await invoke("initialize_pod_manager");
+
+    } catch (error) {
+      console.log(error);
     }
   }
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+  async function createPod() {
+    if (newPodName) {
+      try {
+        isLoading = true;
+        const podInfo = await invoke('add_pod', { request: {name: newPodName} }) as PodInfo;
+        addToast('Pod created at address:'+ podInfo.address, "info")
+        console.log('Pod created at address:', podInfo.address);
+      } catch (err) {
+        console.error('Failed to add pod:', err);
+        addToast('Failed to add pod: ' + err, "error")
+      } finally {
+        const modal = document.getElementById('createNewPodModal') as HTMLDialogElement;
+        if (modal) modal.close();
+        isLoading = false;
+      }
+    }
   }
+
+  onMount(() => {
+    initPodManager();
+  });
 </script>
 
 <main>
@@ -38,7 +54,10 @@
       <!-- ... main content ... -->
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
-        <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
+        <div class="utility-bar" style="display: flex;">
+          <button class="btn btn-neutral btn-soft" onclick={downloadFile()}>Upload All Pods</button>
+          <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
+        </div>
       </div>
       <div class="row">
         <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
@@ -58,10 +77,10 @@
               <tbody>
                 <tr>
                   <th>1</th>
-                  <td>Cy Ganderton</td>
-                  <td>Quality Control Specialist</td>
-                  <td>Blue</td>
-                  <td>Blue</td>
+                  <td>Movies</td>
+                  <td>d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432</td>
+                  <td>2024-05-15</td>
+                  <td>2024-06-02</td>
                   <td>
                     <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
                     <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
@@ -70,26 +89,26 @@
                 </tr>
                 <tr>
                   <th>2</th>
-                  <td>Hart Hagerty</td>
-                  <td>Desktop Support Technician</td>
-                  <td>Purple</td>
-                  <td>Blue</td>
+                  <td>Photos</td>
+                  <td>b4108849f2562b7580b48225f11eda9f35cdf44d6dedfa75ac900d3d7bfc4f4d</td>
+                  <td>2023-12-08</td>
+                  <td>2024-05-25</td>
                   <td>
-                    <button class="btn btn-disabled btn-accent">u</button>
-                    <button class="btn btn-warning">e</button>
-                    <button class="btn btn-error">d</button>
+                    <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
+                    <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
+                    <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
                   </td>
                 </tr>
                 <tr>
                   <th>3</th>
-                  <td>Brice Swyre</td>
-                  <td>Tax Accountant</td>
-                  <td>Red</td>
-                  <td>Blue</td>
+                  <td>Music</td>
+                  <td>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</td>
+                  <td>2024-01-30</td>
+                  <td>2024-04-19</td>
                   <td>
-                    <button class="btn btn-accent">u</button>
-                    <button class="btn btn-warning">e</button>
-                    <button class="btn btn-error">d</button>
+                    <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
+                    <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
+                    <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
                   </td>
                 </tr>
               </tbody>
@@ -108,12 +127,23 @@
     <div class="modal-box">
       <h3 class="text-lg font-bold">Create New Pod</h3>
       <div class="py-4">
-        <input type="text" placeholder="Please enter a name for your pod..." class="input" />
+        <input type="text" placeholder="Please enter a name for your pod..." class="input w-full" bind:value={newPodName} />
       </div>
       <div class="modal-action">
         <form method="dialog">
           <!-- if there is a button in form, it will close the modal -->
-          <button class="btn btn-primary">Create</button>
+          <button 
+            class="btn btn-primary" 
+            type= "button"
+            onclick={createPod}
+            disabled={!newPodName}
+          >
+            {#if isLoading}
+              <span class="loading loading-spinner"></span>
+            {:else}
+              Create
+            {/if}
+          </button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
@@ -295,6 +325,16 @@
 
 <style>
 
+.utility-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* Space between utility items */
+}
+.upload-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .user-pods-container {
   text-align: center;
 }
