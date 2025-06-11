@@ -1038,7 +1038,7 @@ async fn upload_cost(
 async fn upload_data(
     state: State<'_, Mutex<AppState>>,
     request: UploadFileRequest,
-) -> Result<String, Error> {
+) -> Result<(String, String), Error> {
     let (client, wallet) = {
         let state = state.lock().unwrap();
 
@@ -1067,12 +1067,7 @@ async fn upload_data(
     let payment = PaymentOption::Wallet(wallet);
     let (cost, data_addr) = client.data_put_public(data, payment).await?;
 
-    Ok(format!(
-        "File {} uploaded to address {} for {}",
-        request.file_path,
-        data_addr,
-        cost.to_string()
-    ))
+    Ok((cost.to_string(), data_addr.to_string()))
 }
 
 #[tauri::command]
