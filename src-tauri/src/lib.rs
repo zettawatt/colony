@@ -20,6 +20,14 @@ use std::io::Error as IoError;
 use std::sync::{PoisonError, MutexGuard};
 use thiserror;
 use tracing::{error, info};
+use std::fs;
+
+#[tauri::command]
+fn get_file_size(path: String) -> Result<u64, String> {
+    fs::metadata(path)
+        .map(|meta| meta.len())
+        .map_err(|e| e.to_string())
+}
 
 // Error handling
 #[derive(Debug, thiserror::Error)]
@@ -883,7 +891,7 @@ async fn upload_cost(
     let cost = client.data_cost(data).await?;
     info!("File {} is estimated to cost {} to upload", request.file_path, cost.to_string());    
 
-    Ok(format!("File {} is estimated to cost {} to upload", request.file_path, cost.to_string()))
+    Ok(cost.to_string())
 }
 
 #[tauri::command]
@@ -963,6 +971,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(app_state))
         .invoke_handler(tauri::generate_handler![
+            get_file_size,
             greet,
             get_new_seed_phrase,
             initialize_pod_manager,
