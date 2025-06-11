@@ -2,10 +2,29 @@
   import Drawer from "../../../../components/drawer.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { open } from '@tauri-apps/plugin-dialog';
+  import { addToast }  from '../../../../stores/toast';
+  import ps, { type UploadedFileObj } from "../../../../stores/persistantStorage";
+
+  let fileObjs = [];
+  let workingFileObj: UploadedFileObj | undefined;
+
+  async function copyAddress(address: string) {
+    await navigator.clipboard.writeText(address);
+    addToast('Copied address to clipboard!', 'success');
+  }
+
+  function handleCopyAddress(event: MouseEvent) {
+    const button = event.currentTarget as HTMLButtonElement;
+    console.log(button)
+    const address = button.dataset.address;
+    if (address) {
+      copyAddress(address);
+    }
+  }
 
   let isPreviewLoading = $state(false);
   let selectedPath = $state("");
-  let selectedFileName = $state();
+  let selectedFileName = $state("");
   let uploadCost = $state("");
   let wasUploadCanceled = $state(false)
 
@@ -13,25 +32,30 @@
   let toastMessage = $state("");
   let toastType = $state("info"); // can be "info", "success", "error", etc.
 
-  function handleShowToast(msg: string, type = "info") {
-    toastMessage = msg;
-    toastType = type;
-    showToast = true;
-    setTimeout(() => (showToast = false), 5000);
-  }
 
   async function selectFile() {
-    const filePath = await open({ multiple: false });
+    const filePath = await open({ multiple: false, directory: false });
     if (filePath) {
+      const fileSize = await invoke('get_file_size', { path: filePath }) as number;
       isPreviewLoading = true;
       wasUploadCanceled = false;
       selectedPath = filePath;
       selectedFileName = filePath.split(/[/\\]/).pop() || "";
+      let selectedFileExtension = selectedFileName.split('.').pop() || "";
       console.log('Selected file path:', selectedPath);
       uploadCost = await uploadPreview(); // Trigger upload cost preview
       isPreviewLoading = false;
-      // Optionally, send to the backend immediately
-      // await invoke('process_file', { path: selectedPath });
+
+      workingFileObj = {
+        name: selectedFileName,
+        path: filePath,
+        extension: selectedFileExtension,
+        uploadedDate: new Date().toISOString(),
+        autonomiAddress: "",
+        previewCost: uploadCost,
+        actualCost: "",
+        fileSize: fileSize
+      }
     }
   }
 
@@ -53,14 +77,19 @@
 
   async function uploadFile() {
     let uploadResult = "";
+    let address = "";
     if (selectedPath) {
       try {
-        uploadResult = await invoke('upload_data', {
+        [uploadResult, address] = await invoke('upload_data', {
           request: { file_path: selectedPath }
         });
-        handleShowToast(uploadResult, "primary");
+        if (workingFileObj) {
+          workingFileObj.actualCost = uploadResult;
+          workingFileObj.autonomiAddress = address;
+          addToast(`Uploaded ${workingFileObj.name} at address ${workingFileObj.autonomiAddress}`)
+        }
+        console.log(workingFileObj)
       } catch (e) {
-        handleShowToast(String(e), "error");
         uploadResult = 'Error: ' + e;
       }
     }
@@ -72,19 +101,13 @@
     selectedFileName = "";
     uploadCost = "";
     wasUploadCanceled = true;
+    workingFileObj = undefined;
   }
 
   // ... rest of script ...
 </script>
 
 <main>
-  {#if showToast}
-    <div class="toast toast-end toast-bottom" style="max-width: 50%;">
-      <div class={"alert alert-" + toastType} onclick={() => (showToast = false)}>
-        <span>{toastMessage}</span>
-      </div>
-    </div>
-  {/if}
   <Drawer>
     <div slot="main">
       <!-- Your primary page content, e.g., the "Your Pods" table and modals -->
@@ -93,7 +116,7 @@
         <h2 class="h2">Uploads</h2>
         <div class="utility-bar" style="display: flex; align-items: center; gap: 1rem;">
           <div class="upload-info">
-            <p style="margin: 0;" id="totalUplaodedCounter">4.4 GB</p>
+            <p style="margin: 0;" id="totalUplaodedCounter">7.5 MB</p>
             <p style="margin: 0;">uploaded</p>
           </div>
           <button class="btn btn-warning" onclick={uploadNewFile.showModal()}>Upload New File</button>
@@ -115,21 +138,37 @@
               <tbody>
                 <tr>
                   <th>1</th>
-                  <td>song.mp3</td>
-                  <td>dsfjadsklfjasdjfaldsjf;adlskf</td>
-                  <td>3.2 MB</td>
+                  <td>project_report.pdf</td>
+                  <td>d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432</td>
+                  <td>785 KB</td>
                 </tr>
                 <tr>
                   <th>2</th>
-                  <td>video.mp4</td>
-                  <td>dl;j;lkadjs;fljasdlkfjaklsdjfa</td>
-                  <td>2.1 GB</td>
+                  <td>vacation_photo.jpg</td>
+                  <td>994b22801af3e033e8f422c3aa23460617ccbdcf5728cffb534ef681b803bd94</td>
+                  <td>4.1 MB</td>
                 </tr>
                 <tr>
                   <th>3</th>
-                  <td>picture.jpeg</td>
-                  <td>dsafjaslkdfja;dfjasdlkfjal;</td>
-                  <td>1.3 MB</td>
+                  <td>research_data.csv</td>
+                  <td>
+                    <div class="tooltip tooltip-warning" data-tip="d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432">                      
+                      <button 
+                      class="address-tooltip" 
+                      data-address={"d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432"}
+                      onclick={handleCopyAddress}
+                      tabindex="0"
+                      style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
+                      >autonomi address</button>
+                    </div>
+                  </td>
+                  <!-- <td>
+                    <div class="tooltip tooltip-open" data-tip="b6a6e5b12b497962a6b40a7a75f3167eed27218f52885787ce3c88ef4eed52ab">
+                      <p>Network Address</p>
+                    </div>
+                  </td> -->
+                  <!-- <td>b6a6e5b12b497962a6b40a7a75f3167eed27218f52885787ce3c88ef4eed52ab</td> -->
+                  <td>2.6 MB</td>
                 </tr>
               </tbody>
             </table>
@@ -177,6 +216,20 @@
 </main>
 
 <style>
+  .tooltip[data-tip]::before,
+  .tooltip.tooltip-open[data-tip]::before {
+    max-width: 50rem !important;
+    min-width: 16rem;
+    white-space: pre-wrap !important;
+    font-family: monospace !important;
+  }
+  .address-tooltip {
+    transition: color 0.15s;
+  }
+  .address-tooltip:hover, .address-tooltip:focus {
+    color: #009799;
+    text-decoration-style: solid;
+  }
   .row {
     display: flex;
     flex-direction: row;
