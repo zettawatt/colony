@@ -3,10 +3,19 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open } from '@tauri-apps/plugin-dialog';
   import { addToast }  from '../../../../stores/toast';
-  import ps, { type UploadedFileObj } from "../../../../stores/persistantStorage";
+  import ps from "../../../../stores/persistantStorage";
+  import { FileObj, type FileInfo } from "../../../../classes/FileObj";
+  import { onMount } from "svelte";
 
-  let fileObjs = [];
-  let workingFileObj: UploadedFileObj | undefined;
+  let fileObjs: FileObj[] = [];
+  let workingFileObj: FileInfo | undefined;
+  let isPreviewLoading = $state(false);
+  let selectedPath = $state("");
+  let selectedFileName = $state("");
+  let uploadCost = $state("");
+  let wasUploadCanceled = $state(false)
+  let uploadedFiles = $state<FileObj[]>([]);
+
 
   async function copyAddress(address: string) {
     await navigator.clipboard.writeText(address);
@@ -22,17 +31,6 @@
     }
   }
 
-  let isPreviewLoading = $state(false);
-  let selectedPath = $state("");
-  let selectedFileName = $state("");
-  let uploadCost = $state("");
-  let wasUploadCanceled = $state(false)
-
-  let showToast = $state(false);
-  let toastMessage = $state("");
-  let toastType = $state("info"); // can be "info", "success", "error", etc.
-
-
   async function selectFile() {
     const filePath = await open({ multiple: false, directory: false });
     if (filePath) {
@@ -46,16 +44,17 @@
       uploadCost = await uploadPreview(); // Trigger upload cost preview
       isPreviewLoading = false;
 
-      workingFileObj = {
-        name: selectedFileName,
-        path: filePath,
-        extension: selectedFileExtension,
-        uploadedDate: new Date().toISOString(),
-        autonomiAddress: "",
-        previewCost: uploadCost,
-        actualCost: "",
-        fileSize: fileSize
-      }
+      // TODO: in the future, when we let users select multiple files for upload
+      const newFileObj = new FileObj(
+        {
+          name: selectedFileName,
+          path: filePath,
+          extension: selectedFileExtension,
+          previewCost: uploadCost,
+          fileSize: fileSize
+        }
+      );
+      fileObjs.push(newFileObj);
     }
   }
 
@@ -83,12 +82,15 @@
         [uploadResult, address] = await invoke('upload_data', {
           request: { file_path: selectedPath }
         });
-        if (workingFileObj) {
-          workingFileObj.actualCost = uploadResult;
-          workingFileObj.autonomiAddress = address;
-          addToast(`Uploaded ${workingFileObj.name} at address ${workingFileObj.autonomiAddress}`)
+        if (fileObjs[0]) {
+          fileObjs[0].setActualCost(uploadResult);
+          fileObjs[0].setAutonomiAddress(address);
+          await ps.addUploadedFileObj(fileObjs[0]);
+          addToast(`Uploaded ${fileObjs[0].name} at address ${fileObjs[0].autonomiAddress}`)
         }
-        console.log(workingFileObj)
+        console.log(fileObjs[0].toJSON())
+        loadTable();
+        resetUploadState();
       } catch (e) {
         uploadResult = 'Error: ' + e;
       }
@@ -101,10 +103,41 @@
     selectedFileName = "";
     uploadCost = "";
     wasUploadCanceled = true;
-    workingFileObj = undefined;
+    fileObjs = [];
   }
 
-  // ... rest of script ...
+  function updateTotalUploadedCounter() {
+    const totalSize = uploadedFiles.reduce((sum, file) => sum + (file.fileSize || 0), 0);
+    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
+    let formatted = '';
+    if (totalSize >= gb) formatted = (totalSize/gb).toFixed(2) + ' GB';
+    else if (totalSize >= mb) formatted = (totalSize/mb).toFixed(2) + ' MB';
+    else if (totalSize >= kb) formatted = (totalSize/kb).toFixed(2) + ' KB';
+    else formatted = totalSize + ' B';
+    const el = document.getElementById("totalUploadedCounter");
+    if (el) el.innerText = formatted;
+  }
+
+  function formatFileSize(size: number): string {
+    if (!size) return "0 B";
+    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
+    if (size >= gb) return (size/gb).toFixed(2) + ' GB';
+    if (size >= mb) return (size/mb).toFixed(2) + ' MB';
+    if (size >= kb) return (size/kb).toFixed(2) + ' KB';
+    return size + ' B';
+  }
+
+  async function loadTable() {
+    const uploadedFileObjs = await ps.getUploadedFiles();
+    uploadedFiles = uploadedFileObjs ? Object.values(uploadedFileObjs) as FileObj[] : [];
+    updateTotalUploadedCounter()
+    console.log(uploadedFiles)
+  }
+
+  onMount(() => {
+    loadTable();
+  })
+
 </script>
 
 <main>
@@ -116,7 +149,7 @@
         <h2 class="h2">Uploads</h2>
         <div class="utility-bar" style="display: flex; align-items: center; gap: 1rem;">
           <div class="upload-info">
-            <p style="margin: 0;" id="totalUplaodedCounter">7.5 MB</p>
+            <p style="margin: 0;" id="totalUploadedCounter">0.0 B</p>
             <p style="margin: 0;">uploaded</p>
           </div>
           <button class="btn btn-warning" onclick={uploadNewFile.showModal()}>Upload New File</button>
@@ -126,50 +159,42 @@
         <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 100%;">
           <div class="card-body items-center text-center p-4">
             <!-- <h2 class="card-title h2">Your Pods</h2> -->
-            <table class="table table-zebra">
+            <table class="table table-zebra" id="uploadsTable">
               <thead>
                 <tr>
                   <th></th>
                   <th>Name</th>
                   <th>Upload Address</th>
+                  <th>Upload Date</th>
                   <th>Size</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <th>1</th>
-                  <td>project_report.pdf</td>
-                  <td>d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432</td>
-                  <td>785 KB</td>
-                </tr>
-                <tr>
-                  <th>2</th>
-                  <td>vacation_photo.jpg</td>
-                  <td>994b22801af3e033e8f422c3aa23460617ccbdcf5728cffb534ef681b803bd94</td>
-                  <td>4.1 MB</td>
-                </tr>
-                <tr>
-                  <th>3</th>
-                  <td>research_data.csv</td>
-                  <td>
-                    <div class="tooltip tooltip-warning" data-tip="d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432">                      
-                      <button 
-                      class="address-tooltip" 
-                      data-address={"d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432"}
-                      onclick={handleCopyAddress}
-                      tabindex="0"
-                      style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                      >autonomi address</button>
-                    </div>
-                  </td>
-                  <!-- <td>
-                    <div class="tooltip tooltip-open" data-tip="b6a6e5b12b497962a6b40a7a75f3167eed27218f52885787ce3c88ef4eed52ab">
-                      <p>Network Address</p>
-                    </div>
-                  </td> -->
-                  <!-- <td>b6a6e5b12b497962a6b40a7a75f3167eed27218f52885787ce3c88ef4eed52ab</td> -->
-                  <td>2.6 MB</td>
-                </tr>
+                {#if uploadedFiles.length > 0}
+                  {#each uploadedFiles as file, idx}
+                    <tr>
+                      <th>{idx + 1}</th>
+                      <td>{file.name}</td>
+                      <td>
+                        <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
+                          <button
+                            class="address-tooltip"
+                            data-address={file.autonomiAddress}
+                            onclick={handleCopyAddress}
+                            tabindex="0"
+                            style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
+                          >autonomi address</button>
+                        </div>
+                      </td>
+                      <td>{file.uploadedDate}</td>
+                      <td>{formatFileSize(file.fileSize)}</td>
+                    </tr>
+                  {/each}
+                {:else}
+                  <tr>
+                    <td colspan="5" style="text-align:center;">No uploads yet</td>
+                  </tr>
+                {/if}
               </tbody>
             </table>
           </div>
