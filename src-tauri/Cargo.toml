@@ -26,6 +26,7 @@ chrono = { version = "0.4", features = ["serde"] }
 tracing-subscriber = "0.3.18"
 thiserror = "2.0.12"
 tauri-plugin-dialog = "2"
+tauri-plugin-store = "2"
 
 [profile.dev]
 opt-level = 0

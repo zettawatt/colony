@@ -9,6 +9,7 @@
     "core:default",
     "opener:default",
     "notification:default",
-    "dialog:default"
+    "dialog:default",
+    "store:default"
   ]
 }
