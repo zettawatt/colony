@@ -12,10 +12,11 @@
         <!-- <li><a href="/screens/pod-management/uploads">Pod Management</a></li> -->
         <li>
           <details>
-            <summary>Pod Management (dropdown)</summary>
+            <summary>Pod Management</summary>
             <ul class="bg-base-100 rounded-t-none p-2" style="z-index: 1000;">
               <li><a href="/screens/pod-management/your-pods">Your Pods</a></li>
-              <li><a>Uploads</a></li>
+              <!-- <li><a href="/screens/pod-management/upload-files">Upload Files (test)</a></li> -->
+              <li><a href="/screens/pod-management/uploads">Uploads</a></li>
               <li><a href="/screens/pod-management/downloads">Downloads</a></li>
             </ul>
           </details>
