@@ -32,6 +32,7 @@
   }
 
   async function selectFile() {
+    resetUploadState();
     const filePath = await open({ multiple: false, directory: false });
     if (filePath) {
       const fileSize = await invoke('get_file_size', { path: filePath }) as number;
@@ -109,11 +110,7 @@
   function updateTotalUploadedCounter() {
     const totalSize = uploadedFiles.reduce((sum, file) => sum + (file.fileSize || 0), 0);
     const kb = 1024, mb = kb * 1024, gb = mb * 1024;
-    let formatted = '';
-    if (totalSize >= gb) formatted = (totalSize/gb).toFixed(2) + ' GB';
-    else if (totalSize >= mb) formatted = (totalSize/mb).toFixed(2) + ' MB';
-    else if (totalSize >= kb) formatted = (totalSize/kb).toFixed(2) + ' KB';
-    else formatted = totalSize + ' B';
+    let formatted = formatFileSize(totalSize);
     const el = document.getElementById("totalUploadedCounter");
     if (el) el.innerText = formatted;
   }
@@ -128,14 +125,14 @@
   }
 
   async function loadTable() {
-    const uploadedFileObjs = await ps.getUploadedFiles();
-    uploadedFiles = uploadedFileObjs ? Object.values(uploadedFileObjs) as FileObj[] : [];
+    const uploadedFileObjs = await ps.getUploadedFilesArray();
+    uploadedFiles = uploadedFileObjs;
     updateTotalUploadedCounter()
     console.log(uploadedFiles)
   }
 
-  onMount(() => {
-    loadTable();
+  onMount(async () => {
+    await loadTable();
   })
 
 </script>
