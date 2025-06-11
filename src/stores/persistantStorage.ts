@@ -60,6 +60,18 @@ export async function getUploadedFiles(): Promise<Record<string, unknown> | unde
   return (await store.get('uploadedFiles'));
 }
 
+export async function getUploadedFilesArray(): Promise<FileObj[]> {
+  const store = await getStore();
+  const fileObj = await store.get("uploadedFiles");
+  const fileObjArray = fileObj ? Object.values(fileObj) : [];
+  // Sort by uploadedDate ascending
+  return fileObjArray.sort((a: any, b: any) => {
+    const dateA = new Date(a.uploadedDate).getTime();
+    const dateB = new Date(b.uploadedDate).getTime();
+    return dateB - dateA;
+  });
+}
+
 export async function addDownloadedFile(fileObj: FileObj) {
   const store = await getStore();
   await store.set('downloadFiles.' + fileObj.uuid, fileObj);
@@ -84,6 +96,7 @@ const ps = {
   addUploadedFileObj,
   getUploadedFileObj,
   getUploadedFiles,
+  getUploadedFilesArray,
   addDownloadedFile,
   getDownloadedFileObj,
   getDownloadedFiles
