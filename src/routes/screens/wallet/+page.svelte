@@ -29,11 +29,11 @@
               <tbody>
                 <tr>
                   <th>1</th>
-                  <td>Cy Ganderton</td>
-                  <td>Quality Control Specialist</td>
+                  <td>Main Wallet</td>
+                  <td>0xAbC1234ef5678901234567890abcdef123456789</td>
                   <td>
-                    <div class="block">ETH: 0</div>
-                    <div class="block">ANT: 0</div>
+                    <div class="block">ETH: 1.845</div>
+                    <div class="block">ANT: 150</div>
                   </td>
                   <td>
                     <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
@@ -42,10 +42,10 @@
                 </tr>
                 <tr>
                   <th>2</th>
-                  <td>Hart Hagerty</td>
-                  <td>Desktop Support Technician</td>
+                  <td>Second Wallet</td>
+                  <td>0x4567ab98ef12345cd67890abC123400987654321</td>
                   <td>
-                    <div class="block">ETH: 0</div>
+                    <div class="block">ETH: 0.0734</div>
                     <div class="block">ANT: 0</div>
                   </td>
                   <td>
@@ -55,11 +55,11 @@
                 </tr>
                 <tr>
                   <th>3</th>
-                  <td>Brice Swyre</td>
-                  <td>Tax Accountant</td>
+                  <td>Trading Wallet</td>
+                  <td>0x22ab3344Ef8898aCde44f3321B99887766554432</td>
                   <td>
-                    <div class="block">ETH: 0</div>
-                    <div class="block">ANT: 0</div>
+                    <div class="block">ETH: 0.083</div>
+                    <div class="block">ANT: 5420</div>
                   </td>
                   <td>
                     <button class="btn btn-accent">u</button>
@@ -100,22 +100,6 @@
 
 .logo.svelte-kit:hover {
   filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .container {
@@ -202,25 +186,5 @@ button {
 #greet-input {
   margin-right: 5px;
 }
-/* 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-} */
 
 </style>
