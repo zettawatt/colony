@@ -1,6 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import SeedPhrase from "../../components/SeedPhrase.svelte";
+  import SeedPhrase from "../../components/seedPhrase.svelte";
   import ps from "../../stores/persistantStorage"; 
 
   let seedPhraseRef: SeedPhrase;
