@@ -121,6 +121,11 @@ pub struct PodInfo {
     pub address: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AddressList {
+    pub addresses: Vec<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreatePodRequest {
     pub name: String,
@@ -551,6 +556,153 @@ async fn remove_pod_ref(
     );
     Ok(PodInfo {
         address: request.pod_address,
+    })
+}
+
+#[tauri::command]
+async fn list_my_pods(
+    state: State<'_, Mutex<AppState>>,
+) -> Result<AddressList, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let podman =
+        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+    // Use the PodManager
+    let pod_list = podman.list_my_pods()?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("List of user pods:");
+    for pod in &pod_list {
+        info!("Pod address: {}", pod);
+    }        
+
+    Ok(AddressList {
+        addresses: pod_list,
+    })
+}
+
+#[tauri::command]
+async fn list_pod_subjects(
+    state: State<'_, Mutex<AppState>>,
+    address: String,
+) -> Result<AddressList, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Now we can safely use async operations
+    let podman =
+        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+    // Use the PodManager
+    let subject_list = podman.list_pod_subjects(&address)?;
+
+    // Put the components back
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    info!("List of subjects in pod {}:", address);
+    for subject in &subject_list {
+        info!("Subject address: {}", subject);
+    }        
+
+    Ok(AddressList {
+        addresses: subject_list,
     })
 }
 
@@ -1209,6 +1361,8 @@ pub fn run() {
             add_pod,
             add_pod_ref,
             remove_pod_ref,
+            list_my_pods,
+            list_pod_subjects,
             upload_pod,
             upload_all,
             refresh_cache,
