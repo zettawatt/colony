@@ -3,16 +3,93 @@
   import { invoke } from "@tauri-apps/api/core";
   import { addToast }  from '../../../../stores/toast';
   import { onMount } from "svelte";
+  import { FileObj, type FileInfo } from "../../../../classes/FileObj";
+  import ps from "../../../../stores/persistantStorage";
+  import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
 
   let isLoading = $state(false);
   let newPodName = $state("");
+  let createdPods = $state<any[]>([]);
+  let activePod = $state<any>(null); // Holds the pod for the currently active modal
+  let uploadedFiles = $state<FileObj[]>([]);
+  let selectedFileName = $state(""); // <-- Track the filename selected for adding
+
 
   type PodInfo = {
     address: string
   }
 
+  async function addFilesToPod() {
+    const files = activePod.fileObjs as FileObj[];
+    if (files) {
+      try {
+        for(let file of files) {
+          const fileMetaJson = {
+            "@context": { "schema": "http://schema.org/" },
+            "@type": "schema:MediaObject",
+            "@id": `ant://${file.autonomiAddress}`,
+            "schema:name": file.name,
+            "schema:description": "",
+            "schema:contentSize": file.fileSize
+          };
+          console.log({
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            data: JSON.stringify(fileMetaJson)
+          })
+          const result = await invoke<string>('put_subject_data', {request: {
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            data: JSON.stringify(fileMetaJson)
+          }});
+          addToast(`Successfilly added ${file.name} to pod!`, "success")
+          console.log(result)
+        }        
+      } catch (error) {
+       console.trace(error) 
+      }
+    }
+  }
+
+  async function uploadAllPods() {
+    try {
+      const result = await invoke<string>('upload_all');
+      addToast(result, "success");
+      console.log(result); // "Successfully uploaded all updated pods to Autonomi"
+    } catch (error) {
+      console.error('Upload failed:', error);
+    }
+  }
+
+  async function fetchPods() {
+    try {
+      const result = await invoke('list_my_pods');
+      // result will likely be { addresses: [ ..pod addresses.. ] }
+      console.log('Pod addresses:', result.addresses);
+      // you can now use result.addresses in your UI
+    } catch (e) {
+      console.error('Failed to fetch pods:', e);
+    }
+  }
+
+  // async function uploadAllPods() {
+  //   try {
+  //     addToast("uploading pods....", "info");
+  //     // Simulate network/upload delay
+  //     await new Promise(resolve => setTimeout(resolve, 4000));
+
+  //     const result = "Successfully uploaded all updated pods to Autonomi";
+  //     addToast(result, "success");
+  //     console.log(result);
+  //   } catch (error) {
+  //     console.error('Upload failed:', error);
+  //   }
+  // }
+
   async function initPodManager() {
     try {
+      await invoke("initialize_datastore");
+      await invoke("open_keystore", { password: "maxx" });
       await invoke("initialize_graph");
       const result = await invoke("initialize_pod_manager");
 
@@ -23,10 +100,19 @@
 
   async function createPod() {
     if (newPodName) {
+      const podObj = {
+        name: newPodName,
+        createdDate: new Date().toISOString(),
+        lastModifiedDate: new Date().toISOString(),
+        address: "",
+        fileObjs: []
+      }
       try {
         isLoading = true;
         const podInfo = await invoke('add_pod', { request: {name: newPodName} }) as PodInfo;
+        podObj["address"] = podInfo.address;
         addToast('Pod created at address:'+ podInfo.address, "info")
+        await loadTable();
         console.log('Pod created at address:', podInfo.address);
       } catch (err) {
         console.error('Failed to add pod:', err);
@@ -39,9 +125,39 @@
     }
   }
 
-  onMount(() => {
-    initPodManager();
-  });
+
+  function addFileToActivePod() {
+    if (!selectedFileName) return;
+    if (!activePod.fileObjs) activePod.fileObjs = [];
+    // Find FileObj in uploadedFiles by name
+    const fileToAdd = uploadedFiles.find(f => f.name === selectedFileName);
+    if (fileToAdd && !activePod.fileObjs.some(f => f.name === fileToAdd.name)) {
+      // Add only if not already present
+      activePod.fileObjs = [...activePod.fileObjs, fileToAdd];
+    }
+    selectedFileName = ""; // Optionally reset selection
+  }
+
+  function formatFileSize(size: number): string {
+    if (!size) return "0 B";
+    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
+    if (size >= gb) return (size/gb).toFixed(2) + ' GB';
+    if (size >= mb) return (size/mb).toFixed(2) + ' MB';
+    if (size >= kb) return (size/kb).toFixed(2) + ' KB';
+    return size + ' B';
+  }
+
+  async function loadTable() {
+    // createdPods = await ps.getPodCache() as [];
+    const pods = await fetchPods();
+    console.log(createdPods)
+  }
+
+  onMount(async () => {
+    // await initPodManager();
+    await loadTable();
+    uploadedFiles = await ps.getUploadedFilesArray();
+  })
 </script>
 
 <main>
@@ -55,7 +171,7 @@
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
-          <button class="btn btn-neutral btn-soft" onclick={downloadFile()}>Upload All Pods</button>
+          <button class="btn btn-neutral btn-soft" onclick={() => uploadAllPods()}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
       </div>
@@ -75,42 +191,48 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <th>1</th>
-                  <td>Movies</td>
-                  <td>d68eae7ede9d4d4eec5e3fc0d8393e65b4fa63e649a4377118321a4fb93fd432</td>
-                  <td>2024-05-15</td>
-                  <td>2024-06-02</td>
-                  <td>
-                    <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
-                    <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
-                    <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
-                  </td>
-                </tr>
-                <tr>
-                  <th>2</th>
-                  <td>Photos</td>
-                  <td>b4108849f2562b7580b48225f11eda9f35cdf44d6dedfa75ac900d3d7bfc4f4d</td>
-                  <td>2023-12-08</td>
-                  <td>2024-05-25</td>
-                  <td>
-                    <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
-                    <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
-                    <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
-                  </td>
-                </tr>
-                <tr>
-                  <th>3</th>
-                  <td>Music</td>
-                  <td>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</td>
-                  <td>2024-01-30</td>
-                  <td>2024-04-19</td>
-                  <td>
-                    <button class="btn btn-accent" onclick={uploadPodModal.showModal()}>u</button>
-                    <button class="btn btn-warning" onclick={editPodModal.showModal()}>e</button>
-                    <button class="btn btn-error" onclick={deletePodModal.showModal()}>d</button>
-                  </td>
-                </tr>
+                {#if createdPods.length > 0}
+                  {#each createdPods as pod, idx}
+                    <tr>
+                      <th>{idx + 1}</th>
+                      <td>{pod.name}</td>
+                      <td>
+                        <div class="tooltip tooltip-warning" data-tip={pod.address}>
+                          <button
+                            class="address-tooltip"
+                            data-address={pod.address}
+                            onclick={handleCopyAddress}
+                            tabindex="0"
+                            style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
+                          >pod address</button>
+                        </div>
+                      </td>
+                      <td>{pod.createdDate}</td>
+                      <td>{pod.createdDate}</td>
+                      <td>
+                        <button 
+                          class="btn btn-accent"
+                          onclick={() => { activePod = pod; uploadPodModal.showModal(); }}>
+                          u
+                        </button>
+                        <button 
+                          class="btn btn-warning"
+                          onclick={() => { activePod = pod; editPodModal.showModal(); }}>
+                          e
+                        </button>
+                        <button 
+                          class="btn btn-error"
+                          onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
+                          d
+                        </button>
+                      </td>
+                    </tr>
+                  {/each}
+                {:else}
+                  <tr>
+                    <td colspan="12" style="text-align:center;">No pods created yet</td>
+                  </tr>
+                {/if}
               </tbody>
             </table>
           </div>
@@ -190,13 +312,22 @@
   </dialog>
   <dialog id="editPodModal" class="modal">
     <div class="modal-box w-10/12 max-w-3xl max-h-lg">
-      <h3 class="text-lg font-bold">Pod Editing</h3>
+      <h3 class="text-lg font-bold">Pod Editing {activePod?.name}</h3>
       <div class="py-2" style="justify-content: center;">
-        <div class="">
-          <input type="file" class="file-input" />
-          <button class="btn btn-soft btn-primary">Add File</button>
+        <div class="join join-vertical lg:join-horizontal">
+          <select class="select" bind:value={selectedFileName}>
+            <option disabled selected>File Reference</option>
+            {#if uploadedFiles.length > 0}
+              {#each uploadedFiles as file}
+                <option>{file.name}</option>
+              {/each}
+            {/if}
+          </select>
+          <button class="btn join-item" onclick={addFileToActivePod} disabled={!selectedFileName}>
+            Add File To Pod
+          </button>
         </div>
-        <table class="table">
+        <table class="table" id="pod">
           <thead>
             <tr>
               <th>File name</th>
@@ -207,92 +338,27 @@
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>[file name here]</td>
-              <td>[file size here]</td>
-              <td>
-                <select class="select select-neutral">
-                  <option disabled selected>File Type</option>
-                  <option>Music</option>
-                  <option>Video</option>
-                  <option>Document</option>
-                  <option>Pictures</option>
-                  <option>Other</option>
-                </select>
-              </td>
-              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
-              <td><button class="btn btn-outline btn-error">d</button></td>
-            </tr>
-            <tr>
-              <td>[file name here]</td>
-              <td>[file size here]</td>
-              <td>
-                <select class="select select-neutral">
-                  <option disabled selected>File Type</option>
-                  <option>Music</option>
-                  <option>Video</option>
-                  <option>Document</option>
-                  <option>Pictures</option>
-                  <option>Other</option>
-                </select>
-              </td>
-              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
-              <td><button class="btn btn-outline btn-error">d</button></td>
-            </tr>
-            <tr>
-              <td>[file name here]</td>
-              <td>[file size here]</td>
-              <td>
-                <select class="select select-neutral">
-                  <option disabled selected>File Type</option>
-                  <option>Music</option>
-                  <option>Video</option>
-                  <option>Document</option>
-                  <option>Pictures</option>
-                  <option>Other</option>
-                </select>
-              </td>
-              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
-              <td><button class="btn btn-outline btn-error">d</button></td>
-            </tr>
-            <tr>
-              <td>[file name here]</td>
-              <td>[file size here]</td>
-              <td>
-                <select class="select select-neutral">
-                  <option disabled selected>File Type</option>
-                  <option>Music</option>
-                  <option>Video</option>
-                  <option>Document</option>
-                  <option>Pictures</option>
-                  <option>Other</option>
-                </select>
-              </td>
-              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
-              <td><button class="btn btn-outline btn-error">d</button></td>
-            </tr>
-            <tr>
-              <td>[file name here]</td>
-              <td>[file size here]</td>
-              <td>
-                <select class="select select-neutral">
-                  <option disabled selected>File Type</option>
-                  <option>Music</option>
-                  <option>Video</option>
-                  <option>Document</option>
-                  <option>Pictures</option>
-                  <option>Other</option>
-                </select>
-              </td>
-              <td><button class="btn btn-outline btn-neutral" onclick={editFileMetadataModal.showModal()}>edit file metadata</button></td>
-              <td><button class="btn btn-outline btn-error">d</button></td>
-            </tr>
+            {#if activePod?.fileObjs && activePod.fileObjs.length > 0}
+              {#each activePod.fileObjs as file}
+                <tr>
+                  <td>{file.name}</td>
+                  <td>{formatFileSize(file.fileSize)}</td>
+                  <td>{file.extension}</td>
+                  <td></td>
+                  <td>
+                    <!-- operations per file -->
+                  </td>
+                </tr>
+              {/each}
+            {:else}
+              <tr><td colspan="5" style="text-align:center;">No files in pod</td></tr>
+            {/if}
           </tbody>
         </table>
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary">Save Pod</button>
+          <button class="btn btn-primary" onclick={() => addFilesToPod()}>Save Pod</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
@@ -324,7 +390,21 @@
 </main>
 
 <style>
-
+  .tooltip[data-tip]::before,
+  .tooltip.tooltip-open[data-tip]::before {
+    max-width: 75rem !important;
+    min-width: 16rem;
+    white-space: pre-wrap !important;
+    font-family: monospace !important;
+    z-index: 100;
+  }
+  .address-tooltip {
+    transition: color 0.15s;
+  }
+  .address-tooltip:hover, .address-tooltip:focus {
+    color: #009799;
+    text-decoration-style: solid;
+  }
 .utility-bar {
   display: flex;
   align-items: center;
@@ -345,22 +425,6 @@
 
 .logo.svelte-kit:hover {
   filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .container {
