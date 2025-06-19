@@ -109,6 +109,8 @@ export class FileObj {
       path: this._path,
       extension: this._extension,
       uploadedDate: this._uploadedDate,
+      downloadedDate: this._downloadedDate,
+      downloadPath: this.downloadPath,
       autonomiAddress: this._autonomiAddress,
       previewCost: this._previewCost,
       actualCost: this._actualCost,
