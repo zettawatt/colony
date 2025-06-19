@@ -6,6 +6,7 @@
   import ps from "../../../../stores/persistantStorage";
   import { FileObj, type FileInfo } from "../../../../classes/FileObj";
   import { onMount } from "svelte";
+  import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
 
   let fileObjs: FileObj[] = [];
   let workingFileObj: FileInfo | undefined;
@@ -72,13 +73,14 @@
       }
     }
     console.log('uploadCostRes', uploadCostResult)
-    return uploadCostResult;
+    return `Estimated upload cost ${uploadCostResult} ANT`;
   }
 
   async function uploadFile() {
     let uploadResult = "";
     let address = "";
     if (selectedPath) {
+      addToast("uploading file to the network...", "info", 7000)
       try {
         [uploadResult, address] = await invoke('upload_data', {
           request: { file_path: selectedPath }
@@ -87,7 +89,7 @@
           fileObjs[0].setActualCost(uploadResult);
           fileObjs[0].setAutonomiAddress(address);
           await ps.addUploadedFileObj(fileObjs[0]);
-          addToast(`Uploaded ${fileObjs[0].name} at address ${fileObjs[0].autonomiAddress}`)
+          addToast(`Uploaded ${fileObjs[0].name} at address ${fileObjs[0].autonomiAddress}`, "success")
         }
         console.log(fileObjs[0].toJSON())
         loadTable();
@@ -108,20 +110,9 @@
   }
 
   function updateTotalUploadedCounter() {
-    const totalSize = uploadedFiles.reduce((sum, file) => sum + (file.fileSize || 0), 0);
-    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
-    let formatted = formatFileSize(totalSize);
+    let formatted = totalFileSizeCounter(uploadedFiles)
     const el = document.getElementById("totalUploadedCounter");
     if (el) el.innerText = formatted;
-  }
-
-  function formatFileSize(size: number): string {
-    if (!size) return "0 B";
-    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
-    if (size >= gb) return (size/gb).toFixed(2) + ' GB';
-    if (size >= mb) return (size/mb).toFixed(2) + ' MB';
-    if (size >= kb) return (size/kb).toFixed(2) + ' KB';
-    return size + ' B';
   }
 
   async function loadTable() {
