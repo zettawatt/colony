@@ -7,7 +7,7 @@ export function totalFileSizeCounter(files: FileObj[]) {
   return formatted
 }
 
-export function formatFileSize(size: number): string {
+export function formatFileSize(size: number | undefined): string {
   if (!size) return "0 B";
   const kb = 1024, mb = kb * 1024, gb = mb * 1024;
   if (size >= gb) return (size/gb).toFixed(2) + ' GB';
