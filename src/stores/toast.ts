@@ -12,7 +12,7 @@ export interface Toast {
 const toasts = writable<Toast[]>([]);
 let id = 0;
 
-export function addToast(message: string, type: ToastType = 'info', duration = 3000) {
+export function addToast(message: string, type: ToastType = 'info', duration = 5000) {
   const toast: Toast = { id: id++, message, type, duration };
   toasts.update(t => [...t, toast]);
 
