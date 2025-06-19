@@ -7,6 +7,7 @@
   import { FileObj, type FileInfo } from "../../../../classes/FileObj";
   import { onMount } from "svelte";
   import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
+  import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
 
   let fileObjs: FileObj[] = [];
   let workingFileObj: FileInfo | undefined;
@@ -17,20 +18,6 @@
   let wasUploadCanceled = $state(false)
   let uploadedFiles = $state<FileObj[]>([]);
 
-
-  async function copyAddress(address: string) {
-    await navigator.clipboard.writeText(address);
-    addToast('Copied address to clipboard!', 'success');
-  }
-
-  function handleCopyAddress(event: MouseEvent) {
-    const button = event.currentTarget as HTMLButtonElement;
-    console.log(button)
-    const address = button.dataset.address;
-    if (address) {
-      copyAddress(address);
-    }
-  }
 
   async function selectFile() {
     resetUploadState();
