@@ -16,20 +16,22 @@
   let loading = $state(true);
 
   async function checkIfUserIsNew() {
+    let wasUserNew = false;
     try {
-      console.log("hs")
       hasUserCompletedIntro = await ps.getUserCompletedIntro();
-      console.log(hasUserCompletedIntro);
       if (hasUserCompletedIntro === undefined) {
         await ps.initStore();
         hasUserCompletedIntro = false;
+        wasUserNew = true;
       } else if (hasUserCompletedIntro) {
-        window.location.href = '/screens/search';
+        wasUserNew = false;
+        // window.location.href = '/screens/search';
       }
     } catch (e) {
       console.log(e)
     } finally {
       loading = false;
+      return wasUserNew;
     }
   }
 
@@ -58,10 +60,10 @@
     console.log(statusMessage)
   }
   
-  async function initPodManager() {
+  async function initPodManager(wasUserNew: boolean) {
     try {
       await invoke("initialize_datastore");
-      await invoke("open_keystore", { password: "maxx" });
+      if (!wasUserNew) {await invoke("open_keystore", { password: "maxx" });}
       await invoke("initialize_graph");
       const result = await invoke("initialize_pod_manager");
 
@@ -71,9 +73,13 @@
   }
 
   onMount(async () => {
-    await checkIfUserIsNew();
+    console.log("here maxx")
+    const wasUserNew = await checkIfUserIsNew();
     await initializeAutonomiClient();
-    await initPodManager();
+    await initPodManager(wasUserNew);
+    if (!wasUserNew) {
+      window.location.href = '/screens/search';
+    }
   })
 
 </script>
