@@ -22,9 +22,11 @@
 
   async function initDatastore() {
     try {
-      const datastore = await invoke("initialize_datastore"); 
+      // const datastore = await invoke("initialize_datastore"); 
+      console.log(words);
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: words})
-      const writtenKeystore = await invoke("write_keystore_to_file", {password: confirmPassword})
+      const writtenKeystore = await invoke("write_keystore_to_file", {password: "maxx"})
+      await invoke("open_keystore", { password: "maxx" });
       await ps.setUserCompletedIntro(true);
       reroute("/screens/search");
       return true;
