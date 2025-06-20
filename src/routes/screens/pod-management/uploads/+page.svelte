@@ -187,7 +187,7 @@
     <div class="modal-box">
       <h3 class="text-lg font-bold">Select File for Upload</h3>
       <div class="py-2">
-        <div class="join join-vertical lg:join-horizontal">
+        <div class="join">
           <button class="btn join-item" onclick={selectFile}>Choose File</button>
           <input 
             type="text" 
