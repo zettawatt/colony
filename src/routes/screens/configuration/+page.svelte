@@ -6,6 +6,10 @@
   let name = $state("");
   let greetMsg = $state("");
   let downloadPath = $state("");
+  let newPassword = $state("");
+  let confirmPassword = $state("");
+  let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
+  let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
 
   async function toast() {
     let permissionGranted = await isPermissionGranted();
@@ -27,8 +31,47 @@
   }
 </script>
 
-<main>
+<main class="config-container">
   <div class="row">
+    <h2 class="h2">Configuration Settings</h2>
+    <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
+      <div class="card-body p-4">
+        <div class="flex-container" style="display: flex;">
+          <!-- Left: Existing content -->
+          <div class="left-section" style="flex: 1;">
+            <div class="row pt-3">
+              <label>Download Path:</label>
+              <input bind:value={downloadPath} type="text" class="input" placeholder="/home/usr/downloads" />
+            </div>
+            <div class="row pt-3">
+              <label>Colony Application Data Path:</label>
+              <input bind:value={downloadPath} type="text" class="input appData" disabled placeholder="/home/usr/downloads" />
+              <div class="mt-4">
+                <button class="btn btn-primary" onclick={toast}>Save</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vertical rule -->
+          <div style="width:1px; background:#cdcfd1; margin: 0 2rem;"></div>
+
+          <!-- Right: Change Password -->
+          <div class="right-section" style="flex: 1;">
+            <div class="row pt-3 pb-3">
+              <label class="label">New Password: </label>
+              <input bind:value={newPassword} type="password" class="input" placeholder="Password" />
+            </div>
+            <div class="row pt-3 pb-3">
+              <label class="label">Confirm Password:</label>
+              <input bind:value={confirmPassword} type="password" class="input {confirmClass}" placeholder="Password" />
+              <button class="btn btn-secondary mt-4">Update Password</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- <div class="row">
     <h4 class="h4">Configuration Settings</h4>
   </div>
   <div class="row">
@@ -47,11 +90,16 @@
         <button class="btn btn-primary" onclick={toast}>Save</button>
       </div>
     </div>
-  </div>
+  </div> -->
 
 </main>
 
 <style>
+
+.appData::placeholder{
+  color:dimgray;
+}
+
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -60,13 +108,18 @@
   filter: drop-shadow(0 0 2em #ff3e00);
 }
 
-.container {
-  margin: 0;
+.config-container {
+  /* margin: 0;
   padding-top: 10vh;
   display: flex;
-  flex-direction: column;
+  flex-direction: column; */
+  padding-top: 3vh;
   justify-content: center;
-  text-align: center;
+  overflow-y: auto;
+  /* Set a fixed max-width that accounts for scrollbar */
+  /* max-width: 64rem;
+  width: 100%;
+  box-sizing: border-box; */
 }
 
 .logo {
@@ -84,6 +137,8 @@
   display: flex;
   flex-direction: column;
   margin-left: 2%;
+  margin-right: 2%;
+  padding-bottom: 2vh;
   /* justify-content: center; */
 }
 
@@ -93,13 +148,5 @@ a {
   text-decoration: inherit;
 }
 
-a:hover {
-  color: #535bf2;
-}
-
-
-#greet-input {
-  margin-right: 5px;
-}
 
 </style>
