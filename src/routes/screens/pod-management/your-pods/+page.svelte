@@ -66,6 +66,7 @@
       const result = await invoke('list_my_pods');
       // result will likely be { addresses: [ ..pod addresses.. ] }
       console.log('Pod addresses:', result.addresses);
+      return result.addresses
       // you can now use result.addresses in your UI
     } catch (e) {
       console.error('Failed to fetch pods:', e);
@@ -112,6 +113,7 @@
         const podInfo = await invoke('add_pod', { request: {name: newPodName} }) as PodInfo;
         podObj["address"] = podInfo.address;
         addToast('Pod created at address:'+ podInfo.address, "info")
+        await invoke("write_keystore_to_file", {password: "maxx"})
         await loadTable();
         console.log('Pod created at address:', podInfo.address);
       } catch (err) {
@@ -149,7 +151,7 @@
 
   async function loadTable() {
     // createdPods = await ps.getPodCache() as [];
-    const pods = await fetchPods();
+    createdPods = await fetchPods();
     console.log(createdPods)
   }
 
@@ -195,12 +197,13 @@
                   {#each createdPods as pod, idx}
                     <tr>
                       <th>{idx + 1}</th>
-                      <td>{pod.name}</td>
+                      <!-- <td>{pod.name}</td> -->
+                      <td>pod {idx + 1}</td>
                       <td>
-                        <div class="tooltip tooltip-warning" data-tip={pod.address}>
+                        <div class="tooltip tooltip-warning" data-tip={pod}>
                           <button
                             class="address-tooltip"
-                            data-address={pod.address}
+                            data-address={pod}
                             onclick={handleCopyAddress}
                             tabindex="0"
                             style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
@@ -314,7 +317,7 @@
     <div class="modal-box w-10/12 max-w-3xl max-h-lg">
       <h3 class="text-lg font-bold">Pod Editing {activePod?.name}</h3>
       <div class="py-2" style="justify-content: center;">
-        <div class="join join-vertical lg:join-horizontal">
+        <div class="join">
           <select class="select" bind:value={selectedFileName}>
             <option disabled selected>File Reference</option>
             {#if uploadedFiles.length > 0}
