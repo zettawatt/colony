@@ -22,13 +22,15 @@
     greetMsg = await invoke("greet", { name });
   }
 
-  async function handleInitializeAutonomiClient() {
+  async function initializeAutonomiClient() {
     // const walletKey = prompt("Enter wallet key:");
     // if (!walletKey) {
     //   statusMessage = "Wallet key is required";
     //   return;
     // }
 
+    // const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
     const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
     isLoading = true;
@@ -42,6 +44,7 @@
     } finally {
       isLoading = false;
     }
+    console.log(statusMessage)
   }
 
   async function handleInitializePodManager() {
@@ -100,7 +103,7 @@
   }
 </script>
 
-<main class="search-container">
+<main class="search-container" style="padding-top: 7vh;">
   <!-- <h1>Welcome to Colony</h1> -->
 
   <div class="row">
@@ -129,7 +132,7 @@
   </div>
 
   <!-- Action buttons -->
-  <div class="button-row">
+  <!-- <div class="button-row">
     <button
       class="action-button"
       onclick={handleInitializeAutonomiClient}
@@ -151,7 +154,7 @@
     >
       Add Pod
     </button>
-  </div>
+  </div> -->
 
   <!-- Status message -->
   {#if statusMessage}
@@ -228,8 +231,6 @@
   margin-top: 1.5rem;
   padding: 1rem;
   border-radius: 8px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
@@ -248,22 +249,6 @@
 
 .logo.svelte-kit:hover {
   filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .container {
@@ -350,25 +335,5 @@ button {
 #greet-input {
   margin-right: 5px;
 }
-/* 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-} */
 
 </style>

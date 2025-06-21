@@ -1,5 +1,5 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { appDataDir } from '@tauri-apps/api/path';
+import { appDataDir, downloadDir } from '@tauri-apps/api/path';
 import { FileObj } from "../classes/FileObj";
 
 const STORE_NAME = "colony-app-state.json";
@@ -9,11 +9,16 @@ let store: LazyStore | null = null;
 
 export async function initStore() {
   const dir = await appDataDir();
+  const defaultDownloadDir = await downloadDir();
   store = new LazyStore(`${dir}/${STORE_NAME}`, { autoSave: true });
   await store.set('__version', STORE_VERSION);
   await store.set('uploadedFiles', {});
-  await store.set('downloadFiles', {});
-  await store.set('podCache', {});
+  await store.set('downloadedFiles', {});
+  await store.set('podCache', []);
+  await store.set('hasUserCompletedIntro', false);
+  await store.set('userConfig', {
+    "downloadsDirectory": defaultDownloadDir,
+  });
   return store;
 }
 
@@ -74,7 +79,12 @@ export async function getUploadedFilesArray(): Promise<FileObj[]> {
 
 export async function addDownloadedFile(fileObj: FileObj) {
   const store = await getStore();
-  await store.set('downloadFiles.' + fileObj.uuid, fileObj);
+  const downloadedFiles = await getDownloadedFiles();
+  console.log("downloadedFiles - ps", downloadedFiles)
+  if(downloadedFiles && fileObj.autonomiAddress) {
+    downloadedFiles[fileObj.autonomiAddress] = fileObj.toJSON()
+    await store.set('downloadedFiles', downloadedFiles);
+  }
 }
 
 export async function getDownloadedFileObj(uuid: string) {
@@ -82,12 +92,46 @@ export async function getDownloadedFileObj(uuid: string) {
   return store.get('downloadFiles.' + uuid);
 }
 
-export async function getDownloadedFiles(): Promise<Record<string, FileObj>> {
+export async function getDownloadedFiles(): Promise<Record<string, unknown> | undefined>  {
   const store = await getStore();
-  return (await store.get('downloadFiles')) as Record<string, FileObj>;
+  return (await store.get('downloadedFiles')) as Record<string, FileObj>;
 }
 
+export async function getDownloadedFilesArray(): Promise<FileObj[]> {
+  const store = await getStore();
+  const fileObj = await store.get("downloadedFiles");
+  const fileObjArray = fileObj ? Object.values(fileObj) : [];
+  // Sort by ascending
+  return fileObjArray.sort((a: any, b: any) => {
+    const dateA = new Date(a.downloadedDate).getTime();
+    const dateB = new Date(b.downloadedDate).getTime();
+    return dateB - dateA;
+  });
+}
+
+export async function getPodCache() {
+  const store = await getStore();
+  return await store.get('podCache');
+}
+
+export async function addPodObj(pod: any) {
+  const store = await getStore();
+  const podCache = await getPodCache();
+  if(podCache && pod.address) {
+    podCache.push(pod)
+    await store.set('podCache', podCache);
+  }
+}
+
+export async function getDownloadDir(): Promise<string> {
+  const store = await getStore();
+  const config = await store.get("userConfig") as { downloadsDirectory: string };
+  return config.downloadsDirectory;
+} 
+
 const ps = {
+  getPodCache,
+  addPodObj,
   initStore,
   getStore,
   eraseStore,
@@ -99,7 +143,9 @@ const ps = {
   getUploadedFilesArray,
   addDownloadedFile,
   getDownloadedFileObj,
-  getDownloadedFiles
+  getDownloadedFiles,
+  getDownloadDir,
+  getDownloadedFilesArray,
 };
 
 export default ps;
