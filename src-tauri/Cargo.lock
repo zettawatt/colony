@@ -2170,7 +2170,7 @@ dependencies = [
 
 [[package]]
 name = "colonylib"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "088951feb2014e93d04f3cc3fbbe130cbb3686ae05c20acc370bf4681f7c497d"
 dependencies = [
