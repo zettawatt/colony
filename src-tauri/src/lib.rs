@@ -388,14 +388,22 @@ async fn add_pod(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    let (pod_address, _) = podman.add_pod(&request.name).await?;
+        // Use the PodManager
+        let (pod_address, _) = podman.add_pod(&request.name).await?;
 
-    // Put the components back
+        info!("Added pod {} with address {}", &request.name, &pod_address);
+        Ok(PodInfo {
+            address: pod_address,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -403,10 +411,7 @@ async fn add_pod(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("Added pod {} with address {}", &request.name, &pod_address);
-    Ok(PodInfo {
-        address: pod_address,
-    })
+    result
 }
 
 #[tauri::command]
@@ -458,16 +463,27 @@ async fn add_pod_ref(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    podman
-        .add_pod_ref(&request.pod_address, &request.pod_ref_address)
-        .await?;
+        // Use the PodManager
+        podman
+            .add_pod_ref(&request.pod_address, &request.pod_ref_address)
+            .await?;
 
-    // Put the components back
+        info!(
+            "Added pod reference {} to pod {}",
+            &request.pod_ref_address, &request.pod_address
+        );
+        Ok(PodInfo {
+            address: request.pod_address,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -475,13 +491,7 @@ async fn add_pod_ref(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!(
-        "Added pod reference {} to pod {}",
-        &request.pod_ref_address, &request.pod_address
-    );
-    Ok(PodInfo {
-        address: request.pod_address,
-    })
+    result
 }
 
 #[tauri::command]
@@ -533,16 +543,27 @@ async fn remove_pod_ref(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    podman
-        .remove_pod_ref(&request.pod_address, &request.pod_ref_address)
-        .await?;
+        // Use the PodManager
+        podman
+            .remove_pod_ref(&request.pod_address, &request.pod_ref_address)
+            .await?;
 
-    // Put the components back
+        info!(
+            "Removed pod reference {} from pod {}",
+            &request.pod_ref_address, &request.pod_address
+        );
+        Ok(PodInfo {
+            address: request.pod_address,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -550,19 +571,13 @@ async fn remove_pod_ref(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!(
-        "Added pod reference {} to pod {}",
-        &request.pod_ref_address, &request.pod_address
-    );
-    Ok(PodInfo {
-        address: request.pod_address,
-    })
+    result
 }
 
 #[tauri::command]
 async fn list_my_pods(
     state: State<'_, Mutex<AppState>>,
-) -> Result<AddressList, Error> {
+) -> Result<SearchResult, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet, mut datastore, mut keystore, mut graph) = {
         let state = state.lock().unwrap();
@@ -607,14 +622,23 @@ async fn list_my_pods(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    let pod_list = podman.list_my_pods()?;
+        // Use the PodManager
+        let pod_list = podman.list_my_pods()?;
 
-    // Put the components back
+        info!("List of user pods:");
+
+        Ok(SearchResult {
+            results: pod_list,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -622,14 +646,7 @@ async fn list_my_pods(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("List of user pods:");
-    for pod in &pod_list {
-        info!("Pod address: {}", pod);
-    }        
-
-    Ok(AddressList {
-        addresses: pod_list,
-    })
+    result
 }
 
 #[tauri::command]
@@ -681,14 +698,26 @@ async fn list_pod_subjects(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    let subject_list = podman.list_pod_subjects(&address)?;
+        // Use the PodManager
+        let subject_list = podman.list_pod_subjects(&address)?;
 
-    // Put the components back
+        info!("List of subjects in pod {}:", address);
+        for subject in &subject_list {
+            info!("Subject address: {}", subject);
+        }
+
+        Ok(AddressList {
+            addresses: subject_list,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -696,14 +725,7 @@ async fn list_pod_subjects(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("List of subjects in pod {}:", address);
-    for subject in &subject_list {
-        info!("Subject address: {}", subject);
-    }        
-
-    Ok(AddressList {
-        addresses: subject_list,
-    })
+    result
 }
 
 #[tauri::command]
@@ -755,14 +777,22 @@ async fn upload_pod(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    podman.upload_pod(&request.pod_address).await?;
+        // Use the PodManager
+        podman.upload_pod(&request.pod_address).await?;
 
-    // Put the components back
+        info!("Uploaded pod with address {}", &request.pod_address);
+        Ok(PodInfo {
+            address: request.pod_address,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -770,10 +800,7 @@ async fn upload_pod(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("Uploaded pod with address {}", &request.pod_address);
-    Ok(PodInfo {
-        address: request.pod_address,
-    })
+    result
 }
 
 #[tauri::command]
@@ -822,14 +849,22 @@ async fn upload_all(state: State<'_, Mutex<AppState>>) -> Result<String, Error> 
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    podman.upload_all().await?;
+        // Use the PodManager
+        podman.upload_all().await?;
 
-    // Put the components back
+        info!("Uploaded all updated pods to Autonomi");
+        Ok(format!(
+            "Successfully uploaded all updated pods to Autonomi"
+        ))
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -837,10 +872,7 @@ async fn upload_all(state: State<'_, Mutex<AppState>>) -> Result<String, Error> 
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("Uploaded all updated pods to Autonomi");
-    Ok(format!(
-        "Successfully uploaded all updated pods to Autonomi"
-    ))
+    result
 }
 
 #[tauri::command]
@@ -889,14 +921,20 @@ async fn refresh_cache(state: State<'_, Mutex<AppState>>) -> Result<String, Erro
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    podman.refresh_cache().await?;
+        // Use the PodManager
+        podman.refresh_cache().await?;
 
-    // Put the components back
+        info!("Refreshed local pod cache");
+        Ok(format!("Successfully refreshed local pod cache"))
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -904,8 +942,7 @@ async fn refresh_cache(state: State<'_, Mutex<AppState>>) -> Result<String, Erro
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("Refreshed local pod cache");
-    Ok(format!("Successfully efreshed local pod cache"))
+    result
 }
 
 #[tauri::command]
@@ -957,19 +994,31 @@ async fn refresh_ref(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    let depth: u64 = request
-        .depth
-        .clone()
-        .parse()
-        .map_err(|_| Error::from("Invalid depth"))?;
-    podman.refresh_ref(depth).await?;
+        // Use the PodManager
+        let depth: u64 = request
+            .depth
+            .clone()
+            .parse()
+            .map_err(|_| Error::from("Invalid depth"))?;
+        podman.refresh_ref(depth).await?;
 
-    // Put the components back
+        info!(
+            "Refreshed all local pods and pod reference to cache to depth {}",
+            &request.depth
+        );
+        Ok(format!(
+            "Successfully refreshed all local pods and pod reference to cache to depth {}",
+            &request.depth
+        ))
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -977,14 +1026,7 @@ async fn refresh_ref(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!(
-        "Refreshed all local pods and pod reference to cache to depth {}",
-        &request.depth
-    );
-    Ok(format!(
-        "Successfully refreshed all local pods and pod reference to cache to depth {}",
-        &request.depth
-    ))
+    result
 }
 
 #[tauri::command]
@@ -1036,14 +1078,22 @@ async fn search(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    let search_results = podman.search(request.query.clone()).await?;
+        // Use the PodManager
+        let search_results = podman.search(request.query.clone()).await?;
 
-    // Put the components back
+        info!("Search completed");
+        Ok(SearchResult {
+            results: search_results,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -1051,10 +1101,7 @@ async fn search(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("Search completed");
-    Ok(SearchResult {
-        results: search_results,
-    })
+    result
 }
 
 #[tauri::command]
@@ -1106,20 +1153,32 @@ async fn put_subject_data(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    podman
-        .put_subject_data(
-            &request.pod_address,
-            &request.subject_address,
-            &request.data,
-        )
-        .await?;
+        // Use the PodManager
+        podman
+            .put_subject_data(
+                &request.pod_address,
+                &request.subject_address,
+                &request.data,
+            )
+            .await?;
 
-    // Put the components back
+        info!(
+            "Put data for subject {} in pod {}",
+            &request.subject_address, &request.pod_address
+        );
+        Ok(format!(
+            "Successfully put data for subject {} in pod {}",
+            &request.subject_address, &request.pod_address
+        ))
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -1127,14 +1186,7 @@ async fn put_subject_data(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!(
-        "Put data for subject {} in pod {}",
-        &request.subject_address, &request.pod_address
-    );
-    Ok(format!(
-        "Successfully put data for subject {} in pod {}",
-        &request.subject_address, &request.pod_address
-    ))
+    result
 }
 
 #[tauri::command]
@@ -1186,14 +1238,20 @@ async fn get_subject_data(
         (client, wallet, datastore, keystore, graph)
     }; // All MutexGuards are dropped here
 
-    // Now we can safely use async operations
-    let mut podman =
-        PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
 
-    // Use the PodManager
-    let subject_data = podman.get_subject_data(&request.subject_address).await?;
+        // Use the PodManager
+        let subject_data = podman.get_subject_data(&request.subject_address).await?;
 
-    // Put the components back
+        info!("Retrieved data for subject {}", &request.subject_address);
+        Ok(SubjectDataResult { data: subject_data })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
     {
         let state = state.lock().unwrap();
         *state.datastore.lock().unwrap() = Some(datastore);
@@ -1201,8 +1259,7 @@ async fn get_subject_data(
         *state.graph.lock().unwrap() = Some(graph);
     }
 
-    info!("Retrieved data for subject {}", &request.subject_address);
-    Ok(SubjectDataResult { data: subject_data })
+    result
 }
 
 ////////////////////////////////////////////////////////////////////
