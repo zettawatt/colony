@@ -181,6 +181,15 @@ pub struct SearchResult {
     pub results: Value,
 }
 
+#[derive(Serialize, Debug, Clone)]
+pub struct PodMetaData {
+    pub address: String,
+    pub name: Option<String>,
+    pub creation: Option<String>,
+    pub modified: Option<String>,
+    pub depth: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SubjectDataResult {
     pub data: String,
@@ -577,7 +586,7 @@ async fn remove_pod_ref(
 #[tauri::command]
 async fn list_my_pods(
     state: State<'_, Mutex<AppState>>,
-) -> Result<SearchResult, Error> {
+) -> Result<Vec<PodMetaData>, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet, mut datastore, mut keystore, mut graph) = {
         let state = state.lock().unwrap();
@@ -631,11 +640,41 @@ async fn list_my_pods(
         // Use the PodManager
         let pod_list = podman.list_my_pods()?;
 
-        info!("List of user pods:");
+        let bindings = pod_list["results"]["bindings"]
+            .as_array()
+            .ok_or(Error::Message("Unexpected pod list format".into()))?;
 
-        Ok(SearchResult {
-            results: pod_list,
-        })
+        use std::collections::HashMap;
+        let mut pods: HashMap<String, PodMetaData> = HashMap::new();
+
+        for bind in bindings {
+            let subject = bind["subject"]["value"].as_str();
+            let predicate = bind["predicate"]["value"].as_str();
+            let object = bind["object"]["value"].as_str();
+
+            if let (Some(subject), Some(predicate), Some(object)) = (subject, predicate, object) {
+                let entry = pods.entry(subject.to_string()).or_insert(PodMetaData {
+                    address: subject.to_string(),
+                    name: None,
+                    creation: None,
+                    modified: None,
+                    depth: None,
+                });
+
+                if predicate.ends_with("#name") {
+                    entry.name = Some(object.to_string());
+                } else if predicate.ends_with("#creation") {
+                    entry.creation = Some(object.to_string());
+                } else if predicate.ends_with("#modified") {
+                    entry.modified = Some(object.to_string());
+                } else if predicate.ends_with("#depth") {
+                    entry.depth = Some(object.to_string());
+                }
+            }
+        }
+
+        let pod_vec = pods.into_iter().map(|(_, v)| v).collect();
+        Ok(pod_vec)
     }.await;
 
     // Always put the components back, regardless of success or failure
