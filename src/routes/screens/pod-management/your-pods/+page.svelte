@@ -7,17 +7,24 @@
   import ps from "../../../../stores/persistantStorage";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
 
-  let isLoading = $state(false);
-  let newPodName = $state("");
-  let createdPods = $state<any[]>([]);
-  let activePod = $state<any>(null); // Holds the pod for the currently active modal
-  let uploadedFiles = $state<FileObj[]>([]);
-  let selectedFileName = $state(""); // <-- Track the filename selected for adding
-
-
   type PodInfo = {
     address: string
   }
+
+  type PodMetaData = {
+    address: string;
+    name?: string | undefined;
+    creation?: string | undefined;
+    modified?: string | undefined;
+    depth?: string | undefined;
+  };
+
+  let isLoading = $state(false);
+  let newPodName = $state("");
+  let createdPods = $state<any[]>([]) as PodMetaData[];
+  let activePod = $state<any>(null); // Holds the pod for the currently active modal
+  let uploadedFiles = $state<FileObj[]>([]);
+  let selectedFileName = $state(""); // <-- Track the filename selected for adding
 
   async function addFilesToPod() {
     const files = activePod.fileObjs as FileObj[];
@@ -63,10 +70,12 @@
 
   async function fetchPods() {
     try {
-      const result = await invoke('list_my_pods');
+      const results = await invoke('list_my_pods');
       // result will likely be { addresses: [ ..pod addresses.. ] }
-      console.log('Pod addresses:', result.addresses);
-      return result.addresses
+      console.log(JSON.stringify(results));
+      console.log(results);
+      console.log('Pods:', results);
+      return results
       // you can now use result.addresses in your UI
     } catch (e) {
       console.error('Failed to fetch pods:', e);
@@ -155,6 +164,14 @@
     console.log(createdPods)
   }
 
+  function makeDateReadable(date: string | undefined) {
+    if (date) {
+      return new Date(date).toLocaleString();
+    } else {
+      return;
+    }
+  }
+
   onMount(async () => {
     // await initPodManager();
     await loadTable();
@@ -198,20 +215,20 @@
                     <tr>
                       <th>{idx + 1}</th>
                       <!-- <td>{pod.name}</td> -->
-                      <td>pod {idx + 1}</td>
+                      <td>{pod.name}</td>
                       <td>
-                        <div class="tooltip tooltip-warning" data-tip={pod}>
+                        <div class="tooltip tooltip-warning" data-tip={pod.address}>
                           <button
                             class="address-tooltip"
-                            data-address={pod}
+                            data-address={pod.address}
                             onclick={handleCopyAddress}
                             tabindex="0"
                             style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
                           >pod address</button>
                         </div>
                       </td>
-                      <td>{pod.createdDate}</td>
-                      <td>{pod.createdDate}</td>
+                      <td>{makeDateReadable(pod.creation)}</td>
+                      <td>{makeDateReadable(pod.modified)}</td>
                       <td>
                         <button 
                           class="btn btn-accent"
