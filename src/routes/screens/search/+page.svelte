@@ -32,12 +32,12 @@
 
 <main class="search-container">
   <div class="tabs tabs-box">
-    <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" />
+    <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" checked={true}/>
     <div class="tab-content border-base-300 bg-base-100 p-10">
       <TabulatorTable data={torrentsData} columns={torrentsColumns} />
     </div>
 
-    <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" checked="checked" />
+    <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" />
     <div class="tab-content border-base-300 bg-base-100 p-10 pt-3">
       <div class="row mb-3">
         <label class="input mr-2">
