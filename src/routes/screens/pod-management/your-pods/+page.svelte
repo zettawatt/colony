@@ -53,7 +53,7 @@
           console.log(result)
         }        
       } catch (error) {
-       console.trace(error) 
+        console.trace(error) 
       }
     }
   }
@@ -65,6 +65,20 @@
       console.log(result); // "Successfully uploaded all updated pods to Autonomi"
     } catch (error) {
       console.error('Upload failed:', error);
+    }
+  }
+
+  async function uploadSinglePod() {
+    try {
+      const podAddress = activePod.address;
+      const result = await invoke('upload_pod', {
+        request: { pod_address: podAddress }
+      });
+      console.log('Pod uploaded:', result);
+      addToast(`Successfully uploaded pod ${activePod.name}`, "success");
+    } catch (err) {
+      console.error('Failed to upload pod:', err);
+      addToast(err, "error");
     }
   }
 
@@ -138,6 +152,7 @@
 
 
   function addFileToActivePod() {
+    // console.log("activePod", activePod)
     if (!selectedFileName) return;
     if (!activePod.fileObjs) activePod.fileObjs = [];
     // Find FileObj in uploadedFiles by name
@@ -230,9 +245,14 @@
                       <td>{makeDateReadable(pod.creation)}</td>
                       <td>{makeDateReadable(pod.modified)}</td>
                       <td>
-                        <button 
+                        <!-- <button 
                           class="btn btn-accent"
                           onclick={() => { activePod = pod; uploadPodModal.showModal(); }}>
+                          u
+                        </button> -->
+                        <button 
+                          class="btn btn-accent"
+                          onclick={() => { activePod = pod; uploadSinglePod(); }}>
                           u
                         </button>
                         <button 
@@ -332,7 +352,7 @@
   </dialog>
   <dialog id="editPodModal" class="modal">
     <div class="modal-box w-10/12 max-w-3xl max-h-lg">
-      <h3 class="text-lg font-bold">Pod Editing {activePod?.name}</h3>
+      <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
       <div class="py-2" style="justify-content: center;">
         <div class="join">
           <select class="select" bind:value={selectedFileName}>
