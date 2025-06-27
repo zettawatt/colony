@@ -653,8 +653,9 @@ async fn list_my_pods(
             let object = bind["object"]["value"].as_str();
 
             if let (Some(subject), Some(predicate), Some(object)) = (subject, predicate, object) {
+                let address = subject.strip_prefix("ant://").unwrap_or(subject).to_string();
                 let entry = pods.entry(subject.to_string()).or_insert(PodMetaData {
-                    address: subject.to_string(),
+                    address: address,
                     name: None,
                     creation: None,
                     modified: None,
