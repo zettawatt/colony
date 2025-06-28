@@ -6,8 +6,8 @@
   import { testDataSearch } from '../../../components/testDataSearch';
   import { invoke } from "@tauri-apps/api/core";
 
-  let searchInput = $state("");
-  let tableSearchResults = $state([])
+  let searchInput = "";
+  let tableSearchResults = [];
 
   async function simpleSearch() {
     try {
@@ -47,6 +47,7 @@
         const binding = searchResults.bindings[i];
         if (!(binding.subject.value in aggregate)){
           aggregate[binding.subject.value] = {
+            id: i+1,
             pod: binding.graph.value.startsWith("ant://") 
               ? binding.graph.value.slice(6) : binding.graph.value,
             address: binding.subject.value.startsWith("ant://") 
