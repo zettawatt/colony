@@ -251,19 +251,19 @@
                           u
                         </button> -->
                         <button 
-                          class="btn btn-accent"
+                          class="btn btn-accent btn-square"
                           onclick={() => { activePod = pod; uploadSinglePod(); }}>
-                          u
+                          <img src="/app-icons/cloud-data-upload-icon.svg" alt="upload icon" width="24" height="24" />
                         </button>
                         <button 
-                          class="btn btn-warning"
+                          class="btn btn-warning btn-square"
                           onclick={() => { activePod = pod; editPodModal.showModal(); }}>
-                          e
+                          <img src="/app-icons/edit-pen-icon.svg" alt="upload icon" width="19" height="19" />
                         </button>
                         <button 
-                          class="btn btn-error"
+                          class="btn btn-error btn-square"
                           onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
-                          d
+                          <img src="/app-icons/recycle-bin-icon.svg" alt="upload icon" width="16" height="16" />
                         </button>
                       </td>
                     </tr>
