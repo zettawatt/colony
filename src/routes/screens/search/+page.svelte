@@ -2,12 +2,30 @@
   import TabulatorTable from '../../../components/tabulator.svelte';
   import { torrentsColumns } from '../../../components/testCols';
   import { torrentsData } from '../../../components/testData';
-  import { searchColumns } from '../../../utils/searchColumns';
+  import { searchColumns } from '../../../utils/search/searchColumns';
   import { testDataSearch } from '../../../components/testDataSearch';
   import { invoke } from "@tauri-apps/api/core";
+  import { formatFileSize } from '../../../utils/fileFormaters';
 
   let searchInput = "";
   let tableSearchResults = [];
+  let activeRow = {};
+
+  let rowMenu = [
+    {
+        label:"Download",
+        action:function(e, row){
+            row.update({name:"Steve Bobberson"});
+        }
+    },
+    {
+      label:"View Metadata",
+      action:function(e, row){
+        activeRow = row.getData();
+        fileMetadataModal.showModal()
+      }
+    }
+  ];
 
   async function simpleSearch() {
     try {
@@ -110,9 +128,39 @@
         </label>
         <button class="btn btn-sof btn-warning" onclick={()=>simpleSearch()}>Search</button>
       </div>
-      <TabulatorTable data={tableSearchResults} columns={searchColumns} />
+      <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} />
     </div>
   </div>
+  <dialog id="fileMetadataModal" class="modal">
+    <div class="modal-box w-10/12 max-w-5xl max-h-lg">
+      <h3 class="text-lg font-bold">File Metadata: {activeRow?.name}</h3>
+      <div class="py-2" style="justify-content: center;">
+          <table class="table table-xs">
+            {#if activeRow}
+              {#each Object.entries(activeRow) as [key, value]}
+                {#if key === "size"}
+                  <tr>
+                    <th>{key}</th>
+                    <td>{formatFileSize(value)}</td>
+                  </tr>
+                {:else if key !== "id"}
+                  <tr>
+                    <th>{key}</th>
+                    <td>{value}</td>
+                  </tr>
+                {/if}
+              {/each}
+            {/if}
+        </table>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-primary">Save Pod</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
   <!-- <TabulatorTable data={torrentsData} columns={torrentsColumns} /> -->
 </main>
 
@@ -152,5 +200,19 @@
   display: flex;
   justify-content: center;
 }
+/* ---- Added styles for bordered rows in fileMetadataModal ---- */
+#fileMetadataModal table tr {
+  border-bottom: 1px solid #d1d5db; /* Tailwind slate-300 */
+}
 
+#fileMetadataModal table th, 
+#fileMetadataModal table td {
+  border: 1px solid #d1d5db;
+  padding: 0.4em 0.6em;
+}
+
+#fileMetadataModal table {
+  border-collapse: collapse;
+  width: 100%;
+}
 </style>
