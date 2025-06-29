@@ -81,7 +81,7 @@
             aggregate[binding.subject.value].description = binding.object.value;
             break;
           case 'http://schema.org/contentSize':
-            aggregate[binding.subject.value].size = Number(binding.object.value);
+            aggregate[binding.subject.value].size = formatFileSize(Number(binding.object.value));
             break;
           case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type':
             aggregate[binding.subject.value].type = binding.object.value;
@@ -155,8 +155,7 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary">Save Pod</button>
-          <button class="btn btn-soft btn-error">Cancel</button>
+          <button class="btn btn-soft btn-error">Close</button>
         </form>
       </div>
     </div>
