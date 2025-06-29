@@ -132,6 +132,12 @@ pub struct CreatePodRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct RenamePodRequest {
+    pub name: String,
+    pub new_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CreatePodRefRequest {
     pub pod_address: String,
     pub pod_ref_address: String,
@@ -409,6 +415,156 @@ async fn add_pod(
         info!("Added pod {} with address {}", &request.name, &pod_address);
         Ok(PodInfo {
             address: pod_address,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    result
+}
+
+#[tauri::command]
+async fn remove_pod(
+    state: State<'_, Mutex<AppState>>,
+    request: CreatePodRequest,
+) -> Result<PodInfo, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+        // Use the PodManager
+        podman.remove_pod(&request.name).await?;
+
+        info!("Removed pod {}", &request.name);
+        Ok(PodInfo {
+            address: request.name,
+        })
+    }.await;
+
+    // Always put the components back, regardless of success or failure
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    result
+}
+
+#[tauri::command]
+async fn rename_pod(
+    state: State<'_, Mutex<AppState>>,
+    request: RenamePodRequest,
+) -> Result<PodInfo, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+        // Use the PodManager
+        podman.rename_pod(&request.name, &request.new_name).await?;
+
+        info!("Renamed pod {} to new name {}", &request.name, &request.new_name);
+        Ok(PodInfo {
+            address: request.name,
         })
     }.await;
 
@@ -1456,6 +1612,8 @@ pub fn run() {
             get_new_seed_phrase,
             initialize_pod_manager,
             add_pod,
+            rename_pod,
+            remove_pod,
             add_pod_ref,
             remove_pod_ref,
             list_my_pods,
