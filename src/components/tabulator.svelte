@@ -3,7 +3,7 @@
   import { TabulatorFull as Tabulator } from 'tabulator-tables';
   import 'tabulator-tables/dist/css/tabulator.min.css';
 
-  export let columns, data;
+  export let columns, data, rowMenu;
 
   let tableComponent;
   let tabulatorInstance;
@@ -12,6 +12,7 @@
     tabulatorInstance = new Tabulator(tableComponent, {
       columns: columns,
       data: data,
+      rowContextMenu: rowMenu,
       reactiveData: true, // enables Tabulator's own reactivity
       layout: 'fitDataStretch'
     });
