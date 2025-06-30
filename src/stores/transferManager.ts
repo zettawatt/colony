@@ -3,8 +3,10 @@ import { writable } from 'svelte/store';
 import { listen } from '@tauri-apps/api/event';
 import ps from './persistantStorage';
 
+// The underlying store instance (initialized asynchronously)
 let store: Awaited<ReturnType<typeof ps.getStore>> | null = null;
 
+// Status type for transfer tasks (both upload & download)
 export type TransferStatus = 
   | "Complete"
   | "Errored"
@@ -13,24 +15,29 @@ export type TransferStatus =
   | "Cancelled"
   | "Not Yet Uploaded";
 
+// Kind of transfer
 export type TransferType = 'download' | 'upload';
+
+// Public-facing transfer info (persisted & exposed in store)
 export type TransferInfo = {
-  id: string;
-  type: TransferType;
-  path: string;
-  estimated_size?: number;
-  progress: number;
-  complete: boolean;
-  error?: string;
-  elapsed?: string; // HH:MM:SS
-  status: TransferStatus
+  id: string;                       // Unique task identifier
+  type: TransferType;               // Upload or download
+  path: string;                     // Local file path
+  estimated_size?: number;          // Bytes (optional)
+  progress: number;                 // 0-100 percent
+  complete: boolean;                // Whether transfer finished
+  error?: string;                   // Error message (if failed)
+  elapsed?: string;                 // Elapsed time as "HH:MM:SS"
+  status: TransferStatus;           // Current status
 };
 
+// Internal transfer info (adds timer/secondsElapsed, not persisted)
 type InternalTransferInfo = TransferInfo & {
-  timer?: ReturnType<typeof setInterval>;
-  secondsElapsed?: number;
+  timer?: ReturnType<typeof setInterval>; // Interval timer to update time
+  secondsElapsed?: number;                // Seconds since started
 };
 
+// Utility: format seconds as "HH:MM:SS"
 function formatElapsed(seconds: number): string {
   const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
   const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -38,15 +45,20 @@ function formatElapsed(seconds: number): string {
   return `${hrs}:${mins}:${secs}`;
 }
 
+// Svelte store for all tracked transfers (keyed by id)
 const { subscribe, update, set } = writable<Record<string, InternalTransferInfo>>({});
 
+// Internal state to prevent double-init and cleanup logic
 let initialized = false;
 let unsubStore: (() => void) | null = null;
 
+// Start a timer that increments elapsed time for a transfer task
 function startElapsedTimer(id: string) {
+  // Fires every second; updates store with +1 elapsed second & updates elapsed string
   return setInterval(() => {
     update(transfers => {
       const t = transfers[id];
+      // Don't increment if missing or already complete
       if (!t || t.complete) return transfers;
       const secondsElapsed = (t.secondsElapsed ?? 0) + 1;
       return {
@@ -61,8 +73,11 @@ function startElapsedTimer(id: string) {
   }, 1000);
 }
 
+// Set up Tauri event listeners to respond to transfer progress from backend
 function connectListeners() {
-  // Download listeners
+  // Download events
+
+  // On download start: add to store, begin timer, status is "Downloading"
   console.log("download-started")
   listen('download-started', event => {
     const { id, path, estimated_size } = event.payload as { id: string; path: string; estimated_size?: number };
@@ -86,6 +101,7 @@ function connectListeners() {
     });
   });
 
+  // On download complete: set as finished, stop timer, mark status
   listen('download-complete', event => {
     console.log("download-complete")
     const { id } = event.payload as { id: string };
@@ -105,6 +121,7 @@ function connectListeners() {
     });
   });
 
+  // On download error: stop timer, mark status, add error message
   listen('download-error', event => {
     const { id, message } = event.payload as { id: string; message: string };
     update(transfers => {
@@ -123,7 +140,9 @@ function connectListeners() {
     });
   });
 
-  // Upload listeners
+  // Upload events follow same pattern:
+
+  // On upload start: initialize new entry, start timer
   listen('upload-started', event => {
     console.log("upload-started")
     const { id, path, estimated_size } = event.payload as { id: string; path: string; estimated_size?: number };
@@ -147,6 +166,7 @@ function connectListeners() {
     });
   });
 
+  // On upload complete: mark as finished, stop timer
   listen('upload-complete', event => {
     console.log("upload-complete")
     const { id } = event.payload as { id: string };
@@ -166,6 +186,7 @@ function connectListeners() {
     });
   });
 
+  // On upload error: record error, stop timer
   listen('upload-error', event => {
     console.log("upload-error")
     const { id, message } = event.payload as { id: string; message: string };
@@ -186,16 +207,21 @@ function connectListeners() {
   });
 }
 
+// Initialize persistent store, restore prior transfers, set up listeners
 async function init() {
   if (initialized) return;
   store = await ps.getStore();
+
+  // Load persisted transfer info from storage (if available)
   const saved = (await store.get<Record<string, TransferInfo>>('transferManager')) ?? {};
+  // Note: timers are not restored for completed transfers; errored states TODO (see comment)
   const restored: Record<string, InternalTransferInfo> = Object.fromEntries(
     Object.entries(saved).map(([id, t]) => [
       id,
       {
         ...t,
         timer: t.complete ? undefined : startElapsedTimer(id),
+        // Parse elapsed string back to seconds, if available
         secondsElapsed: t.elapsed
           ? (t.elapsed.split(':').reduce((acc, v, idx) =>
             idx === 0
@@ -233,18 +259,20 @@ async function init() {
     store.save();
   });
 
-  connectListeners();
+  connectListeners();  // Begin receiving backend events
   initialized = true;
   console.log("transfermanager - init")
 }
 
+// Clean up: unsubscribe from store and reset state
 function cleanup() {
   if (unsubStore) unsubStore();
   initialized = false;
 }
 
+// The store as exported to Svelte UI
 export const transferManager = {
-  subscribe,
-  init,
-  cleanup,
+  subscribe,   // Svelte store subscription
+  init,        // Call this on app/component mount
+  cleanup,     // Call this on unmount
 };
