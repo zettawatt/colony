@@ -1,7 +1,7 @@
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/static/splash_screen.png" height="250" />
  <img src="https://img.shields.io/github/issues/zettawatt/colony?style=for-the-badge" />
- <img src="https://img.shields.io/github/actions/workflow/status/zettawatt/colony/rust.yml?style=for-the-badge&logo=github&logoColor=white&label=Build" />
+ <img src="https://img.shields.io/github/actions/workflow/status/zettawatt/colony/ci.yml?style=for-the-badge&logo=github&logoColor=white&label=Build" />
 </p>
 
 ## Why do I care?
