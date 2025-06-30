@@ -3,13 +3,20 @@
   import { torrentsColumns } from '../../../components/testCols';
   import { torrentsData } from '../../../components/testData';
   import { searchColumns } from '../../../utils/search/searchColumns';
-  import { testDataSearch } from '../../../components/testDataSearch';
   import { invoke } from "@tauri-apps/api/core";
   import { formatFileSize } from '../../../utils/fileFormaters';
+  import { transferManager } from '../../../stores/transferManager';
+  import { onMount } from 'svelte';
+  import { statusColumns } from '../../../utils/search/statusColumns';
+  import { statusTestData } from '../../../utils/search/statusTestData';
 
   let searchInput = "";
   let tableSearchResults = [];
   let activeRow = {};
+  $: transfers = Object.values($transferManager);
+  $: {
+    console.log("Transfers updated:", transfers);
+  }
 
   let rowMenu = [
     {
@@ -99,13 +106,17 @@
   // function updateTorrentData(newData) {
   //   torrentsData = newData; // Reactive update
   // }
+
+  onMount(async () => {
+    await transferManager.init();
+  })
 </script>
 
 <main class="search-container">
   <div class="tabs tabs-box">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" checked={true}/>
     <div class="tab-content border-base-300 bg-base-100 p-10">
-      <TabulatorTable data={torrentsData} columns={torrentsColumns} />
+      <TabulatorTable data={transfers} columns={statusColumns} />
     </div>
 
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" />
@@ -138,17 +149,21 @@
           <table class="table table-xs">
             {#if activeRow}
               {#each Object.entries(activeRow) as [key, value]}
-                {#if key === "size"}
+                <tr>
+                  <th>{key}</th>
+                  <td>{value}</td>
+                </tr>
+                <!-- {#if key === "size"}
                   <tr>
                     <th>{key}</th>
-                    <td>{formatFileSize(value)}</td>
+                    <td>{value}</td>
                   </tr>
                 {:else if key !== "id"}
                   <tr>
                     <th>{key}</th>
                     <td>{value}</td>
                   </tr>
-                {/if}
+                {/if} -->
               {/each}
             {/if}
         </table>
