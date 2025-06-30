@@ -18,7 +18,7 @@ use std::fs::write;
 use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use thiserror;
 use tracing::{error, info};
 
