@@ -19,7 +19,6 @@ use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, State};
-use thiserror;
 use tracing::{error, info};
 
 #[tauri::command]
@@ -1658,7 +1657,7 @@ async fn download_data(
         "id": request.address,
         "path": request.destination_path,
         // "estimated_size": request.estimated_size
-    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
+    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     let client = {
         let state = state.lock().unwrap();
@@ -1686,7 +1685,7 @@ async fn download_data(
     app.emit("download-complete", serde_json::json!({
         "id": request.address,
         "path": request.destination_path
-    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
+    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     Ok(format!(
         "File downloaded from {} to {}",
