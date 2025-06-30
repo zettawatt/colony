@@ -5,6 +5,14 @@ import ps from './persistantStorage';
 
 const store = await ps.getStore();
 
+export type TransferStatus = 
+  | "Complete"
+  | "Errored"
+  | "Downloading"
+  | "Uploading"
+  | "Cancelled"
+  | "Not Yet Uploaded";
+
 export type DownloadStatus = {
   id: string;
   path: string;
@@ -13,6 +21,7 @@ export type DownloadStatus = {
   complete: boolean;
   error?: string;
   elapsed?: string; // HH:MM:SS
+  status: TransferStatus
 };
 
 type InternalDownloadStatus = DownloadStatus & {
@@ -60,6 +69,7 @@ subscribe(current => {
         progress: d.progress,
         complete: d.complete,
         error: d.error,
+        status: d.status
       },
     ])
   );
@@ -100,6 +110,7 @@ listen('download-started', event => {
         secondsElapsed: 0,
         elapsed: '00:00:00',
         timer,
+        status: "Downloading"
       },
     };
   });
@@ -119,6 +130,7 @@ listen('download-complete', event => {
         progress: 100,
         complete: true,
         timer: undefined,
+        status: "Complete"
       },
 };
   });
@@ -137,6 +149,7 @@ listen('download-error', event => {
         error: message,
         complete: false,
         timer: undefined,
+        status: "Errored"
       },
     };
   });
