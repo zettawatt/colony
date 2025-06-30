@@ -70,7 +70,10 @@
       addToast("uploading file to the network...", "info", 7000)
       try {
         [uploadResult, address] = await invoke('upload_data', {
-          request: { file_path: selectedPath }
+          request: { 
+            id: fileObjs[0].uuid,
+            file_path: selectedPath 
+          }
         });
         if (fileObjs[0]) {
           fileObjs[0].setActualCost(uploadResult);
