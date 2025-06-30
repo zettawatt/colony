@@ -758,6 +758,75 @@ async fn remove_pod_ref(
 }
 
 #[tauri::command]
+async fn get_update_list(state: State<'_, Mutex<AppState>>) -> Result<Value, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = {
+        // Now we can safely use async operations
+        let podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+        // Use the PodManager
+        let update_list = podman.get_update_list()?;
+
+        Ok(update_list)
+    };
+
+    // Always put the components back, regardless of success or failure
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    result
+}
+
+#[tauri::command]
 async fn list_my_pods(state: State<'_, Mutex<AppState>>) -> Result<Vec<PodMetaData>, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet, mut datastore, mut keystore, mut graph) = {
@@ -1642,6 +1711,7 @@ pub fn run() {
             remove_pod,
             add_pod_ref,
             remove_pod_ref,
+            get_update_list,
             list_my_pods,
             list_pod_subjects,
             upload_pod,
