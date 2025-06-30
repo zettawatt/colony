@@ -18,7 +18,8 @@ use std::fs::write;
 use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
+use thiserror;
 use tracing::{error, info};
 
 #[tauri::command]
@@ -1650,8 +1651,15 @@ async fn upload_data(
 async fn download_data(
     state: State<'_, Mutex<AppState>>,
     request: DownloadFileRequest,
+    app: AppHandle
 ) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
+    app.emit("download-started", serde_json::json!({
+        "id": request.address,
+        "path": request.destination_path,
+        // "estimated_size": request.estimated_size
+    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
+
     let client = {
         let state = state.lock().unwrap();
 
@@ -1675,6 +1683,11 @@ async fn download_data(
     // Write the bytes of the dog picture to a file
     write(request.destination_path.clone(), bytes)?;
     // TODO: Implement proper file download once we understand the API
+    app.emit("download-complete", serde_json::json!({
+        "id": request.address,
+        "path": request.destination_path
+    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
+
     Ok(format!(
         "File downloaded from {} to {}",
         request.address, request.destination_path

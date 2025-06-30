@@ -6,15 +6,18 @@
   import ps from "../../../../stores/persistantStorage";
   import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
-    import { onMount } from "svelte";
+  import { onMount } from "svelte";
+  import { downloadManager } from "../../../../stores/downloadManager";
+
+  // $: downloads = Object.values($downloadManager);
 
   let fileObjs: FileObj[] = [];
   let downloadedFiles = $state<FileObj[]>([]);
 
   async function downloadFile() {
     const downloadDir = await ps.getDownloadDir();
-    const dummyFilename = "upload_test.txt";
-    const dummyAddress = "b4108849f2562b7580b48225f11eda9f35cdf44d6dedfa75ac900d3d7bfc4f4d";
+    const dummyFilename = "download_test_pdf_10mb.txt";
+    const dummyAddress = "51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625";
     const request = {
       address: dummyAddress,
       destination_path: `${downloadDir}/${dummyFilename}`
@@ -132,8 +135,8 @@
     </div>
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
       <li><a href="/screens/pod-management/your-pods">Your Pods</a></li>
-      <li><a href="#"class="menu-active">Downloads</a></li>
-      <li><a href="/screens/pod-management/downloads">Downloads</a></li>
+      <li><a href="/screens/pod-management/uploads">Uploads</a></li>
+      <li><a href="#" class="menu-active">Downloads</a></li>
     </ul>
   </Drawer>
 </main>
