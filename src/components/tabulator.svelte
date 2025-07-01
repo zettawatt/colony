@@ -1,6 +1,6 @@
 <script>
-  import { onMount } from 'svelte';
-  import { TabulatorFull as Tabulator } from 'tabulator-tables';
+  import { onMount, onDestroy } from 'svelte';
+  import {TabulatorFull as Tabulator} from 'tabulator-tables';
   import 'tabulator-tables/dist/css/tabulator.min.css';
 
   export let columns, data, rowMenu;
@@ -13,7 +13,7 @@
       columns: columns,
       data: data,
       rowContextMenu: rowMenu,
-      reactiveData: true, // enables Tabulator's own reactivity
+      reactiveData: false,
       layout: 'fitDataStretch'
     });
   });
