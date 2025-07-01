@@ -7,20 +7,22 @@
   import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { onMount } from "svelte";
-  import { downloadManager } from "../../../../stores/downloadManager";
+  import { v4 as uuidv4 } from 'uuid';
 
   // $: downloads = Object.values($downloadManager);
 
   let fileObjs: FileObj[] = [];
   let downloadedFiles = $state<FileObj[]>([]);
 
-  async function downloadFile() {
+  async function downloadFile(dummyAddress: string) {
     const downloadDir = await ps.getDownloadDir();
-    const dummyFilename = "download_test_pdf_10mb.txt";
-    const dummyAddress = "51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625";
+    const dummyFilename = dummyAddress+".txt";
+    // const dummyAddress = "51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625";
     const request = {
+      id: uuidv4(),
       address: dummyAddress,
-      destination_path: `${downloadDir}/${dummyFilename}`
+      destination_path: `${downloadDir}/${dummyFilename}`,
+      size: 64
     };
     try {
       const msg = await invoke<string>('download_data', { request });
@@ -82,7 +84,8 @@
             <p style="margin: 0;" id="totalDownloadedCounter">0.0 B</p>
             <p style="margin: 0;">downloaded</p>
           </div>
-          <button class="btn btn-secondary" onclick={downloadFile()}>Download File Test</button>
+          <button class="btn btn-secondary" onclick={ () => downloadFile("51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625")}>Download File Test</button>
+          <button class="btn btn-secondary" onclick={() => downloadFile("be1f9709f4e1b8bc97f43d825d0b5aff37949775a8daf0eccad5a45ace07c4bf")}>Download File Test2</button>
         </div>
       </div>
             <div class="row">

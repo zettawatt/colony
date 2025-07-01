@@ -2,6 +2,8 @@
 import { writable } from 'svelte/store';
 import { listen } from '@tauri-apps/api/event';
 import ps from './persistantStorage';
+import { v4 as uuidv4 } from 'uuid';
+import { formatFileSize } from '../utils/fileFormaters';
 
 // The underlying store instance (initialized asynchronously)
 let store: Awaited<ReturnType<typeof ps.getStore>> | null = null;
@@ -13,22 +15,25 @@ export type TransferStatus =
   | "Downloading"
   | "Uploading"
   | "Cancelled"
-  | "Not Yet Uploaded";
+  | "Not Yet Uploaded"
+  | "Pending";
 
 // Kind of transfer
 export type TransferType = 'download' | 'upload';
 
 // Public-facing transfer info (persisted & exposed in store)
 export type TransferInfo = {
-  id: string;                       // Unique task identifier
+  id: string;                       // Unique task identifier (UUID)
+  name: string;                     // File name extracted from path
   type: TransferType;               // Upload or download
   path: string;                     // Local file path
-  estimated_size?: number;          // Bytes (optional)
+  size?: string;                    // Bytes (optional, was estimated_size)
   progress: number;                 // 0-100 percent
   complete: boolean;                // Whether transfer finished
   error?: string;                   // Error message (if failed)
   elapsed?: string;                 // Elapsed time as "HH:MM:SS"
   status: TransferStatus;           // Current status
+  startedDate: string;              // ISO date string when transfer started
 };
 
 // Internal transfer info (adds timer/secondsElapsed, not persisted)
@@ -45,6 +50,11 @@ function formatElapsed(seconds: number): string {
   return `${hrs}:${mins}:${secs}`;
 }
 
+// Utility: extract file name from path
+function fileNameFromPath(filePath: string): string {
+  return filePath.split(/[/\\]/).pop() || "";
+}
+
 // Svelte store for all tracked transfers (keyed by id)
 const { subscribe, update, set } = writable<Record<string, InternalTransferInfo>>({});
 
@@ -59,7 +69,7 @@ function startElapsedTimer(id: string) {
     update(transfers => {
       const t = transfers[id];
       // Don't increment if missing or already complete
-      if (!t || t.complete) return transfers;
+      if (!t || t.status == "Complete") return transfers;
       const secondsElapsed = (t.secondsElapsed ?? 0) + 1;
       return {
         ...transfers,
@@ -78,24 +88,27 @@ function connectListeners() {
   // Download events
 
   // On download start: add to store, begin timer, status is "Downloading"
-  console.log("download-started")
+  console.log("download-started");
   listen('download-started', event => {
-    const { id, path, estimated_size } = event.payload as { id: string; path: string; estimated_size?: number };
+    const {id, address, path, size } = event.payload as { id: string; address: string; path: string; size?: number };
+    const name = fileNameFromPath(path);
     update(transfers => {
       const timer = startElapsedTimer(id);
       return {
         ...transfers,
         [id]: {
           id,
+          name,
           type: 'download',
           path,
-          estimated_size,
+          size: formatFileSize(size) || undefined,
           progress: 0,
           complete: false,
           secondsElapsed: 0,
           elapsed: '00:00:00',
           timer,
-          status: "Downloading"
+          status: "Downloading",
+          startedDate: new Date().toISOString()
         },
       };
     });
@@ -103,7 +116,7 @@ function connectListeners() {
 
   // On download complete: set as finished, stop timer, mark status
   listen('download-complete', event => {
-    console.log("download-complete")
+    console.log("download-complete");
     const { id } = event.payload as { id: string };
     update(transfers => {
       const t = transfers[id];
@@ -144,23 +157,26 @@ function connectListeners() {
 
   // On upload start: initialize new entry, start timer
   listen('upload-started', event => {
-    console.log("upload-started")
-    const { id, path, estimated_size } = event.payload as { id: string; path: string; estimated_size?: number };
+    console.log("upload-started");
+    const { id, path, size } = event.payload as { id: string; path: string; size?: number };
+    const name = fileNameFromPath(path);
     update(transfers => {
       const timer = startElapsedTimer(id);
       return {
         ...transfers,
         [id]: {
           id,
+          name,
           type: 'upload',
           path,
-          estimated_size,
+          size: formatFileSize(size) || undefined,
           progress: 0,
           complete: false,
           secondsElapsed: 0,
           elapsed: '00:00:00',
           timer,
-          status: "Uploading"
+          status: "Uploading",
+          startedDate: new Date().toISOString()
         },
       };
     });
@@ -168,7 +184,7 @@ function connectListeners() {
 
   // On upload complete: mark as finished, stop timer
   listen('upload-complete', event => {
-    console.log("upload-complete")
+    console.log("upload-complete");
     const { id } = event.payload as { id: string };
     update(transfers => {
       const t = transfers[id];
@@ -188,7 +204,7 @@ function connectListeners() {
 
   // On upload error: record error, stop timer
   listen('upload-error', event => {
-    console.log("upload-error")
+    console.log("upload-error");
     const { id, message } = event.payload as { id: string; message: string };
     update(transfers => {
       const t = transfers[id];
@@ -220,7 +236,8 @@ async function init() {
       id,
       {
         ...t,
-        timer: t.complete ? undefined : startElapsedTimer(id),
+        name: t.name ?? fileNameFromPath(t.path),
+        timer: t.status !== "Complete" ? undefined : startElapsedTimer(id),
         // Parse elapsed string back to seconds, if available
         secondsElapsed: t.elapsed
           ? (t.elapsed.split(':').reduce((acc, v, idx) =>
@@ -231,7 +248,9 @@ async function init() {
               : acc + +v
             , 0)
           )
-          : t.complete ? undefined : 0,
+          : t.status === "Complete" ? undefined : 0,
+        startedDate: t.startedDate ?? new Date().toISOString(),
+        status: t.status === "Uploading" || t.status === "Downloading" ? "Errored" : t.status
       },
     ])
   );
@@ -244,14 +263,16 @@ async function init() {
         id,
         {
           id: t.id,
+          name: t.name,
           type: t.type,
           path: t.path,
-          estimated_size: t.estimated_size,
+          size: t.size, // Save as size, not estimated_size
           progress: t.progress,
           complete: t.complete,
           error: t.error,
           elapsed: t.elapsed,
-          status: t.status
+          status: t.status,
+          startedDate: t.startedDate
         },
       ])
     );
@@ -261,7 +282,7 @@ async function init() {
 
   connectListeners();  // Begin receiving backend events
   initialized = true;
-  console.log("transfermanager - init")
+  console.log("transfermanager - init");
 }
 
 // Clean up: unsubscribe from store and reset state
