@@ -14,9 +14,6 @@
   let tableSearchResults = [];
   let activeRow = {};
   $: transfers = Object.values($transferManager);
-  $: {
-    console.log("Transfers updated:", transfers);
-  }
 
   let rowMenu = [
     {
@@ -116,7 +113,7 @@
   <div class="tabs tabs-box">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" checked={true}/>
     <div class="tab-content border-base-300 bg-base-100 p-10">
-      <TabulatorTable data={transfers} columns={statusColumns} />
+      <TabulatorTable data={statusTestData} columns={statusColumns} />
     </div>
 
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" />
