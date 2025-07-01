@@ -129,6 +129,14 @@ export async function getDownloadDir(): Promise<string> {
   return config.downloadsDirectory;
 } 
 
+export async function setDownloadDir(path: string): Promise<string> {
+  const store = await getStore();
+  const config = await store.get("userConfig") as { downloadsDirectory: string };
+  config.downloadsDirectory = path;
+  await store.set("userConfig", config);
+  return config.downloadsDirectory;
+} 
+
 const ps = {
   getPodCache,
   addPodObj,
@@ -146,6 +154,7 @@ const ps = {
   getDownloadedFiles,
   getDownloadDir,
   getDownloadedFilesArray,
+  setDownloadDir
 };
 
 export default ps;
