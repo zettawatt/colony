@@ -6,6 +6,7 @@
   import { app } from "@tauri-apps/api";
   import { open } from '@tauri-apps/plugin-dialog';
   import { addToast } from "../../../stores/toast";
+  import { setPassword, getPassword } from "../../../utils/password/session";
 
   let name = $state("");
   let greetMsg = $state("");
@@ -45,6 +46,13 @@
       console.trace(error)
       addToast("Could not save config", "error")
     }
+  }
+
+  async function updatePassword() {
+    // TODO write to keystore with new password
+    if (!passwordsMatch) return;
+    setPassword(confirmPassword);
+    console.log("password", getPassword());
   }
 
   onMount(async() => {
@@ -93,7 +101,7 @@
             <div class="row pt-3 pb-3">
               <label class="label">Confirm Password:</label>
               <input bind:value={confirmPassword} type="password" class="input {confirmClass} w-full" placeholder="Password" />
-              <button class="btn btn-error mt-4">Update Password</button>
+              <button class="btn btn-error mt-4" onclick={()=>{updatePassword()}}>Update Password</button>
             </div>
           </div>
         </div>
