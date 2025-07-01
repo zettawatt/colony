@@ -19,7 +19,6 @@ use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, State};
-use thiserror;
 use tracing::{error, info};
 
 #[tauri::command]
@@ -47,9 +46,9 @@ pub enum Error {
     #[error(transparent)]
     AddressParse(#[from] AddressParseError),
     #[error(transparent)]
-    Get(#[from] GetError),
+    Get(Box<GetError>),
     #[error(transparent)]
-    Put(#[from] PutError),
+    Put(Box<PutError>),
     #[error(transparent)]
     Cost(#[from] CostError),
     #[error(transparent)]
@@ -61,6 +60,18 @@ pub enum Error {
 impl From<&str> for Error {
     fn from(msg: &str) -> Self {
         Error::Message(msg.to_string())
+    }
+}
+
+impl From<GetError> for Error {
+    fn from(err: GetError) -> Self {
+        Error::Get(Box::new(err))
+    }
+}
+
+impl From<PutError> for Error {
+    fn from(err: PutError) -> Self {
+        Error::Put(Box::new(err))
     }
 }
 
@@ -132,6 +143,12 @@ pub struct CreatePodRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct RenamePodRequest {
+    pub name: String,
+    pub new_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CreatePodRefRequest {
     pub pod_address: String,
     pub pod_ref_address: String,
@@ -160,7 +177,6 @@ pub struct DownloadFileRequest {
 pub struct UploadPodRequest {
     pub pod_address: String,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SearchRequest {
@@ -200,7 +216,7 @@ pub struct SubjectDataResult {
 
 #[tauri::command]
 fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+    format!("Hello, {name}! You've been greeted from Rust!")
 }
 
 #[tauri::command]
@@ -293,7 +309,7 @@ fn write_keystore_to_file(
 
     let key_store_file = datastore.get_keystore_path();
     let mut file = std::fs::File::create(key_store_file)?;
-    let _ = KeyStore::to_file(&keystore, &mut file, &password)?;
+    KeyStore::to_file(&keystore, &mut file, &password)?;
 
     // Put the components back
     {
@@ -413,7 +429,163 @@ async fn add_pod(
         Ok(PodInfo {
             address: pod_address,
         })
-    }.await;
+    }
+    .await;
+
+    // Always put the components back, regardless of success or failure
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    result
+}
+
+#[tauri::command]
+async fn remove_pod(
+    state: State<'_, Mutex<AppState>>,
+    request: CreatePodRequest,
+) -> Result<PodInfo, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+        // Use the PodManager
+        podman.remove_pod(&request.name).await?;
+
+        info!("Removed pod {}", &request.name);
+        Ok(PodInfo {
+            address: request.name,
+        })
+    }
+    .await;
+
+    // Always put the components back, regardless of success or failure
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    result
+}
+
+#[tauri::command]
+async fn rename_pod(
+    state: State<'_, Mutex<AppState>>,
+    request: RenamePodRequest,
+) -> Result<PodInfo, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = async {
+        // Now we can safely use async operations
+        let mut podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+        // Use the PodManager
+        podman.rename_pod(&request.name, &request.new_name).await?;
+
+        info!(
+            "Renamed pod {} to new name {}",
+            &request.name, &request.new_name
+        );
+        Ok(PodInfo {
+            address: request.name,
+        })
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -493,7 +665,8 @@ async fn add_pod_ref(
         Ok(PodInfo {
             address: request.pod_address,
         })
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -573,7 +746,8 @@ async fn remove_pod_ref(
         Ok(PodInfo {
             address: request.pod_address,
         })
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -587,9 +761,76 @@ async fn remove_pod_ref(
 }
 
 #[tauri::command]
-async fn list_my_pods(
-    state: State<'_, Mutex<AppState>>,
-) -> Result<Vec<PodMetaData>, Error> {
+async fn get_update_list(state: State<'_, Mutex<AppState>>) -> Result<Value, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet, mut datastore, mut keystore, mut graph) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("DataStore not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("KeyStore not initialized")?;
+
+        let graph = state
+            .graph
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Graph not initialized")?;
+
+        (client, wallet, datastore, keystore, graph)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = {
+        // Now we can safely use async operations
+        let podman =
+            PodManager::new(client, &wallet, &mut datastore, &mut keystore, &mut graph).await?;
+
+        // Use the PodManager
+        let update_list = podman.get_update_list()?;
+
+        Ok(update_list)
+    };
+
+    // Always put the components back, regardless of success or failure
+    {
+        let state = state.lock().unwrap();
+        *state.datastore.lock().unwrap() = Some(datastore);
+        *state.keystore.lock().unwrap() = Some(keystore);
+        *state.graph.lock().unwrap() = Some(graph);
+    }
+
+    result
+}
+
+#[tauri::command]
+async fn list_my_pods(state: State<'_, Mutex<AppState>>) -> Result<Vec<PodMetaData>, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet, mut datastore, mut keystore, mut graph) = {
         let state = state.lock().unwrap();
@@ -656,9 +897,12 @@ async fn list_my_pods(
             let object = bind["object"]["value"].as_str();
 
             if let (Some(subject), Some(predicate), Some(object)) = (subject, predicate, object) {
-                let address = subject.strip_prefix("ant://").unwrap_or(subject).to_string();
+                let address = subject
+                    .strip_prefix("ant://")
+                    .unwrap_or(subject)
+                    .to_string();
                 let entry = pods.entry(subject.to_string()).or_insert(PodMetaData {
-                    address: address,
+                    address,
                     name: None,
                     creation: None,
                     modified: None,
@@ -677,9 +921,10 @@ async fn list_my_pods(
             }
         }
 
-        let pod_vec = pods.into_iter().map(|(_, v)| v).collect();
+        let pod_vec = pods.into_values().collect();
         Ok(pod_vec)
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -758,7 +1003,8 @@ async fn list_pod_subjects(
         Ok(AddressList {
             addresses: subject_list,
         })
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -833,7 +1079,8 @@ async fn upload_pod(
         Ok(PodInfo {
             address: request.pod_address,
         })
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -902,10 +1149,9 @@ async fn upload_all(state: State<'_, Mutex<AppState>>) -> Result<String, Error> 
         podman.upload_all().await?;
 
         info!("Uploaded all updated pods to Autonomi");
-        Ok(format!(
-            "Successfully uploaded all updated pods to Autonomi"
-        ))
-    }.await;
+        Ok("Successfully uploaded all updated pods to Autonomi".to_string())
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -974,8 +1220,9 @@ async fn refresh_cache(state: State<'_, Mutex<AppState>>) -> Result<String, Erro
         podman.refresh_cache().await?;
 
         info!("Refreshed local pod cache");
-        Ok(format!("Successfully refreshed local pod cache"))
-    }.await;
+        Ok("Successfully refreshed local pod cache".to_string())
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -1059,7 +1306,8 @@ async fn refresh_ref(
             "Successfully refreshed all local pods and pod reference to cache to depth {}",
             &request.depth
         ))
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -1134,7 +1382,8 @@ async fn search(
         Ok(SearchResult {
             results: search_results,
         })
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -1219,7 +1468,8 @@ async fn put_subject_data(
             "Successfully put data for subject {} in pod {}",
             &request.subject_address, &request.pod_address
         ))
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -1292,7 +1542,8 @@ async fn get_subject_data(
 
         info!("Retrieved data for subject {}", &request.subject_address);
         Ok(SubjectDataResult { data: subject_data })
-    }.await;
+    }
+    .await;
 
     // Always put the components back, regardless of success or failure
     {
@@ -1466,7 +1717,7 @@ async fn download_data(
         "id": request.id,
         "address": request.address,
         "path": request.destination_path
-    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
+    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     Ok(format!(
         "File downloaded from {} to {}",
@@ -1500,8 +1751,11 @@ pub fn run() {
             get_new_seed_phrase,
             initialize_pod_manager,
             add_pod,
+            rename_pod,
+            remove_pod,
             add_pod_ref,
             remove_pod_ref,
+            get_update_list,
             list_my_pods,
             list_pod_subjects,
             upload_pod,
