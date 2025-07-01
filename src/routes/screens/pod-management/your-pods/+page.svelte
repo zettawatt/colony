@@ -502,4 +502,9 @@
   margin-right: 5px;
 }
 
+.table th:last-child,
+.table td:last-child {
+  min-width: 170px; /* Adjust to your desired minimum width */
+}
+
 </style>
