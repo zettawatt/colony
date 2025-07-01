@@ -69,7 +69,7 @@ function startElapsedTimer(id: string) {
     update(transfers => {
       const t = transfers[id];
       // Don't increment if missing or already complete
-      if (!t || t.complete) return transfers;
+      if (!t || t.status == "Complete") return transfers;
       const secondsElapsed = (t.secondsElapsed ?? 0) + 1;
       return {
         ...transfers,
@@ -237,7 +237,7 @@ async function init() {
       {
         ...t,
         name: t.name ?? fileNameFromPath(t.path),
-        timer: t.complete ? undefined : startElapsedTimer(id),
+        timer: t.status !== "Complete" ? undefined : startElapsedTimer(id),
         // Parse elapsed string back to seconds, if available
         secondsElapsed: t.elapsed
           ? (t.elapsed.split(':').reduce((acc, v, idx) =>
@@ -248,8 +248,9 @@ async function init() {
               : acc + +v
             , 0)
           )
-          : t.complete ? undefined : 0,
-        startedDate: t.startedDate ?? new Date().toISOString()
+          : t.status === "Complete" ? undefined : 0,
+        startedDate: t.startedDate ?? new Date().toISOString(),
+        status: t.status === "Uploading" || t.status === "Downloading" ? "Errored" : t.status
       },
     ])
   );
