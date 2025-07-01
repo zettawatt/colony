@@ -57,7 +57,10 @@
       }
     },
     "windows": {
-      "msi": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
         "installMode": "perMachine"
       }
     }
