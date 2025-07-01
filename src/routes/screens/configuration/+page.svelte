@@ -3,8 +3,9 @@
   import ps from "../../../stores/persistantStorage";
   import { onMount } from "svelte";
   import { appDataDir } from '@tauri-apps/api/path';
-    import { app } from "@tauri-apps/api";
-
+  import { app } from "@tauri-apps/api";
+  import { open } from '@tauri-apps/plugin-dialog';
+  import { addToast } from "../../../stores/toast";
 
   let name = $state("");
   let greetMsg = $state("");
@@ -28,6 +29,24 @@
     }
   }
 
+  async function selectPath() {
+    const newDownloadPath = await open({ multiple: false, directory: true });
+    if (newDownloadPath) {
+      downloadPath = newDownloadPath;
+    }
+  }
+
+  async function saveConfig() {
+    try {
+      if (!downloadPath) return;
+      const newDownloadPath = await ps.setDownloadDir(downloadPath);
+      addToast("Saved config!", "success");
+    } catch (error) {
+      console.trace(error)
+      addToast("Could not save config", "error")
+    }
+  }
+
   onMount(async() => {
     downloadPath = await ps.getDownloadDir();
     appDataPath = await appDataDir();
@@ -44,13 +63,20 @@
           <div class="left-section" style="flex: 1;">
             <div class="row pt-3">
               <label>Download Path:</label>
-              <input bind:value={downloadPath} type="text" class="input w-full" placeholder="/home/usr/downloads" />
+              <input 
+                type="text" 
+                value={downloadPath} 
+                class="input" 
+                style="min-width: 100%;"
+                onclick={()=>{selectPath()}}
+                readonly
+              />
             </div>
             <div class="row pt-3">
               <label>Colony Application Data Path:</label>
               <input bind:value={appDataPath} type="text" class="input appData w-full" disabled placeholder="/home/usr/downloads" />
               <div class="mt-4">
-                <button class="btn btn-primary" onclick={toast}>Save</button>
+                <button class="btn btn-primary" onclick={()=>(saveConfig())}>Save</button>
               </div>
             </div>
           </div>
@@ -67,7 +93,7 @@
             <div class="row pt-3 pb-3">
               <label class="label">Confirm Password:</label>
               <input bind:value={confirmPassword} type="password" class="input {confirmClass} w-full" placeholder="Password" />
-              <button class="btn btn-secondary mt-4">Update Password</button>
+              <button class="btn btn-error mt-4">Update Password</button>
             </div>
           </div>
         </div>
