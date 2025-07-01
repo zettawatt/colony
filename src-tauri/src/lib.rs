@@ -157,7 +157,7 @@ pub struct CreatePodRefRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UploadFileRequest {
     pub file_path: String,
-    pub id: Option<String>
+    pub id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -170,7 +170,7 @@ pub struct DownloadFileRequest {
     pub address: String,
     pub destination_path: String,
     pub size: u64,
-    pub id: String
+    pub id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -1617,7 +1617,7 @@ async fn upload_cost(
 async fn upload_data(
     state: State<'_, Mutex<AppState>>,
     request: UploadFileRequest,
-    app: tauri::AppHandle
+    app: tauri::AppHandle,
 ) -> Result<(String, String), Error> {
     let (client, wallet) = {
         let state = state.lock().unwrap();
@@ -1644,11 +1644,15 @@ async fn upload_data(
     // Read file
     let data = std::fs::read(&request.file_path)?;
     let data_len = data.len();
-    app.emit("upload-started", serde_json::json!({
-        "id": request.id,
-        "size": data_len,
-        "path": request.file_path,
-    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;;
+    app.emit(
+        "upload-started",
+        serde_json::json!({
+            "id": request.id,
+            "size": data_len,
+            "path": request.file_path,
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     let data = std::fs::read(request.file_path.clone())?;
     let data = Bytes::from(data);
@@ -1657,21 +1661,29 @@ async fn upload_data(
     let (cost, data_addr) = match client.data_put_public(data, payment).await {
         Ok(result) => result,
         Err(e) => {
-            app.emit("upload-error", serde_json::json!({
-                "id": request.id,
-                "path": request.file_path,
-                "message": format!("Upload failed: {}", e)
-            })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;;
+            app.emit(
+                "upload-error",
+                serde_json::json!({
+                    "id": request.id,
+                    "path": request.file_path,
+                    "message": format!("Upload failed: {}", e)
+                }),
+            )
+            .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
             return Err(e.into());
         }
     };
 
-    app.emit("upload-complete", serde_json::json!({
-        "id": request.id,
-        "path": request.file_path,
-        "address": data_addr.to_string(),
-        "cost": cost.to_string()
-    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;;
+    app.emit(
+        "upload-complete",
+        serde_json::json!({
+            "id": request.id,
+            "path": request.file_path,
+            "address": data_addr.to_string(),
+            "cost": cost.to_string()
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     Ok((cost.to_string(), data_addr.to_string()))
 }
@@ -1680,15 +1692,19 @@ async fn upload_data(
 async fn download_data(
     state: State<'_, Mutex<AppState>>,
     request: DownloadFileRequest,
-    app: AppHandle
+    app: AppHandle,
 ) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
-    app.emit("download-started", serde_json::json!({
-        "id": request.id,
-        "address": request.address,
-        "path": request.destination_path,
-        "size": request.size
-    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+    app.emit(
+        "download-started",
+        serde_json::json!({
+            "id": request.id,
+            "address": request.address,
+            "path": request.destination_path,
+            "size": request.size
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     let client = {
         let state = state.lock().unwrap();
@@ -1713,11 +1729,15 @@ async fn download_data(
     // Write the bytes of the dog picture to a file
     write(request.destination_path.clone(), bytes)?;
     // TODO: Implement proper file download once we understand the API
-    app.emit("download-complete", serde_json::json!({
-        "id": request.id,
-        "address": request.address,
-        "path": request.destination_path
-    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+    app.emit(
+        "download-complete",
+        serde_json::json!({
+            "id": request.id,
+            "address": request.address,
+            "path": request.destination_path
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     Ok(format!(
         "File downloaded from {} to {}",
