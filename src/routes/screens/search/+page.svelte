@@ -74,7 +74,7 @@
               ? binding.graph.value.slice(6) : binding.graph.value,
             address: binding.subject.value.startsWith("ant://") 
               ? binding.subject.value.slice(6) : binding.subject.value,
-            depth: binding.depth.value
+            depth: binding.depth?.value || undefined
           };
         }
         switch (binding.predicate.value) {
