@@ -52,3 +52,7 @@
   } */
   
 </style>
+
+<svelte:head>
+  <link id="tabulator-theme" rel="stylesheet" href="/css/tabulator.min.css">
+</svelte:head>

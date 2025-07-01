@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { TabulatorFull as Tabulator } from 'tabulator-tables';
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { DateTime } from "luxon";
 
   export let columns, data, rowMenu;
 
@@ -32,6 +33,14 @@
       rowContextMenu: rowMenu,
       reactiveData: false,
       layout: 'fitDataStretch',
+      persistence:{
+        sort:true,
+        filter:true,
+      },
+      persistenceID:"tabulatorPersistance",
+      dependencies:{
+        DateTime:DateTime,
+      }, 
     });
 
     // Listen for theme changes from Tauri
