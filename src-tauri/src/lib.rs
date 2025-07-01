@@ -909,13 +909,13 @@ async fn list_my_pods(state: State<'_, Mutex<AppState>>) -> Result<Vec<PodMetaDa
                     depth: None,
                 });
 
-                if predicate.ends_with("#name") {
+                if predicate.ends_with("name") {
                     entry.name = Some(object.to_string());
-                } else if predicate.ends_with("#creation") {
+                } else if predicate.ends_with("creation") {
                     entry.creation = Some(object.to_string());
-                } else if predicate.ends_with("#modified") {
+                } else if predicate.ends_with("modified") {
                     entry.modified = Some(object.to_string());
-                } else if predicate.ends_with("#depth") {
+                } else if predicate.ends_with("depth") {
                     entry.depth = Some(object.to_string());
                 }
             }
