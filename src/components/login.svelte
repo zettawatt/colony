@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { setPassword } from '../utils/password/session';
   let loginModal: HTMLDialogElement;
   let password;
 
@@ -11,7 +12,12 @@
   function handleClose() {
     console.log(password)
     if (!password) return;
+    setPassword(password);
     loginModal?.close();
+  }
+
+  function authUser() {
+    // TODO write the auth check to open keystore
   }
 </script>
 
