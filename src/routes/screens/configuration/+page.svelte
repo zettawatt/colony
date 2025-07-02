@@ -12,23 +12,11 @@
   let greetMsg = $state("");
   let downloadPath = $state("");
   let appDataPath = $state("");
+  let currentPassword = $state("");
   let newPassword = $state("");
   let confirmPassword = $state("");
   let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
   let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
-
-  async function toast() {
-    let permissionGranted = await isPermissionGranted();
-    console.log('here', permissionGranted)
-    if (!permissionGranted) {
-      const permission = await requestPermission();
-      permissionGranted = permission === 'granted';
-    }
-    if (permissionGranted) {
-      sendNotification('Tauri is awesome!');
-      sendNotification({ title: 'TAURI', body: 'Tauri is awesome!' });
-    }
-  }
 
   async function selectPath() {
     const newDownloadPath = await open({ multiple: false, directory: true });
@@ -50,9 +38,20 @@
 
   async function updatePassword() {
     // TODO write to keystore with new password
-    if (!passwordsMatch) return;
-    setPassword(confirmPassword);
-    console.log("password", getPassword());
+    if (!passwordsMatch) {
+      addToast("Passwords do not match!", "error")
+      return;
+    }
+    try {
+      const res = await invoke("open_keystore", { password: currentPassword });
+      const writtenKeystore = await invoke("write_keystore_to_file", {password: confirmPassword})
+      console.log("res", res)
+      setPassword(confirmPassword);
+      console.log("password", getPassword()); 
+    } catch (error) {
+      console.trace(error)
+      addToast("Could not update password. Check console for error....", "error");
+    }
   }
 
   onMount(async() => {
@@ -94,11 +93,15 @@
 
           <!-- Right: Change Password -->
           <div class="right-section" style="flex: 1;">
-            <div class="row pt-3 pb-3">
+            <div class="row pt-3">
+              <label class="label">Current Password: </label>
+              <input bind:value={currentPassword} type="password" class="input w-full" placeholder="Password" />
+            </div>
+            <div class="row">
               <label class="label">New Password: </label>
               <input bind:value={newPassword} type="password" class="input w-full" placeholder="Password" />
             </div>
-            <div class="row pt-3 pb-3">
+            <div class="row pb-3">
               <label class="label">Confirm Password:</label>
               <input bind:value={confirmPassword} type="password" class="input {confirmClass} w-full" placeholder="Password" />
               <button class="btn btn-error mt-4" onclick={()=>{updatePassword()}}>Update Password</button>
