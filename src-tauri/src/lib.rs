@@ -275,7 +275,13 @@ fn open_keystore(state: State<'_, Mutex<AppState>>, password: String) -> Result<
         None => return Err(Error::Message("Datastore not initialized".to_string())),
     };
     let mut file = std::fs::File::open(keystore_path.clone())?;
-    let keystore = KeyStore::from_file(&mut file, &password)?;
+    let keystore = match KeyStore::from_file(&mut file, &password) {
+        Ok(ks) => ks,
+        Err(e) => {
+            // You can further match `e` for specific error types if required
+            return Err(Error::Message("Failed to open keystore: possible wrong password".into()));
+        }
+    };
     *state.keystore.lock().unwrap() = Some(keystore);
     info!("Existing KeyStore file {} opened", keystore_path.display());
     Ok("Existing KeyStore file opened".to_string())
