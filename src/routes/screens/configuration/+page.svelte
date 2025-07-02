@@ -45,9 +45,8 @@
     try {
       const res = await invoke("open_keystore", { password: currentPassword });
       const writtenKeystore = await invoke("write_keystore_to_file", {password: confirmPassword})
-      console.log("res", res)
       setPassword(confirmPassword);
-      console.log("password", getPassword()); 
+      addToast("Updated Password Successfully!", "success");
     } catch (error) {
       console.trace(error)
       addToast("Could not update password. Check console for error....", "error");
