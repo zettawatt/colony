@@ -9,10 +9,14 @@
   import { onMount } from 'svelte';
   import { statusColumns } from '../../../utils/search/statusColumns';
   import { statusTestData } from '../../../utils/search/statusTestData';
+  import { getPassword } from "../../../utils/password/session";
+  import LoginModal from '../../../components/login.svelte';
+
 
   let searchInput = "";
   let tableSearchResults = [];
   let activeRow = {};
+  let showLogin = false;
   $: transfers = Object.values($transferManager);
 
   let rowMenu = [
@@ -74,7 +78,7 @@
               ? binding.graph.value.slice(6) : binding.graph.value,
             address: binding.subject.value.startsWith("ant://") 
               ? binding.subject.value.slice(6) : binding.subject.value,
-            depth: binding.depth.value
+            depth: binding.depth?.value || undefined
           };
         }
         switch (binding.predicate.value) {
@@ -106,14 +110,20 @@
 
   onMount(async () => {
     await transferManager.init();
+    if (getPassword() === null) {
+      showLogin = true;
+    }
   })
 </script>
 
+{#if showLogin}
+  <LoginModal/>
+{/if}
 <main class="search-container">
   <div class="tabs tabs-box">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" checked={true}/>
     <div class="tab-content border-base-300 bg-base-100 p-10">
-      <TabulatorTable data={statusTestData} columns={statusColumns} />
+      <TabulatorTable data={transfers} columns={statusColumns} />
     </div>
 
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" />

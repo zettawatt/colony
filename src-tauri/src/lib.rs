@@ -275,7 +275,13 @@ fn open_keystore(state: State<'_, Mutex<AppState>>, password: String) -> Result<
         None => return Err(Error::Message("Datastore not initialized".to_string())),
     };
     let mut file = std::fs::File::open(keystore_path.clone())?;
-    let keystore = KeyStore::from_file(&mut file, &password)?;
+    let keystore = match KeyStore::from_file(&mut file, &password) {
+        Ok(ks) => ks,
+        Err(e) => {
+            // You can further match `e` for specific error types if required
+            return Err(Error::Message("Failed to open keystore: possible wrong password".into()));
+        }
+    };
     *state.keystore.lock().unwrap() = Some(keystore);
     info!("Existing KeyStore file {} opened", keystore_path.display());
     Ok("Existing KeyStore file opened".to_string())
@@ -909,13 +915,13 @@ async fn list_my_pods(state: State<'_, Mutex<AppState>>) -> Result<Vec<PodMetaDa
                     depth: None,
                 });
 
-                if predicate.ends_with("#name") {
+                if predicate.ends_with("name") {
                     entry.name = Some(object.to_string());
-                } else if predicate.ends_with("#creation") {
+                } else if predicate.ends_with("creation") {
                     entry.creation = Some(object.to_string());
-                } else if predicate.ends_with("#modified") {
+                } else if predicate.ends_with("modified") {
                     entry.modified = Some(object.to_string());
-                } else if predicate.ends_with("#depth") {
+                } else if predicate.ends_with("depth") {
                     entry.depth = Some(object.to_string());
                 }
             }
@@ -1695,16 +1701,12 @@ async fn download_data(
     app: AppHandle,
 ) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
-    app.emit(
-        "download-started",
-        serde_json::json!({
-            "id": request.id,
-            "address": request.address,
-            "path": request.destination_path,
-            "size": request.size
-        }),
-    )
-    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+    app.emit("download-started", serde_json::json!({
+        "id": request.id,
+        "address": request.address,
+        "path": request.destination_path,
+        "size": request.size
+    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
 
     let client = {
         let state = state.lock().unwrap();

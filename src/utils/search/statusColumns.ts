@@ -42,12 +42,21 @@ export const statusColumns = [
     title: "Elapsed Time",
     field: "elapsed",
     width: 125,
-    hozAlign: "center"
+    hozAlign: "center",
+    sorter: "time",
+    sorterParams:{
+      format:"HH:mm:ss",
+      alignEmptyValues:"top",
+    }
   },
   {
     title: "Started Date",
     field: "startedDate",
-    sorter: "date",
-    hozAlign: "center"
+    sorter: "datetime",
+    hozAlign: "center",
+    sorterParams:{
+      format:"iso",
+      alignEmptyValues:"top",
+    }
   }
 ];

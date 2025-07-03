@@ -3,28 +3,53 @@
   import ps from "../../../stores/persistantStorage";
   import { onMount } from "svelte";
   import { appDataDir } from '@tauri-apps/api/path';
-    import { app } from "@tauri-apps/api";
-
+  import { app } from "@tauri-apps/api";
+  import { open } from '@tauri-apps/plugin-dialog';
+  import { addToast } from "../../../stores/toast";
+  import { setPassword, getPassword } from "../../../utils/password/session";
 
   let name = $state("");
   let greetMsg = $state("");
   let downloadPath = $state("");
   let appDataPath = $state("");
+  let currentPassword = $state("");
   let newPassword = $state("");
   let confirmPassword = $state("");
   let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
   let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
 
-  async function toast() {
-    let permissionGranted = await isPermissionGranted();
-    console.log('here', permissionGranted)
-    if (!permissionGranted) {
-      const permission = await requestPermission();
-      permissionGranted = permission === 'granted';
+  async function selectPath() {
+    const newDownloadPath = await open({ multiple: false, directory: true });
+    if (newDownloadPath) {
+      downloadPath = newDownloadPath;
     }
-    if (permissionGranted) {
-      sendNotification('Tauri is awesome!');
-      sendNotification({ title: 'TAURI', body: 'Tauri is awesome!' });
+  }
+
+  async function saveConfig() {
+    try {
+      if (!downloadPath) return;
+      const newDownloadPath = await ps.setDownloadDir(downloadPath);
+      addToast("Saved config!", "success");
+    } catch (error) {
+      console.trace(error)
+      addToast("Could not save config", "error")
+    }
+  }
+
+  async function updatePassword() {
+    // TODO write to keystore with new password
+    if (!passwordsMatch) {
+      addToast("Passwords do not match!", "error")
+      return;
+    }
+    try {
+      const res = await invoke("open_keystore", { password: currentPassword });
+      const writtenKeystore = await invoke("write_keystore_to_file", {password: confirmPassword})
+      setPassword(confirmPassword);
+      addToast("Updated Password Successfully!", "success");
+    } catch (error) {
+      console.trace(error)
+      addToast("Could not update password. Check console for error....", "error");
     }
   }
 
@@ -44,13 +69,20 @@
           <div class="left-section" style="flex: 1;">
             <div class="row pt-3">
               <label>Download Path:</label>
-              <input bind:value={downloadPath} type="text" class="input w-full" placeholder="/home/usr/downloads" />
+              <input 
+                type="text" 
+                value={downloadPath} 
+                class="input" 
+                style="min-width: 100%;"
+                onclick={()=>{selectPath()}}
+                readonly
+              />
             </div>
             <div class="row pt-3">
               <label>Colony Application Data Path:</label>
               <input bind:value={appDataPath} type="text" class="input appData w-full" disabled placeholder="/home/usr/downloads" />
               <div class="mt-4">
-                <button class="btn btn-primary" onclick={toast}>Save</button>
+                <button class="btn btn-primary" onclick={()=>(saveConfig())}>Save</button>
               </div>
             </div>
           </div>
@@ -60,14 +92,18 @@
 
           <!-- Right: Change Password -->
           <div class="right-section" style="flex: 1;">
-            <div class="row pt-3 pb-3">
+            <div class="row pt-3">
+              <label class="label">Current Password: </label>
+              <input bind:value={currentPassword} type="password" class="input w-full" placeholder="Password" />
+            </div>
+            <div class="row">
               <label class="label">New Password: </label>
               <input bind:value={newPassword} type="password" class="input w-full" placeholder="Password" />
             </div>
-            <div class="row pt-3 pb-3">
+            <div class="row pb-3">
               <label class="label">Confirm Password:</label>
               <input bind:value={confirmPassword} type="password" class="input {confirmClass} w-full" placeholder="Password" />
-              <button class="btn btn-secondary mt-4">Update Password</button>
+              <button class="btn btn-error mt-4" onclick={()=>{updatePassword()}}>Update Password</button>
             </div>
           </div>
         </div>
