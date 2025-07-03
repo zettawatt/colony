@@ -11,11 +11,6 @@ on:
         required: true
         default: 'v0.0.0-test'
         type: string
-      draft:
-        description: 'Create as draft release'
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -155,7 +150,8 @@ jobs:
 
             ### Changes
             See the commit history for detailed changes in this release.
-          releaseDraft: ${{ github.event.inputs.draft || 'false' }}
+          releaseDraft: false
           prerelease: false
+          includeUpdaterJson: false
           args: ${{ matrix.args }}
           bundleIdentifier: 'colony-app'
