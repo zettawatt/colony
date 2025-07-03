@@ -277,7 +277,7 @@ fn open_keystore(state: State<'_, Mutex<AppState>>, password: String) -> Result<
     let mut file = std::fs::File::open(keystore_path.clone())?;
     let keystore = match KeyStore::from_file(&mut file, &password) {
         Ok(ks) => ks,
-        Err(e) => {
+        Err(_e) => {
             // You can further match `e` for specific error types if required
             return Err(Error::Message("Failed to open keystore: possible wrong password".into()));
         }
@@ -1706,7 +1706,7 @@ async fn download_data(
         "address": request.address,
         "path": request.destination_path,
         "size": request.size
-    })).map_err(|e| Error::Message(format!("Emit failed: {}", e)))?;
+    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     let client = {
         let state = state.lock().unwrap();
