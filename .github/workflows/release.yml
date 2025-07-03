@@ -9,7 +9,7 @@ on:
       tag_name:
         description: 'Tag name for the release (e.g., v1.0.0-test)'
         required: true
-        default: 'v0.0.0-test'
+        default: ''
         type: string
 
 permissions:
@@ -118,33 +118,6 @@ jobs:
 
       - name: Build frontend
         run: npm run build
-
-      - name: Verify Cargo configuration
-        run: |
-          echo "Checking Cargo.toml configuration..."
-          cat src-tauri/Cargo.toml | grep -A 10 "\[profile"
-          echo "Checking dependencies..."
-          cat src-tauri/Cargo.toml | grep -A 20 "\[dependencies"
-          echo "Checking dependency tree..."
-          cd src-tauri && cargo tree --target ${{ matrix.target }}
-        shell: bash
-
-      - name: Test Rust build separately
-        run: |
-          cd src-tauri
-          echo "Building Rust binary..."
-          cargo build --release --target ${{ matrix.target }} --verbose
-          echo "Checking built binary size:"
-          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
-            ls -lh target/${{ matrix.target }}/release/colony.exe || ls -lh target/${{ matrix.target }}/release/*.exe
-            echo "Checking binary dependencies:"
-            file target/${{ matrix.target }}/release/colony.exe || file target/${{ matrix.target }}/release/*.exe
-          else
-            ls -lh target/${{ matrix.target }}/release/colony || ls -lh target/${{ matrix.target }}/release/colony*
-            echo "Checking binary dependencies:"
-            file target/${{ matrix.target }}/release/colony || file target/${{ matrix.target }}/release/colony*
-          fi
-        shell: bash
 
       - name: Configure Windows static linking
         if: matrix.platform == 'windows-latest'

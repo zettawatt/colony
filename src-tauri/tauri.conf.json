@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "colony-app",
+        "title": "Colony",
         "width": 1024,
         "height": 600,
         "minWidth": 1024
@@ -37,8 +37,8 @@
     "resources": [],
     "externalBin": [],
     "copyright": "",
-    "category": "DeveloperTool",
-    "shortDescription": "Colony - Autonomi Network GUI",
+    "category": "Utility",
+    "shortDescription": "Colony - Autonomi Semantic Search Engine and File Manager",
     "longDescription": "A desktop application for interacting with the Autonomi network",
     "linux": {
       "appimage": {
