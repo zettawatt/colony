@@ -279,7 +279,9 @@ fn open_keystore(state: State<'_, Mutex<AppState>>, password: String) -> Result<
         Ok(ks) => ks,
         Err(_e) => {
             // You can further match `e` for specific error types if required
-            return Err(Error::Message("Failed to open keystore: possible wrong password".into()));
+            return Err(Error::Message(
+                "Failed to open keystore: possible wrong password".into(),
+            ));
         }
     };
     *state.keystore.lock().unwrap() = Some(keystore);
@@ -1701,12 +1703,16 @@ async fn download_data(
     app: AppHandle,
 ) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
-    app.emit("download-started", serde_json::json!({
-        "id": request.id,
-        "address": request.address,
-        "path": request.destination_path,
-        "size": request.size
-    })).map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+    app.emit(
+        "download-started",
+        serde_json::json!({
+            "id": request.id,
+            "address": request.address,
+            "path": request.destination_path,
+            "size": request.size
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
 
     let client = {
         let state = state.lock().unwrap();
