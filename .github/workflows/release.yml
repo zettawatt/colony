@@ -14,8 +14,11 @@ on:
       draft:
         description: 'Create as draft release'
         required: false
-        default: true
+        default: false
         type: boolean
+
+permissions:
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -152,7 +155,7 @@ jobs:
 
             ### Changes
             See the commit history for detailed changes in this release.
-          releaseDraft: ${{ github.event.inputs.draft || 'true' }}
+          releaseDraft: ${{ github.event.inputs.draft || 'false' }}
           prerelease: false
           args: ${{ matrix.args }}
           bundleIdentifier: 'colony-app'
