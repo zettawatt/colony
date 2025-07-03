@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "colony-app",
+  "productName": "colony",
   "version": "0.1.0",
-  "identifier": "colony-app",
+  "identifier": "com.colony.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -25,6 +25,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": false,
+    "publisher": "Colony",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -32,6 +34,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [],
+    "externalBin": [],
+    "copyright": "",
+    "category": "DeveloperTool",
+    "shortDescription": "Colony - Autonomi Network GUI",
+    "longDescription": "A desktop application for interacting with the Autonomi network",
     "linux": {
       "appimage": {
         "bundleMediaFramework": true
@@ -57,11 +65,19 @@
       }
     },
     "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "tsp": false,
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
       },
       "nsis": {
-        "installMode": "perMachine"
+        "installMode": "perMachine",
+        "displayLanguageSelector": true
+      },
+      "wix": {
+        "language": "en-US"
       }
     }
   }
