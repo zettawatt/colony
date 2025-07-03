@@ -77,13 +77,13 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
+            args: '--release --target aarch64-apple-darwin'
             target: 'aarch64-apple-darwin'
           - platform: 'ubuntu-22.04'
-            args: '--target x86_64-unknown-linux-gnu'
+            args: '--release --target x86_64-unknown-linux-gnu'
             target: 'x86_64-unknown-linux-gnu'
           - platform: 'windows-latest'
-            args: '--target x86_64-pc-windows-msvc'
+            args: '--release --target x86_64-pc-windows-msvc'
             target: 'x86_64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
@@ -119,10 +119,18 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Verify Cargo configuration
+        run: |
+          echo "Checking Cargo.toml configuration..."
+          cat src-tauri/Cargo.toml | grep -A 10 "\[profile"
+        shell: bash
+
       - name: Configure Windows static linking
         if: matrix.platform == 'windows-latest'
         run: |
-          echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+          echo "RUSTFLAGS=-C target-feature=+crt-static -C opt-level=3" >> $GITHUB_ENV
+          echo "CARGO_BUILD_TARGET=x86_64-pc-windows-msvc" >> $GITHUB_ENV
+          echo "CARGO_PROFILE_RELEASE_LTO=true" >> $GITHUB_ENV
         shell: bash
 
       - name: Build Tauri app
@@ -155,3 +163,24 @@ jobs:
           includeUpdaterJson: false
           args: ${{ matrix.args }}
           bundleIdentifier: 'colony-app'
+
+      - name: Verify build artifacts
+        run: |
+          echo "Checking build artifacts..."
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            echo "Windows executable files:"
+            find src-tauri/target -name "*.exe" -exec ls -lh {} \;
+            echo "Windows installer files:"
+            find . -name "*.msi" -exec ls -lh {} \;
+            echo "Checking dependencies of main executable:"
+            find src-tauri/target -name "colony-app.exe" -exec file {} \;
+          elif [ "${{ matrix.platform }}" = "ubuntu-22.04" ]; then
+            echo "Linux AppImage files:"
+            find . -name "*.AppImage" -exec ls -lh {} \;
+            echo "Linux DEB files:"
+            find . -name "*.deb" -exec ls -lh {} \;
+          elif [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            echo "macOS DMG files:"
+            find . -name "*.dmg" -exec ls -lh {} \;
+          fi
+        shell: bash
