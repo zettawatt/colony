@@ -13,9 +13,7 @@ fn fetch_binaries() {
     let script_path = binaries_dir.join("fetch_binaries.sh");
 
     if !script_path.exists() {
-        println!(
-            "cargo:warning=fetch_binaries.sh not found at {script_path:?}"
-        );
+        println!("cargo:warning=fetch_binaries.sh not found at {script_path:?}");
         return;
     }
 
