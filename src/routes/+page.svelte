@@ -19,7 +19,7 @@
     let wasUserNew = false;
     try {
       hasUserCompletedIntro = await ps.getUserCompletedIntro();
-      if (hasUserCompletedIntro === undefined) {
+      if (hasUserCompletedIntro === undefined || hasUserCompletedIntro === false) {
         await ps.initStore();
         hasUserCompletedIntro = false;
         wasUserNew = true;
@@ -63,7 +63,7 @@
   async function initPodManager(wasUserNew: boolean) {
     try {
       await invoke("initialize_datastore");
-      if (!wasUserNew) {await invoke("open_keystore", { password: "maxx" });}
+      // if (!wasUserNew) {await invoke("open_keystore", { password: "" });}
       await invoke("initialize_graph");
       const result = await invoke("initialize_pod_manager");
 
