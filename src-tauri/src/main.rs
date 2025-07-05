@@ -17,7 +17,7 @@ async fn main() {
                 .value_name("NETWORK")
                 .help("Network environment to connect to")
                 .value_parser(["local", "alpha", "main"])
-                .default_value("main")
+                .default_value("main"),
         )
         .get_matches();
 
