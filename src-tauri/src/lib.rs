@@ -19,6 +19,7 @@ use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_shell::{ShellExt, Error as ShellError};
 use tracing::{error, info};
 
 #[tauri::command]
@@ -53,6 +54,8 @@ pub enum Error {
     Cost(#[from] CostError),
     #[error(transparent)]
     Io(#[from] IoError),
+    #[error(transparent)]
+    Shell(#[from] ShellError),
     #[error("{0}")]
     Message(String),
 }
@@ -90,6 +93,7 @@ pub enum ErrorKind {
     Put(String),
     Cost(String),
     Io(String),
+    Shell(String),
     Message(String),
 }
 
@@ -111,6 +115,7 @@ impl serde::Serialize for Error {
             Self::Put(_) => ErrorKind::Put(error_message),
             Self::Cost(_) => ErrorKind::Cost(error_message),
             Self::Io(_) => ErrorKind::Io(error_message),
+            Self::Shell(_) => ErrorKind::Shell(error_message),
             Self::Message(_) => ErrorKind::Message(error_message),
         };
         error_kind.serialize(serializer)
@@ -1890,6 +1895,26 @@ async fn download_data(
     ))
 }
 
+#[tauri::command]
+async fn dweb_serve(app: AppHandle) -> Result<String, Error> {
+    let sidecar_command = app.shell().sidecar("dweb")?;
+    let (_rx, mut _child) = sidecar_command
+      .args(["serve"])
+      .spawn()
+      .expect("Failed to spawn sidecar");
+    Ok("Started dweb".to_string())
+}
+
+#[tauri::command]
+async fn dweb_open(app: AppHandle, address: String) -> Result<String, Error> {
+    let sidecar_command = app.shell().sidecar("dweb")?;
+    let (_rx, mut _child) = sidecar_command
+      .args(["open", &address])
+      .spawn()
+      .expect("Failed to spawn sidecar");
+    Ok("Opened address with dweb".to_string())
+}
+
 ////////////////////////////////////////////////////////////////////
 // Tauri App
 ////////////////////////////////////////////////////////////////////
@@ -1945,7 +1970,9 @@ pub fn run(network: &str) {
             add_wallet,
             remove_wallet,
             list_wallets,
-            switch_wallet
+            switch_wallet,
+            dweb_serve,
+            dweb_open,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
