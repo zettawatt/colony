@@ -1575,7 +1575,10 @@ async fn get_subject_data(
 ////////////////////////////////////////////////////////////////////
 
 #[tauri::command]
-async fn add_wallet(state: State<'_, Mutex<AppState>>, request: AddWalletRequest) -> Result<String, Error> {
+async fn add_wallet(
+    state: State<'_, Mutex<AppState>>,
+    request: AddWalletRequest,
+) -> Result<String, Error> {
     // Extract keystore and drop all locks before any operations
     let mut keystore = {
         let app_state = state.lock().unwrap();
@@ -1956,8 +1959,8 @@ async fn init_client(environment: &str) -> Result<Client, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
     use colonylib::KeyStore;
+    use std::sync::Mutex;
 
     // Helper function to create a test AppState with initialized components
     fn create_test_app_state() -> Mutex<AppState> {
@@ -1975,13 +1978,26 @@ mod tests {
         // Create keystore from a test mnemonic
         let mut keystore = KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
         // Add some test wallet keys
-        keystore.add_wallet_key("test_wallet_1", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").unwrap();
-        keystore.add_wallet_key("test_wallet_2", "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890").unwrap();
+        keystore
+            .add_wallet_key(
+                "test_wallet_1",
+                "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap();
+        keystore
+            .add_wallet_key(
+                "test_wallet_2",
+                "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            )
+            .unwrap();
         keystore
     }
 
     // Test helper functions that directly test the wallet operations without Tauri State
-    async fn test_add_wallet_direct(app_state: &Mutex<AppState>, request: AddWalletRequest) -> Result<String, Error> {
+    async fn test_add_wallet_direct(
+        app_state: &Mutex<AppState>,
+        request: AddWalletRequest,
+    ) -> Result<String, Error> {
         // Extract keystore and drop all locks before any operations
         let mut keystore = {
             let state = app_state.lock().unwrap();
@@ -2001,7 +2017,10 @@ mod tests {
         Ok("Wallet added".to_string())
     }
 
-    async fn test_remove_wallet_direct(app_state: &Mutex<AppState>, name: String) -> Result<String, Error> {
+    async fn test_remove_wallet_direct(
+        app_state: &Mutex<AppState>,
+        name: String,
+    ) -> Result<String, Error> {
         // Extract keystore and drop all locks before any operations
         let mut keystore = {
             let state = app_state.lock().unwrap();
@@ -2081,7 +2100,10 @@ mod tests {
         let result = test_add_wallet_direct(&app_state, request).await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("KeyStore not initialized"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("KeyStore not initialized"));
     }
 
     #[tokio::test]
@@ -2177,7 +2199,10 @@ mod tests {
         let mut keystore = KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
 
         // Test adding a wallet
-        let add_result = keystore.add_wallet_key("test_wallet", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+        let add_result = keystore.add_wallet_key(
+            "test_wallet",
+            "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        );
         assert!(add_result.is_ok());
 
         // Test getting wallet keys
