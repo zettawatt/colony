@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "@tauri-apps/plugin-notification": "^2.2.2",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-shell": "^2.3.0",
     "@tauri-apps/plugin-store": "^2.2.0",
     "daisyui": "^5.0.35",
     "luxon": "^3.6.1",
