@@ -26,7 +26,7 @@
     await tick();
     try {
       await invoke("open_keystore", { password: password });
-      setPassword(password);
+      await setPassword(password);
       loginModal?.close(); 
     } catch (error) {
       console.trace(error);

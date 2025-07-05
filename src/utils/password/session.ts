@@ -1,13 +1,14 @@
-let password: string | null = null;
+import { invoke } from '@tauri-apps/api/core';
 
-export function setPassword(pw: string) {
-  password = pw;
+
+export async function setPassword(pw: string) {
+  return invoke('set_password', { pw });
 }
 
-export function getPassword(): string | null {
-  return password;
+export async function getPassword(): Promise<string | null> {
+  return await invoke<string | null>('get_password');
 }
 
-export function clearPassword() {
-  password = null;
+export async function clearPassword() {
+  return invoke('clear_password');
 }

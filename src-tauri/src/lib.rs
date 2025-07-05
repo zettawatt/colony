@@ -29,6 +29,31 @@ fn get_file_size(path: String) -> Result<u64, String> {
         .map_err(|e| e.to_string())
 }
 
+pub struct Session {
+    pub password: Mutex<Option<String>>,
+}
+
+#[tauri::command]
+fn set_password(state: State<'_, Mutex<AppState>>, pw: String) {
+    let app_state = state.lock().unwrap();
+    let mut stored_pw = app_state.session.password.lock().unwrap();
+    *stored_pw = Some(pw);
+}
+
+#[tauri::command]
+fn get_password(state: State<'_, Mutex<AppState>>) -> Option<String> {
+    let app_state = state.lock().unwrap();
+    let mut stored_pw = app_state.session.password.lock().unwrap();
+    stored_pw.clone()
+}
+
+#[tauri::command]
+fn clear_password(state: State<'_, Mutex<AppState>>) {
+    let app_state = state.lock().unwrap();
+    let mut stored_pw = app_state.session.password.lock().unwrap();
+    *stored_pw = None;
+}
+
 // Error handling
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -130,6 +155,7 @@ pub struct AppState {
     pub keystore: Mutex<Option<KeyStore>>,
     pub graph: Mutex<Option<Graph>>,
     pub network: String,
+    pub session: Session,
 }
 
 // Data structures for Tauri commands
@@ -1928,6 +1954,9 @@ pub fn run(network: &str) {
         keystore: Mutex::new(None),
         graph: Mutex::new(None),
         network: network.to_string(),
+        session: Session {
+            password: Mutex::new(None),
+        },
     };
 
     tauri::Builder::default()
@@ -1938,6 +1967,9 @@ pub fn run(network: &str) {
         .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(app_state))
         .invoke_handler(tauri::generate_handler![
+            set_password,
+            get_password,
+            clear_password,
             get_file_size,
             greet,
             get_new_seed_phrase,
@@ -2002,6 +2034,7 @@ mod tests {
             keystore: Mutex::new(None),
             graph: Mutex::new(None),
             network: "main".to_string(),
+            session: Mutex::new(None),
         })
     }
 

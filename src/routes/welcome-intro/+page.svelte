@@ -2,6 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import SeedPhrase from "../../components/seedPhrase.svelte";
   import ps from "../../stores/persistantStorage"; 
+  import { getPassword, setPassword } from "../../utils/password/session";
 
   let seedPhraseRef: SeedPhrase;
 
@@ -24,14 +25,17 @@
     try {
       // const datastore = await invoke("initialize_datastore"); 
       console.log(words);
+      await setPassword(confirmPassword);
+      const pw = await getPassword();
+      console.log("password", pw)
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: words})
-      const writtenKeystore = await invoke("write_keystore_to_file", {password: "maxx"})
-      await invoke("open_keystore", { password: "maxx" });
+      const writtenKeystore = await invoke("write_keystore_to_file", {password: pw})
+      await invoke("open_keystore", { password: pw });
       await ps.setUserCompletedIntro(true);
       reroute("/screens/search");
       return true;
     } catch (error) {
-      console.log(error);
+      console.trace(error);
       return false;
     }
   }
