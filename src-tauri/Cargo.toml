@@ -1,11 +1,15 @@
 [package]
-name = "colony"
+name = "colony-app"
 version = "0.1.0"
 description = "A GUI frontend to the Autonomi network with a client side search engine"
 authors = ["Chuck McClish", "Maxx Rodriguez"]
 edition = "2021"
 homepage = "https://github.com/zettawatt/colony"
 license = "GPL-3.0-only"
+
+[[bin]]
+name = "colony-app"
+path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -28,6 +32,7 @@ thiserror = "2.0.12"
 tauri-plugin-dialog = "2"
 tauri-plugin-store = "2"
 tauri-plugin-shell = "2"
+clap = "4.5.40"
 
 [profile.dev]
 opt-level = 0

@@ -124,6 +124,7 @@ pub struct AppState {
     pub datastore: Mutex<Option<DataStore>>,
     pub keystore: Mutex<Option<KeyStore>>,
     pub graph: Mutex<Option<Graph>>,
+    pub network: String,
 }
 
 // Data structures for Tauri commands
@@ -1707,9 +1708,11 @@ async fn initialize_autonomi_client(
     state: State<'_, Mutex<AppState>>,
     wallet_key: String,
 ) -> Result<String, Error> {
-    //FIXME: do we want to hard code this or have an argument to set this in the frontend?
-    let environment = "local";
-    let client = init_client(environment).await?;
+    let environment = {
+        let state = state.lock().unwrap();
+        state.network.clone()
+    };
+    let client = init_client(&environment).await?;
     let evm_network = client.evm_network();
     info!("EVM network: {evm_network:?}");
     //FIXME: need to grap the wallet error and remove this unwrap()
@@ -1892,13 +1895,14 @@ async fn download_data(
 ////////////////////////////////////////////////////////////////////
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run(network: &str) {
     let app_state = AppState {
         client: Mutex::new(None),
         wallet: Mutex::new(None),
         datastore: Mutex::new(None),
         keystore: Mutex::new(None),
         graph: Mutex::new(None),
+        network: network.to_string(),
     };
 
     tauri::Builder::default()
@@ -1970,6 +1974,7 @@ mod tests {
             datastore: Mutex::new(None),
             keystore: Mutex::new(None),
             graph: Mutex::new(None),
+            network: "main".to_string(),
         })
     }
 

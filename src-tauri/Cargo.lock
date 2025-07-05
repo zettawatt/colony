@@ -2148,11 +2148,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "colony"
+name = "colony-app"
 version = "0.1.0"
 dependencies = [
  "autonomi",
  "chrono",
+ "clap",
  "colonylib",
  "futures",
  "ruint",
