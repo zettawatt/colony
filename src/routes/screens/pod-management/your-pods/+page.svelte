@@ -6,6 +6,7 @@
   import { FileObj, type FileInfo } from "../../../../classes/FileObj";
   import ps from "../../../../stores/persistantStorage";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
+  import { getPassword } from "../../../../utils/password/session";
 
   type PodInfo = {
     address: string
@@ -113,7 +114,7 @@
   async function initPodManager() {
     try {
       await invoke("initialize_datastore");
-      await invoke("open_keystore", { password: "maxx" });
+      await invoke("open_keystore", { password: await getPassword() });
       await invoke("initialize_graph");
       const result = await invoke("initialize_pod_manager");
 
@@ -136,7 +137,7 @@
         const podInfo = await invoke('add_pod', { request: {name: newPodName} }) as PodInfo;
         podObj["address"] = podInfo.address;
         addToast('Pod created at address:'+ podInfo.address, "info")
-        await invoke("write_keystore_to_file", {password: "maxx"})
+        await invoke("write_keystore_to_file", {password: await getPassword()})
         await loadTable();
         console.log('Pod created at address:', podInfo.address);
       } catch (err) {
