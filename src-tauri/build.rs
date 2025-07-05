@@ -1,5 +1,5 @@
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 
 fn main() {
     // Run fetch_binaries.sh before building
@@ -13,7 +13,9 @@ fn fetch_binaries() {
     let script_path = binaries_dir.join("fetch_binaries.sh");
 
     if !script_path.exists() {
-        println!("cargo:warning=fetch_binaries.sh not found at {:?}", script_path);
+        println!(
+            "cargo:warning=fetch_binaries.sh not found at {script_path:?}"
+        );
         return;
     }
 
@@ -36,12 +38,15 @@ fn fetch_binaries() {
             } else {
                 println!("cargo:warning=Failed to fetch binaries");
                 if !output.stderr.is_empty() {
-                    println!("cargo:warning=Error: {}", String::from_utf8_lossy(&output.stderr));
+                    println!(
+                        "cargo:warning=Error: {}",
+                        String::from_utf8_lossy(&output.stderr)
+                    );
                 }
             }
         }
         Err(e) => {
-            println!("cargo:warning=Failed to execute fetch_binaries.sh: {}", e);
+            println!("cargo:warning=Failed to execute fetch_binaries.sh: {e}");
         }
     }
 }

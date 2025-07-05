@@ -19,7 +19,7 @@ use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, State};
-use tauri_plugin_shell::{ShellExt, Error as ShellError};
+use tauri_plugin_shell::{Error as ShellError, ShellExt};
 use tracing::{error, info};
 
 #[tauri::command]
@@ -43,7 +43,7 @@ fn set_password(state: State<'_, Mutex<AppState>>, pw: String) {
 #[tauri::command]
 fn get_password(state: State<'_, Mutex<AppState>>) -> Option<String> {
     let app_state = state.lock().unwrap();
-    let mut stored_pw = app_state.session.password.lock().unwrap();
+    let stored_pw = app_state.session.password.lock().unwrap();
     stored_pw.clone()
 }
 
@@ -1925,9 +1925,9 @@ async fn download_data(
 async fn dweb_serve(app: AppHandle) -> Result<String, Error> {
     let sidecar_command = app.shell().sidecar("dweb")?;
     let (_rx, mut _child) = sidecar_command
-      .args(["serve"])
-      .spawn()
-      .expect("Failed to spawn sidecar");
+        .args(["serve"])
+        .spawn()
+        .expect("Failed to spawn sidecar");
     Ok("Started dweb".to_string())
 }
 
@@ -1935,9 +1935,9 @@ async fn dweb_serve(app: AppHandle) -> Result<String, Error> {
 async fn dweb_open(app: AppHandle, address: String) -> Result<String, Error> {
     let sidecar_command = app.shell().sidecar("dweb")?;
     let (_rx, mut _child) = sidecar_command
-      .args(["open", &address])
-      .spawn()
-      .expect("Failed to spawn sidecar");
+        .args(["open", &address])
+        .spawn()
+        .expect("Failed to spawn sidecar");
     Ok("Opened address with dweb".to_string())
 }
 
