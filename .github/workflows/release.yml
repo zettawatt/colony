@@ -156,7 +156,7 @@ jobs:
           prerelease: false
           includeUpdaterJson: false
           args: ${{ matrix.args }}
-          bundleIdentifier: 'com.colony.app'
+          bundleIdentifier: 'com.colony.gui'
 
       - name: Verify build artifacts
         run: |
