@@ -2034,7 +2034,9 @@ mod tests {
             keystore: Mutex::new(None),
             graph: Mutex::new(None),
             network: "main".to_string(),
-            session: Mutex::new(None),
+            session: Session {
+                password: Mutex::new(None),
+            },
         })
     }
 
