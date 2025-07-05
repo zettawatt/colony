@@ -2154,6 +2154,7 @@ dependencies = [
  "autonomi",
  "chrono",
  "colonylib",
+ "futures",
  "ruint",
  "serde",
  "serde_json",
@@ -2173,9 +2174,9 @@ dependencies = [
 
 [[package]]
 name = "colonylib"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f63641fd04ab621318f9b33c7f790d8638035a013a99cf8be911518236bd7c5"
+checksum = "62eb2d46619d5b12ebbc38df012119bbc99a9785348bd137441b1e73881d8c43"
 dependencies = [
  "ant-networking",
  "autonomi",

@@ -18,7 +18,7 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-notification = "2"
-colonylib = "0.4.4"
+colonylib = "0.4.5"
 autonomi = "0.5.0"
 tracing = "0.1.41"
 tokio = { version = "1", features = ["full"] }
@@ -44,6 +44,7 @@ strip = true
 tokio-test = "0.4"
 ruint = "1.12.3"
 tracing-subscriber = "0.3.18"
+futures = "0.3"
 
 [target.aarch64-apple-darwin.env]
 SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"

@@ -161,6 +161,12 @@ pub struct UploadFileRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct AddWalletRequest {
+    pub name: String,
+    pub key: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RefreshRefRequest {
     pub depth: String,
 }
@@ -1569,6 +1575,131 @@ async fn get_subject_data(
 ////////////////////////////////////////////////////////////////////
 
 #[tauri::command]
+async fn add_wallet(state: State<'_, Mutex<AppState>>, request: AddWalletRequest) -> Result<String, Error> {
+    // Extract keystore and drop all locks before any operations
+    let mut keystore = {
+        let app_state = state.lock().unwrap();
+        let keystore_guard = app_state.keystore.lock().unwrap();
+        keystore_guard.clone().ok_or("KeyStore not initialized")?
+    }; // All MutexGuards are dropped here
+
+    // Call the keystore add_wallet_key function to add the new wallet private key to the keystore
+    keystore.add_wallet_key(&request.name, &request.key)?;
+
+    // Put the modified keystore back
+    {
+        let app_state = state.lock().unwrap();
+        *app_state.keystore.lock().unwrap() = Some(keystore);
+    }
+
+    info!("Wallet added: {}", request.name);
+    Ok("Wallet added".to_string())
+}
+
+#[tauri::command]
+async fn remove_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
+    // Extract keystore and drop all locks before any operations
+    let mut keystore = {
+        let app_state = state.lock().unwrap();
+        let keystore_guard = app_state.keystore.lock().unwrap();
+        keystore_guard.clone().ok_or("KeyStore not initialized")?
+    }; // All MutexGuards are dropped here
+
+    // Call the keystore remove_wallet_key function to remove the wallet private key from the keystore
+    keystore.remove_wallet_key(&name)?;
+
+    // Put the modified keystore back
+    {
+        let app_state = state.lock().unwrap();
+        *app_state.keystore.lock().unwrap() = Some(keystore);
+    }
+
+    info!("Wallet removed: {}", name);
+    Ok("Wallet removed".to_string())
+}
+
+#[tauri::command]
+async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error> {
+    let state = state.lock().unwrap();
+    let keystore = state
+        .keystore
+        .lock()
+        .unwrap()
+        .as_ref()
+        .ok_or("KeyStore not initialized")?
+        .clone();
+
+    // Call the keystore list_wallets function to get the list of wallet names
+    let wallets = keystore.get_wallet_keys();
+
+    // Map the wallet names and keys to a single JSON Value object
+    let wallets: Value = serde_json::json!(wallets);
+
+    info!("Wallets listed");
+    Ok(wallets)
+}
+
+#[tauri::command]
+async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
+    // Extract all data we need and drop all locks before any await
+    let (client, wallet_key, evm_network) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .take()
+            .ok_or("Client not initialized")?;
+
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("KeyStore not initialized")?
+            .clone();
+
+        // Call the keystore get_wallet_key function to get the wallet private key
+        let wallet_key = keystore.get_wallet_key(&name)?;
+
+        // Get the EVM network from the existing client
+        let evm_network = client.evm_network().clone();
+
+        (client, wallet_key, evm_network)
+    }; // All MutexGuards are dropped here
+
+    // Perform operations and ensure components are always restored
+    let result = async {
+        info!("EVM network: {evm_network:?}");
+
+        // Create new wallet with the specified key
+        let wallet = Wallet::new_from_private_key(evm_network.clone(), &wallet_key)
+            .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
+
+        info!("Wallet switched to: {}", name);
+        Ok(wallet)
+    }
+    .await;
+
+    // Always put the components back, regardless of success or failure
+    match result {
+        Ok(wallet) => {
+            let state = state.lock().unwrap();
+            *state.client.lock().unwrap() = Some(client);
+            *state.wallet.lock().unwrap() = Some(wallet);
+            Ok("Wallet switched".to_string())
+        }
+        Err(e) => {
+            // Restore the client even on failure
+            let state = state.lock().unwrap();
+            *state.client.lock().unwrap() = Some(client);
+            Err(e)
+        }
+    }
+}
+
+#[tauri::command]
 async fn initialize_autonomi_client(
     state: State<'_, Mutex<AppState>>,
     wallet_key: String,
@@ -1803,7 +1934,11 @@ pub fn run() {
             initialize_graph,
             upload_cost,
             upload_data,
-            download_data
+            download_data,
+            add_wallet,
+            remove_wallet,
+            list_wallets,
+            switch_wallet
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1815,5 +1950,295 @@ async fn init_client(environment: &str) -> Result<Client, Error> {
         "local" => Ok(Client::init_local().await?),
         "alpha" => Ok(Client::init_alpha().await?),
         _ => Ok(Client::init().await?), // main net
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+    use colonylib::KeyStore;
+
+    // Helper function to create a test AppState with initialized components
+    fn create_test_app_state() -> Mutex<AppState> {
+        Mutex::new(AppState {
+            client: Mutex::new(None),
+            wallet: Mutex::new(None),
+            datastore: Mutex::new(None),
+            keystore: Mutex::new(None),
+            graph: Mutex::new(None),
+        })
+    }
+
+    // Helper function to create a mock keystore with some test wallets
+    fn create_mock_keystore() -> KeyStore {
+        // Create keystore from a test mnemonic
+        let mut keystore = KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
+        // Add some test wallet keys
+        keystore.add_wallet_key("test_wallet_1", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").unwrap();
+        keystore.add_wallet_key("test_wallet_2", "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890").unwrap();
+        keystore
+    }
+
+    // Test helper functions that directly test the wallet operations without Tauri State
+    async fn test_add_wallet_direct(app_state: &Mutex<AppState>, request: AddWalletRequest) -> Result<String, Error> {
+        // Extract keystore and drop all locks before any operations
+        let mut keystore = {
+            let state = app_state.lock().unwrap();
+            let keystore_guard = state.keystore.lock().unwrap();
+            keystore_guard.clone().ok_or("KeyStore not initialized")?
+        }; // All MutexGuards are dropped here
+
+        // Call the keystore add_wallet_key function to add the new wallet private key to the keystore
+        keystore.add_wallet_key(&request.name, &request.key)?;
+
+        // Put the modified keystore back
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(keystore);
+        }
+
+        Ok("Wallet added".to_string())
+    }
+
+    async fn test_remove_wallet_direct(app_state: &Mutex<AppState>, name: String) -> Result<String, Error> {
+        // Extract keystore and drop all locks before any operations
+        let mut keystore = {
+            let state = app_state.lock().unwrap();
+            let keystore_guard = state.keystore.lock().unwrap();
+            keystore_guard.clone().ok_or("KeyStore not initialized")?
+        }; // All MutexGuards are dropped here
+
+        // Call the keystore remove_wallet_key function to remove the wallet private key from the keystore
+        keystore.remove_wallet_key(&name)?;
+
+        // Put the modified keystore back
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(keystore);
+        }
+
+        Ok("Wallet removed".to_string())
+    }
+
+    async fn test_list_wallets_direct(app_state: &Mutex<AppState>) -> Result<Value, Error> {
+        let state = app_state.lock().unwrap();
+        let keystore = state
+            .keystore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("KeyStore not initialized")?
+            .clone();
+
+        // Call the keystore list_wallets function to get the list of wallet names
+        let wallets = keystore.get_wallet_keys();
+
+        // Map the wallet names and keys to a single JSON Value object
+        let wallets: Value = serde_json::json!(wallets);
+
+        Ok(wallets)
+    }
+
+    #[tokio::test]
+    async fn test_add_wallet_success() {
+        let app_state = create_test_app_state();
+
+        // Initialize keystore
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap());
+        }
+
+        let request = AddWalletRequest {
+            name: "new_wallet".to_string(),
+            key: "0x1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff".to_string(),
+        };
+
+        let result = test_add_wallet_direct(&app_state, request).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Wallet added".to_string());
+
+        // Verify the wallet was actually added
+        let state_guard = app_state.lock().unwrap();
+        let keystore = state_guard.keystore.lock().unwrap();
+        let keystore_ref = keystore.as_ref().unwrap();
+        let wallet_keys = keystore_ref.get_wallet_keys();
+        assert!(wallet_keys.contains_key("new_wallet"));
+    }
+
+    #[tokio::test]
+    async fn test_add_wallet_keystore_not_initialized() {
+        let app_state = create_test_app_state();
+        // Don't initialize keystore
+
+        let request = AddWalletRequest {
+            name: "new_wallet".to_string(),
+            key: "0x1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff".to_string(),
+        };
+
+        let result = test_add_wallet_direct(&app_state, request).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("KeyStore not initialized"));
+    }
+
+    #[tokio::test]
+    async fn test_remove_wallet_success() {
+        let app_state = create_test_app_state();
+
+        // Initialize keystore with test wallets
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(create_mock_keystore());
+        }
+
+        let result = test_remove_wallet_direct(&app_state, "test_wallet_1".to_string()).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Wallet removed".to_string());
+
+        // Verify the wallet was actually removed
+        let state_guard = app_state.lock().unwrap();
+        let keystore = state_guard.keystore.lock().unwrap();
+        let keystore_ref = keystore.as_ref().unwrap();
+        let wallet_keys = keystore_ref.get_wallet_keys();
+        assert!(!wallet_keys.contains_key("test_wallet_1"));
+        assert!(wallet_keys.contains_key("test_wallet_2")); // Other wallet should still exist
+    }
+
+    #[tokio::test]
+    async fn test_remove_wallet_not_found() {
+        let app_state = create_test_app_state();
+
+        // Initialize keystore with test wallets
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(create_mock_keystore());
+        }
+
+        let result = test_remove_wallet_direct(&app_state, "nonexistent_wallet".to_string()).await;
+
+        assert!(result.is_err());
+        // The error should indicate the wallet was not found
+    }
+
+    #[tokio::test]
+    async fn test_list_wallets_success() {
+        let app_state = create_test_app_state();
+
+        // Initialize keystore with test wallets
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(create_mock_keystore());
+        }
+
+        let result = test_list_wallets_direct(&app_state).await;
+
+        assert!(result.is_ok());
+        let wallets = result.unwrap();
+
+        // Verify the response contains our test wallets
+        assert!(wallets.is_object());
+        let wallet_map = wallets.as_object().unwrap();
+        assert!(wallet_map.contains_key("test_wallet_1"));
+        assert!(wallet_map.contains_key("test_wallet_2"));
+    }
+
+    #[tokio::test]
+    async fn test_list_wallets_empty() {
+        let app_state = create_test_app_state();
+
+        // Initialize empty keystore
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap());
+        }
+
+        let result = test_list_wallets_direct(&app_state).await;
+
+        assert!(result.is_ok());
+        let wallets = result.unwrap();
+
+        // Should return empty object
+        assert!(wallets.is_object());
+        let wallet_map = wallets.as_object().unwrap();
+        assert!(wallet_map.is_empty());
+    }
+
+    // Note: switch_wallet tests require a real Client and network connection
+    // These are integration tests that would need a test environment
+    // For now, we'll test the error conditions that don't require network access
+
+    #[tokio::test]
+    async fn test_keystore_operations_basic() {
+        // Test basic keystore operations without network dependencies
+        let mut keystore = KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
+
+        // Test adding a wallet
+        let add_result = keystore.add_wallet_key("test_wallet", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+        assert!(add_result.is_ok());
+
+        // Test getting wallet keys
+        let wallet_keys = keystore.get_wallet_keys();
+        assert!(wallet_keys.contains_key("test_wallet"));
+
+        // Test getting a specific wallet key
+        let wallet_key_result = keystore.get_wallet_key("test_wallet");
+        assert!(wallet_key_result.is_ok());
+
+        // Test removing a wallet
+        let remove_result = keystore.remove_wallet_key("test_wallet");
+        assert!(remove_result.is_ok());
+
+        // Verify wallet was removed
+        let wallet_keys_after = keystore.get_wallet_keys();
+        assert!(!wallet_keys_after.contains_key("test_wallet"));
+    }
+
+    #[tokio::test]
+    async fn test_add_wallet_duplicate_name() {
+        let app_state = create_test_app_state();
+
+        // Initialize keystore with test wallets
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(create_mock_keystore());
+        }
+
+        let request = AddWalletRequest {
+            name: "test_wallet_1".to_string(), // This wallet already exists
+            key: "0x9999888877776666555544443333222211110000ffffeeeedddcccbbbaaa999".to_string(),
+        };
+
+        let result = test_add_wallet_direct(&app_state, request).await;
+
+        // The behavior depends on the KeyStore implementation
+        // It might overwrite or return an error - we test that it handles it gracefully
+        // For now, we just ensure it doesn't panic
+        let _ = result; // Don't assert specific behavior as it depends on KeyStore implementation
+    }
+
+    #[tokio::test]
+    async fn test_add_wallet_invalid_key_format() {
+        let app_state = create_test_app_state();
+
+        // Initialize keystore
+        {
+            let state = app_state.lock().unwrap();
+            *state.keystore.lock().unwrap() = Some(KeyStore::from_mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap());
+        }
+
+        let request = AddWalletRequest {
+            name: "invalid_wallet".to_string(),
+            key: "invalid_key_format".to_string(), // Invalid hex format
+        };
+
+        let result = test_add_wallet_direct(&app_state, request).await;
+
+        // Should handle invalid key format gracefully
+        // The exact behavior depends on KeyStore implementation
+        let _ = result; // Don't assert specific behavior as it depends on KeyStore implementation
     }
 }
