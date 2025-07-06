@@ -56,7 +56,7 @@
   });
 
   $: if (tabulatorInstance && Array.isArray(data)) {
-    tabulatorInstance.setData(data);
+    tabulatorInstance.replaceData(data);
   }
 </script>
 
