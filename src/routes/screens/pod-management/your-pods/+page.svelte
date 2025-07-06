@@ -259,12 +259,12 @@
                         <button 
                           class="btn btn-warning btn-square"
                           onclick={() => { activePod = pod; editPodModal.showModal(); }}>
-                          <img src="/app-icons/edit-pen-icon.svg" alt="upload icon" width="19" height="19" />
+                          <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
                         </button>
                         <button 
                           class="btn btn-error btn-square"
                           onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
-                          <img src="/app-icons/recycle-bin-icon.svg" alt="upload icon" width="16" height="16" />
+                          <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
                         </button>
                       </td>
                     </tr>

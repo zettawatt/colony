@@ -11,6 +11,7 @@
   import { statusTestData } from '../../../utils/search/statusTestData';
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
+  import { downloadFile } from '../../../utils/file/download';
 
 
   let searchInput = "";
@@ -35,6 +36,26 @@
     }
   ];
 
+  // set cellClick function for info column
+  searchColumns[0].cellClick = function(e, cell) {
+    activeRow = cell.getRow().getData();
+    fileMetadataModal.showModal()
+  }
+
+  // set cellClick function for download column
+  searchColumns[1].cellClick = function(e, cell) {
+    activeRow = cell.getRow().getData();
+
+    const request = {
+      name: activeRow.name,
+      address: activeRow.address,
+      bytes: activeRow.bytes
+    }
+
+    downloadFile(request);
+  }
+
+
   async function simpleSearch() {
     try {
       if (searchInput === "") return;
@@ -48,11 +69,12 @@
       };
       // const request = {query: "beg"}
       const response = await invoke('search', { request });
+      // console.log(response)
       const parsedResults = parseSparqlResults(response.results)
-      console.log(parsedResults)
+      // console.log(parsedResults)
       tableSearchResults = parsedResults;
     } catch (error) {
-      console.log(error)
+      console.trace(error)
     }
   }
 
@@ -90,6 +112,7 @@
             break;
           case 'http://schema.org/contentSize':
             aggregate[binding.subject.value].size = formatFileSize(Number(binding.object.value));
+            aggregate[binding.subject.value].bytes = Number(binding.object.value);
             break;
           case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type':
             aggregate[binding.subject.value].type = binding.object.value;
@@ -148,7 +171,7 @@
         </label>
         <button class="btn btn-sof btn-warning" onclick={()=>simpleSearch()}>Search</button>
       </div>
-      <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} />
+      <TabulatorTable data={tableSearchResults} columns={searchColumns} />
     </div>
   </div>
   <dialog id="fileMetadataModal" class="modal">
