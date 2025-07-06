@@ -1,4 +1,32 @@
+var infoIcon = function(cell, formatterParams){ //plain text value
+    return '<img src="/app-icons/info-icon.svg" alt="download icon" width="20" height="20" />';
+};
+
+var downloadIcon = function(cell, formatterParams){ //plain text value
+    return '<img src="/app-icons/arrow-bottom-icon.svg" alt="download icon" width="20" height="20" />';
+};
+
 export const searchColumns = [
+  {
+    formatter:infoIcon, 
+    width: 20,
+    maxWidth: 25,
+    hozAlign:"center", 
+    vertAlign: "center",
+    cellClick:function(e, cell) {
+      alert("Printing row data for: " + cell.getRow().getData().name)
+    }
+  },
+  {
+    formatter:downloadIcon, 
+    width: 20,
+    maxWidth: 25,
+    hozAlign:"center", 
+    vertAlign: "center",
+    cellClick:function(e, cell) {
+      alert("Printing row data for: " + cell.getRow().getData().name)
+    }
+  },
   {
     title: "Name",
     field: "name",
