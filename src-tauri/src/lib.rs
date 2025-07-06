@@ -1676,10 +1676,7 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
 }
 
 #[tauri::command]
-async fn switch_wallet(
-    state: State<'_, Mutex<AppState>>,
-    name: String,
-) -> Result<String, Error> {
+async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet_key, evm_network) = {
         let state = state.lock().unwrap();
@@ -1730,7 +1727,7 @@ async fn switch_wallet(
                 *state_guard.wallet.lock().unwrap() = Some(wallet);
             } // Release the lock
 
-            Ok(format!("Successfully switched to wallet: {}", name))
+            Ok(format!("Successfully switched to wallet: {name}"))
         }
         Err(e) => {
             // Restore the client even on failure
@@ -1942,7 +1939,7 @@ async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
             }
             Err(e) => {
                 error!("Failed to stop dweb process: {}", e);
-                Err(Error::Message(format!("Failed to stop dweb process: {}", e)))
+                Err(Error::Message(format!("Failed to stop dweb process: {e}")))
             }
         }
     } else {
@@ -1987,7 +1984,7 @@ async fn dweb_serve(
     }
 
     info!("Started dweb serve with network: {}", network);
-    Ok(format!("Started dweb serve with network: {}", network))
+    Ok(format!("Started dweb serve with network: {network}"))
 }
 
 #[tauri::command]
