@@ -1,4 +1,4 @@
-<script type="ts">
+<script lang="ts">
   import TabulatorTable from '../../../components/tabulator.svelte';
   import { torrentsColumns } from '../../../components/testCols';
   import { torrentsData } from '../../../components/testData';
@@ -18,6 +18,7 @@
   let tableSearchResults = [];
   let activeRow = {};
   let showLogin = false;
+  let isSearching = false;
   $: transfers = Object.values($transferManager);
 
   let rowMenu = [
@@ -57,6 +58,7 @@
 
 
   async function simpleSearch() {
+    isSearching = true;
     try {
       if (searchInput === "") return;
       const request = {
@@ -72,9 +74,11 @@
       // console.log(response)
       const parsedResults = parseSparqlResults(response.results)
       // console.log(parsedResults)
+      isSearching = false;
       tableSearchResults = parsedResults;
     } catch (error) {
       console.trace(error)
+      isSearching = false;
     }
   }
 
@@ -126,10 +130,11 @@
     }
   }
   
-  // Function to update data (useful for real-time updates)
-  // function updateTorrentData(newData) {
-  //   torrentsData = newData; // Reactive update
-  // }
+  async function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      await simpleSearch();
+    }
+  }
 
   onMount(async () => {
     await transferManager.init();
@@ -167,9 +172,15 @@
               <path d="m21 21-4.3-4.3"></path>
             </g>
           </svg>
-          <input type="search" required placeholder="Search" bind:value={searchInput}/>
+          <input type="search" required placeholder="Search" bind:value={searchInput} onkeydown={handleKeydown}/>
         </label>
-        <button class="btn btn-sof btn-warning" onclick={()=>simpleSearch()}>Search</button>
+        <button class="btn btn-sof btn-warning" onclick={()=>simpleSearch()}>
+          {#if isSearching}
+            <span class="loading loading-spinner"></span>
+          {:else}
+            Search
+          {/if}
+        </button>
       </div>
       <TabulatorTable data={tableSearchResults} columns={searchColumns} />
     </div>
