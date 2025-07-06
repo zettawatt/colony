@@ -19,7 +19,7 @@ use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, State};
-use tauri_plugin_shell::{Error as ShellError, ShellExt};
+use tauri_plugin_shell::{process::CommandChild, Error as ShellError, ShellExt};
 use tracing::{error, info};
 
 #[tauri::command]
@@ -156,6 +156,7 @@ pub struct AppState {
     pub graph: Mutex<Option<Graph>>,
     pub network: String,
     pub session: Session,
+    pub dweb_process: Mutex<Option<CommandChild>>,
 }
 
 // Data structures for Tauri commands
@@ -1675,7 +1676,10 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
 }
 
 #[tauri::command]
-async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
+async fn switch_wallet(
+    state: State<'_, Mutex<AppState>>,
+    name: String,
+) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet_key, evm_network) = {
         let state = state.lock().unwrap();
@@ -1713,17 +1717,20 @@ async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Resul
             .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
 
         info!("Wallet switched to: {}", name);
-        Ok(wallet)
+        Ok((wallet, wallet_key))
     }
     .await;
 
     // Always put the components back, regardless of success or failure
     match result {
-        Ok(wallet) => {
-            let state = state.lock().unwrap();
-            *state.client.lock().unwrap() = Some(client);
-            *state.wallet.lock().unwrap() = Some(wallet);
-            Ok("Wallet switched".to_string())
+        Ok((wallet, _wallet_key)) => {
+            {
+                let state_guard = state.lock().unwrap();
+                *state_guard.client.lock().unwrap() = Some(client);
+                *state_guard.wallet.lock().unwrap() = Some(wallet);
+            } // Release the lock
+
+            Ok(format!("Successfully switched to wallet: {}", name))
         }
         Err(e) => {
             // Restore the client even on failure
@@ -1750,9 +1757,11 @@ async fn initialize_autonomi_client(
     let wallet = Wallet::new_from_private_key(evm_network.clone(), &wallet_key).unwrap();
 
     // Lock the state and update the client
-    let state = state.lock().unwrap();
-    *state.client.lock().unwrap() = Some(client);
-    *state.wallet.lock().unwrap() = Some(wallet);
+    let state_guard = state.lock().unwrap();
+    *state_guard.client.lock().unwrap() = Some(client);
+    *state_guard.wallet.lock().unwrap() = Some(wallet);
+    drop(state_guard); // Release the lock
+
     info!("Autonomi client initialized");
     Ok("Autonomi client initialized".to_string())
 }
@@ -1922,13 +1931,63 @@ async fn download_data(
 }
 
 #[tauri::command]
-async fn dweb_serve(app: AppHandle) -> Result<String, Error> {
+async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
+    let process = state.lock().unwrap().dweb_process.lock().unwrap().take();
+
+    if let Some(child) = process {
+        match child.kill() {
+            Ok(_) => {
+                info!("Successfully stopped dweb process");
+                Ok("Stopped dweb process".to_string())
+            }
+            Err(e) => {
+                error!("Failed to stop dweb process: {}", e);
+                Err(Error::Message(format!("Failed to stop dweb process: {}", e)))
+            }
+        }
+    } else {
+        Ok("No dweb process running".to_string())
+    }
+}
+
+#[tauri::command]
+async fn dweb_serve(
+    app: AppHandle,
+    state: State<'_, Mutex<AppState>>,
+    wallet_key: String,
+) -> Result<String, Error> {
+    // Stop any existing dweb process first
+    let _ = dweb_stop(state.clone()).await;
+
+    // Get the network setting from state
+    let network = {
+        let state_guard = state.lock().unwrap();
+        state_guard.network.clone()
+    };
+
+    // Build arguments based on network
+    let mut args = vec!["serve"];
+    match network.as_str() {
+        "local" => args.push("--local"),
+        "alpha" => args.push("--alpha"),
+        _ => {} // main network (default)
+    }
+
     let sidecar_command = app.shell().sidecar("dweb")?;
-    let (_rx, mut _child) = sidecar_command
-        .args(["serve"])
+    let (_rx, child) = sidecar_command
+        .args(args)
+        .env("SECRET_KEY", wallet_key)
         .spawn()
-        .expect("Failed to spawn sidecar");
-    Ok("Started dweb".to_string())
+        .expect("Failed to run dweb serve");
+
+    // Store the child process for later termination
+    {
+        let state_guard = state.lock().unwrap();
+        *state_guard.dweb_process.lock().unwrap() = Some(child);
+    }
+
+    info!("Started dweb serve with network: {}", network);
+    Ok(format!("Started dweb serve with network: {}", network))
 }
 
 #[tauri::command]
@@ -1937,7 +1996,7 @@ async fn dweb_open(app: AppHandle, address: String) -> Result<String, Error> {
     let (_rx, mut _child) = sidecar_command
         .args(["open", &address])
         .spawn()
-        .expect("Failed to spawn sidecar");
+        .expect("Failed to open the address with dweb");
     Ok("Opened address with dweb".to_string())
 }
 
@@ -1957,6 +2016,7 @@ pub fn run(network: &str) {
         session: Session {
             password: Mutex::new(None),
         },
+        dweb_process: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -2004,6 +2064,7 @@ pub fn run(network: &str) {
             list_wallets,
             switch_wallet,
             dweb_serve,
+            dweb_stop,
             dweb_open,
         ])
         .run(tauri::generate_context!())
@@ -2037,6 +2098,7 @@ mod tests {
             session: Session {
                 password: Mutex::new(None),
             },
+            dweb_process: Mutex::new(None),
         })
     }
 
