@@ -1,9 +1,9 @@
 var infoIcon = function(cell, formatterParams){ //plain text value
-    return '<img src="/app-icons/info-icon.svg" alt="download icon" width="20" height="20" />';
+    return '<img src="/app-icons/info-icon.svg" alt="download icon" width="16" height="16" />';
 };
 
 var downloadIcon = function(cell, formatterParams){ //plain text value
-    return '<img src="/app-icons/arrow-bottom-icon.svg" alt="download icon" width="20" height="20" />';
+    return '<img src="/app-icons/arrow-bottom-icon.svg" alt="download icon" width="16" height="16" />';
 };
 
 export const searchColumns = [
