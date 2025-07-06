@@ -49,14 +49,13 @@
 
   function updateTotalDownloadedCounter() {
     let formatted = totalFileSizeCounter(downloadedFiles)
-    const el = document.getElementById("totalUploadedCounter");
+    const el = document.getElementById("totalDownloadedCounter");
     if (el) el.innerText = formatted;
   }
 
   async function loadTable() {
     downloadedFiles = await ps.getDownloadedFilesArray();
     updateTotalDownloadedCounter()
-    console.log(downloadedFiles)
   }
 
   function resetDownloadState() {
@@ -84,8 +83,8 @@
             <p style="margin: 0;" id="totalDownloadedCounter">0.0 B</p>
             <p style="margin: 0;">downloaded</p>
           </div>
-          <button class="btn btn-secondary" onclick={ () => downloadFile("51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625")}>Download File Test</button>
-          <button class="btn btn-secondary" onclick={() => downloadFile("be1f9709f4e1b8bc97f43d825d0b5aff37949775a8daf0eccad5a45ace07c4bf")}>Download File Test2</button>
+          <!-- <button class="btn btn-secondary" onclick={ () => downloadFile("51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625")}>Download File Test</button>
+          <button class="btn btn-secondary" onclick={() => downloadFile("be1f9709f4e1b8bc97f43d825d0b5aff37949775a8daf0eccad5a45ace07c4bf")}>Download File Test2</button> -->
         </div>
       </div>
             <div class="row">
