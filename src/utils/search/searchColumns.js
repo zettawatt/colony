@@ -12,10 +12,7 @@ export const searchColumns = [
     width: 20,
     maxWidth: 25,
     hozAlign:"center", 
-    vertAlign: "center",
-    cellClick:function(e, cell) {
-      alert("Printing row data for: " + cell.getRow().getData().name)
-    }
+    vertAlign: "center", 
   },
   {
     formatter:downloadIcon, 
@@ -23,9 +20,6 @@ export const searchColumns = [
     maxWidth: 25,
     hozAlign:"center", 
     vertAlign: "center",
-    cellClick:function(e, cell) {
-      alert("Printing row data for: " + cell.getRow().getData().name)
-    }
   },
   {
     title: "Name",
