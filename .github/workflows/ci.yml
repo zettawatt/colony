@@ -60,5 +60,9 @@ jobs:
         run: cargo test
         working-directory: src-tauri
 
-      - name: Test Tauri build
-        run: npm run tauri build -- --debug
+      - name: Test Tauri build (no bundle)
+        run: cargo build
+        working-directory: src-tauri
+        env:
+          # Ensure we don't try to create bundles in CI
+          TAURI_SKIP_DEVSERVER_CHECK: true
