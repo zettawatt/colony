@@ -27,9 +27,9 @@ fn fetch_binaries() {
     ];
 
     // Check if all binaries already exist
-    let all_exist = binaries.iter().all(|(local_name, _)| {
-        binaries_dir.join(local_name).exists()
-    });
+    let all_exist = binaries
+        .iter()
+        .all(|(local_name, _)| binaries_dir.join(local_name).exists());
 
     if all_exist {
         println!("cargo:warning=Binaries already exist, skipping download");
