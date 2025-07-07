@@ -3,6 +3,7 @@
   import ps from "../../../stores/persistantStorage";
   import { onMount } from "svelte";
   import { handleCopyAddress } from "../../../utils/copyAutonomiAddress";
+  import { getPassword } from "../../../utils/password/session";
 
   const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -34,10 +35,12 @@
   // Add a wallet
   export async function addWallet(name, key) {
     try {
+      let pw = await getPassword();
       // request shape should match AddWalletRequest
       const response = await invoke('add_wallet', {
         request: { name, key }
       });
+      await invoke("write_keystore_to_file", {password: pw})
       console.log(response); // "Wallet added"
       return response;
     } catch (error) {
@@ -48,7 +51,9 @@
   // Remove a wallet by name
   export async function removeWallet(name) {
     try {
+      let pw = await getPassword();
       const response = await invoke('remove_wallet', { name });
+      await invoke("write_keystore_to_file", {password: pw})
       console.log(response); // "Wallet removed"
       return response;
     } catch (error) {
@@ -60,6 +65,7 @@
   export async function listWallets() {
     try {
       const wallets = await invoke('list_wallets');
+      console.log("wallets", wallets)
       const remappedWallets = [];
       for (const [key, value] of Object.entries(wallets)) {
         remappedWallets.push({
@@ -75,9 +81,12 @@
   }
 
   // Switch to a wallet by name
-  export async function switchWallet(name) {
+  export async function switchWallet(name:string) {
     try {
+      let pw = await getPassword();
       const response = await invoke('switch_wallet', { name });
+      await invoke("write_keystore_to_file", {password: pw})
+      await ps.setPrimaryWallet(name);
       console.log(response); // "Wallet switched"
       return response;
     } catch (error) {
