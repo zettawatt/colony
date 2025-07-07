@@ -122,7 +122,7 @@
       reroute("/screens/search");
       return true;
     } catch (error) {
-      console.trace(error);
+      console.error(error);
       return false;
     }
   }

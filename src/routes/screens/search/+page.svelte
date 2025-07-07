@@ -80,7 +80,7 @@
       isSearching = false;
       tableSearchResults = parsedResults;
     } catch (error) {
-      console.trace(error)
+      console.error(error)
       isSearching = false;
     }
   }
@@ -128,7 +128,7 @@
       }
       return Object.values(aggregate);
     } catch (error) {
-      console.trace(error)
+      console.error(error)
       return;
     }
   }

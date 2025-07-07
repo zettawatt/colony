@@ -31,7 +31,7 @@
       const newDownloadPath = await ps.setDownloadDir(downloadPath);
       addToast("Saved config!", "success");
     } catch (error) {
-      console.trace(error)
+      console.error(error)
       addToast("Could not save config", "error")
     }
   }
@@ -48,7 +48,7 @@
       await setPassword(confirmPassword);
       addToast("Updated Password Successfully!", "success");
     } catch (error) {
-      console.trace(error)
+      console.error(error)
       addToast("Could not update password. Check console for error....", "error");
     }
   }

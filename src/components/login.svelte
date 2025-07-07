@@ -29,7 +29,7 @@
       await setPassword(password);
       loginModal?.close(); 
     } catch (error) {
-      console.trace(error);
+      console.error(error);
       wasPasswordInvalid = true;
       checkingAuth = false;
     }
