@@ -19,6 +19,7 @@ export async function initStore() {
   await store.set('userConfig', {
     "downloadsDirectory": defaultDownloadDir,
   });
+  await store.set('primaryWallet', "");
   return store;
 }
 
@@ -137,6 +138,19 @@ export async function setDownloadDir(path: string): Promise<string> {
   return config.downloadsDirectory;
 } 
 
+export async function getPrimaryWallet(): Promise<string> {
+  const store = await getStore();
+  const walletName = await store.get("primaryWallet") as string;
+  return walletName;
+} 
+
+export async function setPrimaryWallet(walletName: string): Promise<string> {
+  const store = await getStore();
+  await store.set("primaryWallet", walletName);
+  return walletName;
+} 
+
+
 const ps = {
   getPodCache,
   addPodObj,
@@ -154,7 +168,9 @@ const ps = {
   getDownloadedFiles,
   getDownloadDir,
   getDownloadedFilesArray,
-  setDownloadDir
+  setDownloadDir,
+  getPrimaryWallet,
+  setPrimaryWallet
 };
 
 export default ps;
