@@ -3,6 +3,7 @@
 
   // import Welcome from "../pages/welcome.svelte";
   import Intro from "./welcome-intro/+page.svelte";
+  import UserIntro from "./user-intro/+page.svelte";
   import ps from "../stores/persistantStorage";
   import { invoke } from "@tauri-apps/api/core";
 
@@ -88,7 +89,8 @@
   <div class="">
     {#if !loading && hasUserCompletedIntro === false}
       <div class="">
-        <Intro/>
+        <!-- <Intro/> -->
+         <UserIntro/>
       </div>
     {/if}
   </div>
