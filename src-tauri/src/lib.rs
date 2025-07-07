@@ -1676,6 +1676,24 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
 }
 
 #[tauri::command]
+async fn get_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
+    let state = state.lock().unwrap();
+    let keystore = state
+        .keystore
+        .lock()
+        .unwrap()
+        .as_ref()
+        .ok_or("KeyStore not initialized")?
+        .clone();
+
+    // Call the keystore get_wallet_key function to get the wallet private key
+    let wallet_key = keystore.get_wallet_key(&name)?;
+
+    info!("Wallet key retrieved for: {}", name);
+    Ok(wallet_key)
+}
+
+#[tauri::command]
 async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet_key, evm_network) = {
@@ -2059,6 +2077,7 @@ pub fn run(network: &str) {
             add_wallet,
             remove_wallet,
             list_wallets,
+            get_wallet,
             switch_wallet,
             dweb_serve,
             dweb_stop,
