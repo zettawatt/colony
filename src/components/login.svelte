@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getPassword, setPassword } from '../utils/password/session';
   import { invoke } from '@tauri-apps/api/core';
   import { tick } from 'svelte';
+  import { initColony } from '../utils/colony/initColony';
+
   let loginModal: HTMLDialogElement;
   let password: string;
   let wasPasswordInvalid = false;
@@ -25,8 +26,7 @@
     wasPasswordInvalid = false;
     await tick();
     try {
-      await invoke("open_keystore", { password: password });
-      await setPassword(password);
+      await initColony(password);
       loginModal?.close(); 
     } catch (error) {
       console.error(error);
