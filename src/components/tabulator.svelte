@@ -4,7 +4,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { DateTime } from "luxon";
 
-  export let columns, data, rowMenu;
+  export let columns, data, rowMenu, initialSort;
 
   let tableComponent;
   let tabulatorInstance;
@@ -34,14 +34,10 @@
       rowContextMenu: rowMenu,
       reactiveData: false,
       layout: 'fitDataStretch',
-      persistence:{
-        sort:true,
-        filter:true,
-      },
-      persistenceID:"tabulatorPersistance",
       dependencies:{
         DateTime:DateTime,
       }, 
+      initialSort: initialSort,
     });
 
     // Listen for theme changes from Tauri
