@@ -54,7 +54,7 @@
           console.log(result)
         }        
       } catch (error) {
-        console.trace(error) 
+        console.error(error) 
       }
     }
   }

@@ -19,6 +19,9 @@
   let activeRow = {};
   let showLogin = false;
   let isSearching = false;
+  let statusInitialSort = [
+    {column:"startedDate", dir:"desc"}
+  ]
   $: transfers = Object.values($transferManager);
 
   let rowMenu = [
@@ -77,7 +80,7 @@
       isSearching = false;
       tableSearchResults = parsedResults;
     } catch (error) {
-      console.trace(error)
+      console.error(error)
       isSearching = false;
     }
   }
@@ -125,7 +128,7 @@
       }
       return Object.values(aggregate);
     } catch (error) {
-      console.trace(error)
+      console.error(error)
       return;
     }
   }
@@ -153,7 +156,7 @@
   <div class="tabs tabs-box">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" checked={true}/>
     <div class="tab-content border-base-300 bg-base-100 p-10">
-      <TabulatorTable data={transfers} columns={statusColumns} />
+      <TabulatorTable data={transfers} columns={statusColumns} initialSort={statusInitialSort} />
     </div>
 
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" />
