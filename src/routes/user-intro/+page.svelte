@@ -21,7 +21,8 @@
   let confirmSeedWords = [];
   let isSeedPhraseMatching = false;
   let showMatchingString = false;
-  let walletPrivateKey = "0x0000000000000000000000000000000000000000000000000000000000000000";
+  let walletPrivateKey = "0x0000000000000000000000000000000000000000000000000000000000000001";
+  let initWalletName = "Initial Wallet";
 
   $: {
     if (parentSeedWords.length == 12){
@@ -95,7 +96,7 @@
       password,
       walletPrivateKey
     })
-    await initDatastore();
+    await firstTimeSetup();
   }
 
 
@@ -103,22 +104,27 @@
     window.location.href = href;
   }
 
-  async function initDatastore() {
+  // initColony but needs to be different
+  async function firstTimeSetup() {
     try {
-      // const datastore = await invoke("initialize_datastore"); 
+      await invoke("initialize_datastore");
+      await invoke("initialize_graph");
       await setPassword(password);
       const pw = await getPassword();
       console.log("password", pw)
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
-      const writtenKeystore = await invoke("write_keystore_to_file", {password: pw})
       await invoke("open_keystore", { password: pw });
       await invoke("add_wallet", {
         request: {
-          name: "First Wallet",
+          name: initWalletName,
           key: walletPrivateKey
         }
       })
+      await invoke("write_keystore_to_file", {password: pw})
       await ps.setUserCompletedIntro(true);
+      await ps.setPrimaryWallet(initWalletName)
+      const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
+      const podManager = await invoke("initialize_pod_manager");
       reroute("/screens/search");
       return true;
     } catch (error) {
@@ -128,55 +134,57 @@
   }
 </script>
 
-<div class="p-6 max-w-5xl mx-auto">
-  <ul class="steps w-full mb-6">
-    {#each steps as step, index}
-      <li class="step {index <= currentStep ? 'step-warning' : ''}">
-        {step.title}
-      </li>
-    {/each}
-  </ul>
+<main>
+  <div class="p-6 max-w-5xl mx-auto">
+    <ul class="steps w-full mb-6">
+      {#each steps as step, index}
+        <li class="step {index <= currentStep ? 'step-warning' : ''}">
+          {step.title}
+        </li>
+      {/each}
+    </ul>
 
-  <div class="p-4 rounded shadow bg-base-200">
-    {#if currentStep === 0}
-      <svelte:component this={steps[currentStep].component} {validatePassword} />
-    {:else if currentStep === 1}
-      <svelte:component 
-        this={steps[currentStep].component} 
-        {generateNewSeedPhrase}
-        {validateSeedPhrase}
-        bind:words={parentSeedWords}
-        bind:isPhraseValid={isPhraseValid}
-        bind:showValidString={showValidString}
-      />
-    {:else if currentStep === 2}
-      <svelte:component 
-        this={steps[currentStep].component} 
-        bind:words={confirmSeedWords}
-        bind:showMatchingString={showMatchingString}
-        bind:isSeedPhraseMatching={isSeedPhraseMatching}
-      />
-    {:else if currentStep === 3}
-      <svelte:component 
-        this={steps[currentStep].component} 
-        bind:walletPrivateKey={walletPrivateKey}
-      />
-    {:else}
-      <svelte:component this={steps[currentStep].component} />
-    {/if}
+    <div class="p-4 rounded shadow bg-base-200">
+      {#if currentStep === 0}
+        <svelte:component this={steps[currentStep].component} {validatePassword} />
+      {:else if currentStep === 1}
+        <svelte:component 
+          this={steps[currentStep].component} 
+          {generateNewSeedPhrase}
+          {validateSeedPhrase}
+          bind:words={parentSeedWords}
+          bind:isPhraseValid={isPhraseValid}
+          bind:showValidString={showValidString}
+        />
+      {:else if currentStep === 2}
+        <svelte:component 
+          this={steps[currentStep].component} 
+          bind:words={confirmSeedWords}
+          bind:showMatchingString={showMatchingString}
+          bind:isSeedPhraseMatching={isSeedPhraseMatching}
+        />
+      {:else if currentStep === 3}
+        <svelte:component 
+          this={steps[currentStep].component} 
+          bind:walletPrivateKey={walletPrivateKey}
+        />
+      {:else}
+        <svelte:component this={steps[currentStep].component} />
+      {/if}
+    </div>
+
+
+    <div class="mt-6 flex justify-between">
+      <button class="btn btn-outline" onclick={() => currentStep--} disabled={currentStep === 0}>
+        Back
+      </button>
+      <button
+        class="btn btn-primary"
+        onclick={onNext}
+        disabled={!canGoNext}
+      >
+        {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
+      </button>
+    </div>
   </div>
-
-
-  <div class="mt-6 flex justify-between">
-    <button class="btn btn-outline" onclick={() => currentStep--} disabled={currentStep === 0}>
-      Back
-    </button>
-    <button
-      class="btn btn-primary"
-      onclick={onNext}
-      disabled={!canGoNext}
-    >
-      {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
-    </button>
-  </div>
-</div>
+</main>
