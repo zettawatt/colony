@@ -12,12 +12,8 @@ export async function initColony(password: string) {
     const client = await invoke("initialize_autonomi_client", { walletKey });
     const podManager = await invoke("initialize_pod_manager");
   } catch (error) {
-    if (error && typeof error === "object" && "message" in error) {
-      if (error.message === "Failed to open keystore: possible wrong password")
-        throw error;
-    } else {
-      console.error(error)
-    }
+    console.error(error)
+    throw error;
   }
 }
 
@@ -30,3 +26,12 @@ export async function initDatastore () {
     throw error;
   }
 }
+
+// export async function checkForExistingColonyStore () {
+//   try {
+//     await 
+//   } catch (error) {
+//     console.error(error);
+//     throw error;
+//   }
+// }
