@@ -278,6 +278,12 @@ fn initialize_datastore(state: State<'_, Mutex<AppState>>) -> Result<String, Err
     Ok("Datastore initialized".to_string())
 }
 
+#[tauri::command]
+fn datastore_exists() -> Result<bool, Error> {
+    let exists = DataStore::data_dir_exists()?;
+    Ok(exists)
+}
+
 ////////////////////////////////////////////////////////////////////
 // KeyStore commands
 ////////////////////////////////////////////////////////////////////
@@ -2066,6 +2072,7 @@ pub fn run(network: &str) {
             get_subject_data,
             initialize_autonomi_client,
             initialize_datastore,
+            datastore_exists,
             create_keystore_from_seed_phrase,
             create_keystore_from_key,
             write_keystore_to_file,
