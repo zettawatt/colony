@@ -27,7 +27,9 @@
       console.log(words);
       await setPassword(confirmPassword);
       const pw = await getPassword();
-      console.log("password", pw)
+      if (!pw) {
+        console.error("password was null")
+      }
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: words})
       const writtenKeystore = await invoke("write_keystore_to_file", {password: pw})
       await invoke("open_keystore", { password: pw });

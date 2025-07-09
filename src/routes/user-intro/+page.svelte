@@ -111,7 +111,9 @@
       await invoke("initialize_graph");
       await setPassword(password);
       const pw = await getPassword();
-      console.log("password", pw)
+      if (!pw) {
+        console.error("password was null");
+      }
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
       await invoke("add_wallet", {
         request: {
