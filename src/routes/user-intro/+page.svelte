@@ -113,7 +113,6 @@
       const pw = await getPassword();
       console.log("password", pw)
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
-      await invoke("open_keystore", { password: pw });
       await invoke("add_wallet", {
         request: {
           name: initWalletName,
