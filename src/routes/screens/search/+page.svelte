@@ -142,8 +142,8 @@
   onMount(async () => {
     await transferManager.init();
     const pw = await getPassword();
-    console.log('password', pw)
     if (pw === null) {
+      console.error("password was null");
       showLogin = true;
     }
   })
