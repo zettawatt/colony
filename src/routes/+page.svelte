@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+  import { onMount } from "svelte";
 
   // import Welcome from "../pages/welcome.svelte";
   import Intro from "./welcome-intro/+page.svelte";
   import UserIntro from "./user-intro/+page.svelte";
   import ps from "../stores/persistantStorage";
+  import { initDatastore } from "../utils/colony/initColony";
 
   let hasUserCompletedIntro: Boolean | undefined = $state(undefined);
   let loading = $state(true);
@@ -31,6 +32,7 @@
 
   onMount(async () => {
     console.log("here maxx")
+    await initDatastore();
     const wasUserNew = await checkIfUserIsNew();
     if (!wasUserNew) {
       window.location.href = '/screens/search';

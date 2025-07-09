@@ -4,8 +4,6 @@ import { getPrimaryWallet } from "../wallet/getPrimaryWallet";
 
 export async function initColony(password: string) {
   try {
-    await invoke("initialize_datastore");
-    await invoke("initialize_graph");
     await invoke("open_keystore", { password: password });
     await setPassword(password);
     const primaryWallet = await getPrimaryWallet();
@@ -14,6 +12,21 @@ export async function initColony(password: string) {
     const client = await invoke("initialize_autonomi_client", { walletKey });
     const podManager = await invoke("initialize_pod_manager");
   } catch (error) {
-    console.log(error);
+    if (error && typeof error === "object" && "message" in error) {
+      if (error.message === "Failed to open keystore: possible wrong password")
+        throw error;
+    } else {
+      console.error(error)
+    }
+  }
+}
+
+export async function initDatastore () {
+  try {
+    await invoke("initialize_datastore");
+    await invoke("initialize_graph");
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
 }
