@@ -7,7 +7,7 @@
   import ps from "../../../../stores/persistantStorage";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
-  import { podsSyncing } from "../../../../stores/globals";
+  import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
 
   type PodInfo = {
     address: string
@@ -62,11 +62,14 @@
 
   async function uploadAllPods() {
     try {
+      allPodsUploading.set(true);
       const result = await invoke<string>('upload_all');
       addToast(result, "success");
+      allPodsUploading.set(false);
       console.log(result); // "Successfully uploaded all updated pods to Autonomi"
     } catch (error) {
       console.error('Upload failed:', error);
+      allPodsUploading.set(false);
     }
   }
 
@@ -201,7 +204,7 @@
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
           <button class="btn btn-neutral btn-soft" onclick={() => refreshReference(0)} disabled={$podsSyncing}>Sync Pods</button>
-          <button class="btn btn-neutral btn-soft" onclick={() => uploadAllPods()}>Upload All Pods</button>
+          <button class="btn btn-neutral btn-soft" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
       </div>
