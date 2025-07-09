@@ -7,6 +7,7 @@
   import ps from "../../../../stores/persistantStorage";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
+  import { podsSyncing } from "../../../../stores/globals";
 
   type PodInfo = {
     address: string
@@ -97,29 +98,22 @@
     }
   }
 
-  // async function uploadAllPods() {
-  //   try {
-  //     addToast("uploading pods....", "info");
-  //     // Simulate network/upload delay
-  //     await new Promise(resolve => setTimeout(resolve, 4000));
-
-  //     const result = "Successfully uploaded all updated pods to Autonomi";
-  //     addToast(result, "success");
-  //     console.log(result);
-  //   } catch (error) {
-  //     console.error('Upload failed:', error);
-  //   }
-  // }
-
-  async function initPodManager() {
+  async function refreshReference(depthValue: number) {
     try {
-      await invoke("initialize_datastore");
-      await invoke("open_keystore", { password: await getPassword() });
-      await invoke("initialize_graph");
-      const result = await invoke("initialize_pod_manager");
-
-    } catch (error) {
-      console.log(error);
+      podsSyncing.set(true);
+      addToast("Refreshing pods....", "info");
+      const response = await invoke('refresh_ref', {
+        request: {
+          depth: String(depthValue),
+        }
+      });
+      console.log('Success:', response);
+      podsSyncing.set(false);
+      addToast("Pods have been synced", "info");
+    } catch (e) {
+      console.error('Failed to sync:', e);
+      addToast("Failed to sync pods", "error");
+      podsSyncing.set(false);
     }
   }
 
@@ -206,6 +200,7 @@
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
+          <button class="btn btn-neutral btn-soft" onclick={() => refreshReference(0)} disabled={$podsSyncing}>Sync Pods</button>
           <button class="btn btn-neutral btn-soft" onclick={() => uploadAllPods()}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
