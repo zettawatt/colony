@@ -23,13 +23,14 @@
         // window.location.href = '/screens/search';
       }
     } catch (e) {
-      console.log(e)
+      console.error(e)
     } finally {
       loading = false;
       return wasUserNew;
     }
   }
 
+  // App startup
   onMount(async () => {
     try {
       await initDatastore();
