@@ -21,7 +21,7 @@
   let confirmSeedWords = [];
   let isSeedPhraseMatching = false;
   let showMatchingString = false;
-  let walletPrivateKey = "0x0000000000000000000000000000000000000000000000000000000000000001";
+  let walletPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
   let initWalletName = "Initial Wallet";
 
   $: {
