@@ -54,7 +54,7 @@
   on:click={cycleTheme}
 >
   {#if theme === 'auto'}
-    <img src="/app-icons/circle-arrow-icon.svg" alt="auto mode icon" width="18" height="18" />
+    <img src="/app-icons/circle-arrow-icon.svg" alt="auto mode icon" width="16" height="16" />
   {:else if theme === 'light'}
     <img src="/app-icons/sun-icon.svg" alt="light mode icon" width="24" height="24" />
   {:else}
