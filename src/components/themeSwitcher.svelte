@@ -1,11 +1,23 @@
 <script lang="ts">
   import { setTheme } from '@tauri-apps/api/app';
   import { onMount } from 'svelte';
+  import ps from '../stores/persistantStorage';
 
-  type Theme = 'auto' | 'light' | 'dark' | undefined | null;
-  let theme: Theme = 'light';
+  type Theme = 'auto' | 'light' | 'dark';
+  let theme: Theme = 'auto';
 
-  onMount(() => {
+  async function getUserTheme() {
+    try {
+      const userTheme = await ps.getTheme() as Theme;
+      return userTheme
+    } catch (error) {
+      console.error(error)
+      return 'auto'
+    }
+  }
+
+  onMount(async() => {
+    theme = await getUserTheme()
     setAppTheme(theme);
   });
 
@@ -18,10 +30,12 @@
 
   async function setAppTheme(t: Theme) {
     try {
-      if (!t) {
-        t = 'light';
+      await ps.setTheme(t);
+      if (t === 'auto') {
+        await setTheme(undefined);
+      } else {
+        await setTheme(t);
       }
-      await setTheme(t);
     } catch (error) {
       console.error(error);
     }
@@ -40,7 +54,7 @@
   on:click={cycleTheme}
 >
   {#if theme === 'auto'}
-    <img src="/app-icons/operations-icon.svg" alt="auto mode icon" width="24" height="24" />
+    <img src="/app-icons/circle-arrow-icon.svg" alt="auto mode icon" width="18" height="18" />
   {:else if theme === 'light'}
     <img src="/app-icons/sun-icon.svg" alt="light mode icon" width="24" height="24" />
   {:else}

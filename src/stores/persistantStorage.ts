@@ -6,6 +6,11 @@ const STORE_NAME = "colony-app-state.json";
 const STORE_VERSION = 1;
 let store: LazyStore | null = null;
 
+type UserConfig = {
+  "downloadsDirectory": string,
+  "theme": 'auto' | 'light' | 'dark'
+}
+
 
 export async function initStore() {
   try {
@@ -30,6 +35,7 @@ export async function initStore() {
     await store.set('hasUserCompletedIntro', false);
     await store.set('userConfig', {
       "downloadsDirectory": defaultDownloadDir,
+      "theme": "auto" // undefined is default for automatic switching
     });
     await store.set('primaryWallet', "");
     return store;
@@ -148,7 +154,7 @@ export async function getDownloadDir(): Promise<string> {
 
 export async function setDownloadDir(path: string): Promise<string> {
   const store = await getStore();
-  const config = await store.get("userConfig") as { downloadsDirectory: string };
+  const config = await store.get("userConfig") as UserConfig;
   config.downloadsDirectory = path;
   await store.set("userConfig", config);
   return config.downloadsDirectory;
@@ -165,6 +171,24 @@ export async function setPrimaryWallet(walletName: string): Promise<string> {
   await store.set("primaryWallet", walletName);
   return walletName;
 } 
+
+export async function setTheme(t: 'auto' | 'light' | 'dark') {
+  const store = await getStore();
+  const config = await store.get("userConfig") as UserConfig;
+  config.theme = t;
+  await store.set("userConfig", config);
+  return config.theme;
+}
+
+export async function getTheme(): Promise<string> {
+  const store = await getStore();
+  const config = await store.get("userConfig") as UserConfig;
+  if ("theme" in config) {
+    return config.theme;
+  } else {
+    return "auto";
+  }
+}
 
 
 const ps = {
@@ -186,7 +210,9 @@ const ps = {
   getDownloadedFilesArray,
   setDownloadDir,
   getPrimaryWallet,
-  setPrimaryWallet
+  setPrimaryWallet,
+  getTheme,
+  setTheme
 };
 
 export default ps;
