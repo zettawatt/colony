@@ -107,8 +107,8 @@
   // initColony but needs to be different
   async function firstTimeSetup() {
     try {
-      await invoke("initialize_datastore");
-      await invoke("initialize_graph");
+      // await invoke("initialize_datastore");
+      // await invoke("initialize_graph");
       await setPassword(password);
       const pw = await getPassword();
       if (!pw) {
