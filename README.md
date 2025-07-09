@@ -27,16 +27,16 @@ Colony is a cross-platform GUI application that makes it easy to upload, downloa
 Download the latest release for your platform from the [Releases page](https://github.com/zettawatt/colony/releases):
 
 #### 🐧 Linux
-- **AppImage**: `Colony-x.x.x.AppImage` - Portable application, no installation required. Mark it as executable, double click, and go.
+- **AppImage**: `colony-app_x.x.x_amd64.AppImage` - Portable application, no installation required. Mark it as executable, double click, and go.
 - **DEB Package**: `colony-app_x.x.x_amd64.deb` - For Debian/Ubuntu systems
-- **RPM Package**: `colony-app-x.x.x.x86_64.rpm` - For Red Hat/Fedora systems
+- **RPM Package**: `colony-app-x.x.x-1.x86_64.rpm` - For Red Hat/Fedora systems
 
 #### 🍎 macOS
-- **DMG**: `Colony_x.x.x_aarch64.dmg` - Drag to Applications folder
+- **DMG**: `colony-app_x.x.x_aarch64.dmg` - Drag to Applications folder
 - ⚠️ **Security Notice**: The app is not signed with an Apple Developer certificate. You may need to right-click and select "Open" the first time, or go to System Preferences > Security & Privacy to allow the app to run.
 
 #### 🪟 Windows
-- **MSI Installer**: `Colony_x.x.x_x64_en-US.msi` - Standard Windows installer
+- **MSI Installer**: `colony-app_x.x.x_x64_en-US.msi` - Standard Windows installer
 - ⚠️ **Security Notice**: The app is not signed with a Microsoft certificate. Windows may show a security warning. Click "More info" and then "Run anyway" to proceed.
 
 ### Network Options
