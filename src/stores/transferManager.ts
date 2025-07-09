@@ -88,7 +88,6 @@ function connectListeners() {
   // Download events
 
   // On download start: add to store, begin timer, status is "Downloading"
-  console.log("download-started");
   listen('download-started', event => {
     const {id, address, path, size } = event.payload as { id: string; address: string; path: string; size?: number };
     const name = fileNameFromPath(path);
