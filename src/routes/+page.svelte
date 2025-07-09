@@ -31,11 +31,15 @@
   }
 
   onMount(async () => {
-    console.log("here maxx")
-    await initDatastore();
-    const wasUserNew = await checkIfUserIsNew();
-    if (!wasUserNew) {
-      window.location.href = '/screens/search';
+    try {
+      await initDatastore();
+      const wasUserNew = await checkIfUserIsNew();
+      if (!wasUserNew) {
+        window.location.href = '/screens/search';
+      } 
+    } catch (error) {
+      console.error(error)
+      throw error;
     }
   })
 
