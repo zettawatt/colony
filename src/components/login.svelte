@@ -3,11 +3,13 @@
   import { invoke } from '@tauri-apps/api/core';
   import { tick } from 'svelte';
   import { initColony } from '../utils/colony/initColony';
+    import { addToast } from '../stores/toast';
 
   let loginModal: HTMLDialogElement;
   let password: string;
   let wasPasswordInvalid = false;
   let checkingAuth = false;
+  let invalidMessage = "Password was invalid!";
 
   onMount(() => {
     if (loginModal) {
@@ -26,9 +28,16 @@
     wasPasswordInvalid = false;
     await tick();
     try {
-      await initColony(password);
+      const colony = await initColony(password);
+      console.log(colony)
       loginModal?.close(); 
     } catch (error) {
+      invalidMessage = "An error occurred. Please check the logs."
+      if (error && typeof error === "object" && "message" in error) {
+        if (error.message === "Failed to open keystore: possible wrong password") {
+          invalidMessage = "Password was invalid!";
+        }
+      }
       console.error(error);
       wasPasswordInvalid = true;
       checkingAuth = false;
@@ -49,7 +58,7 @@
     <p class="pt-4">Your password is needed for write access to your pod storage.</p>
     <input type="password" placeholder="Password" class="input w-full my-4 input-{wasPasswordInvalid ? "error": "bordered"}" bind:value={password}/>
     {#if wasPasswordInvalid}
-      <p class="text-red-500">Password was invalid</p>
+      <p class="text-red-500">{invalidMessage}</p>
     {/if}
     <div class="modal-action">
       <button class="btn btn-error" onclick={()=>{handleClose()}}>
