@@ -9,7 +9,16 @@ let store: LazyStore | null = null;
 
 export async function initStore() {
   const dir = await appDataDir();
-  const defaultDownloadDir = await downloadDir();
+  let defaultDownloadDir: string;
+  try {
+    defaultDownloadDir = await downloadDir();
+    if (!defaultDownloadDir) {
+      defaultDownloadDir = dir;
+    }
+  } catch (error) {
+    console.warn("Failed to get download directory, using app data directory as fallback:", error);
+    defaultDownloadDir = dir;
+  }
   store = new LazyStore(`${dir}/${STORE_NAME}`, { autoSave: true });
   await store.set('__version', STORE_VERSION);
   await store.set('uploadedFiles', {});
