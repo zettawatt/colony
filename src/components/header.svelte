@@ -1,3 +1,8 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import ThemeSwitcher from './themeSwitcher.svelte';
+</script>
+
 <header class="">
   <div class="navbar bg-base-100 shadow-sm">
     <div class="flex-1">
@@ -6,10 +11,9 @@
         Colony
       </a>
     </div>
-    <div class="flex-3 flex justifiy-center">
+    <div class="flex-3 flex justify-center">
       <ul class="menu menu-horizontal px-1 flex justify-between w-full">
         <li><a href="/screens/search">Search</a></li>
-
         <li class="dropdown">
           <div tabindex="0" role="button" class="btn-ghost">Pod Management</div>
           <ul tabindex="0" class="menu dropdown-content bg-base-100 rounded-box w-52 shadow p-2 z-[1000]">
@@ -18,13 +22,15 @@
             <li><a href="/screens/pod-management/downloads">Downloads</a></li>
           </ul>
         </li>
-
         <li><a>Colonies</a></li>
         <li><a href="/screens/wallet">Wallet</a></li>
         <li><a href="/screens/configuration">Configuration</a></li>
         <li><a href="/user-intro">Steps</a></li>
+        <li><a href="/screens/test">Test</a></li>
       </ul>
     </div>
-    <div class="flex-1"></div>  <!-- Added this empty div for balance -->
+    <div class="flex-1 flex justify-end">
+      <ThemeSwitcher />
+    </div>
   </div>
 </header>

@@ -11,6 +11,7 @@
     "notification:default",
     "dialog:default",
     "store:default",
-    "shell:default"
+    "shell:default",
+    "core:app:allow-set-app-theme"
   ]
 }
