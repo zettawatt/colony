@@ -159,12 +159,12 @@
 {/if}
 <main class="search-container">
   <div class="tabs tabs-box">
-    <input type="radio" name="my_tabs_2" class="tab" aria-label="Table" checked={true}/>
+    <input type="radio" name="my_tabs_2" class="tab" aria-label="Status"/>
     <div class="tab-content border-base-300 bg-base-100 p-10">
       <TabulatorTable data={transfers} columns={statusColumns} initialSort={statusInitialSort} />
     </div>
 
-    <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" />
+    <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" checked={true}/>
     <div class="tab-content border-base-300 bg-base-100 p-10 pt-3">
       <div class="row mb-3">
         <label class="input mr-2">
