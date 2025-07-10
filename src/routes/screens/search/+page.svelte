@@ -53,7 +53,7 @@
     const request = {
       name: activeRow.name,
       address: activeRow.address,
-      bytes: activeRow.bytes
+      bytes: activeRow.bytes ?? 0
     }
 
     downloadFile(request);
@@ -107,7 +107,12 @@
               ? binding.graph.value.slice(6) : binding.graph.value,
             address: binding.subject.value.startsWith("ant://") 
               ? binding.subject.value.slice(6) : binding.subject.value,
-            depth: binding.depth?.value || undefined
+            depth: binding.depth?.value || undefined,
+            name: "",
+            description: "",
+            size: "?",
+            bytes: 0,
+            type: ""
           };
         }
         switch (binding.predicate.value) {
