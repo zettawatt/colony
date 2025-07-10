@@ -22,7 +22,7 @@
   let isSeedPhraseMatching = false;
   let showMatchingString = false;
   let walletPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-  let initWalletName = "Initial Wallet";
+  let initWalletName = "main";
 
   $: {
     if (parentSeedWords.length == 12){
