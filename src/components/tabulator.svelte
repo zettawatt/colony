@@ -29,7 +29,8 @@
     tabulatorInstance = new Tabulator(tableComponent, {
       columns,
       height: 300,
-      maxHeight: 700,
+      minHeight: 300,
+      maxHeight: "100%",
       data,
       rowContextMenu: rowMenu,
       reactiveData: false,
