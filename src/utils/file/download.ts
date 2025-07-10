@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 type DownloadRequest = {
   name: string,
   address: string,
-  bytes: number
+  bytes?: number
 }
 
 export async function downloadFile(downloadReq: DownloadRequest) {
@@ -17,7 +17,7 @@ export async function downloadFile(downloadReq: DownloadRequest) {
     id: uuidv4(),
     address: downloadReq.address,
     destination_path: `${downloadDir}/${downloadReq.name}`,
-    size: downloadReq.bytes
+    size: downloadReq.bytes ?? 0
   };
   try {
     const msg = await invoke<string>('download_data', { request });
@@ -29,7 +29,7 @@ export async function downloadFile(downloadReq: DownloadRequest) {
         path: downloadDir,
         autonomiAddress: downloadReq.address,
         extension: downloadReq.name.split('.').pop() || "",
-        fileSize: downloadReq.bytes,
+        fileSize: downloadReq.bytes ?? 0,
         downloadPath: downloadDir
       }
     );
