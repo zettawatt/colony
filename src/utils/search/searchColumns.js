@@ -9,15 +9,15 @@ var downloadIcon = function(cell, formatterParams){ //plain text value
 export const searchColumns = [
   {
     formatter:infoIcon, 
-    width: 20,
-    maxWidth: 25,
+    width: 40,
+    maxWidth: 40,
     hozAlign:"center", 
     vertAlign: "center", 
   },
   {
     formatter:downloadIcon, 
-    width: 20,
-    maxWidth: 25,
+    width: 40,
+    maxWidth: 40,
     hozAlign:"center", 
     vertAlign: "center",
   },
