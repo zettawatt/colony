@@ -193,13 +193,8 @@
 </script>
 
 <main>
-  <!-- <div class="row">
-    <h2 class="h2" style="text-align: center;">Your Pods</h2>
-  </div> -->
   <Drawer>
     <div slot="main">
-      <!-- Your primary page content, e.g., the "Your Pods" table and modals -->
-      <!-- ... main content ... -->
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
@@ -211,7 +206,6 @@
       <div class="row">
         <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
           <div class="card-body items-center text-center p-4">
-            <!-- <h2 class="card-title h2">Your Pods</h2> -->
             <table class="table table-zebra">
               <thead>
                 <tr>
@@ -228,7 +222,6 @@
                   {#each createdPods as pod, idx}
                     <tr>
                       <th>{idx + 1}</th>
-                      <!-- <td>{pod.name}</td> -->
                       <td>{pod.name}</td>
                       <td>
                         <div class="tooltip tooltip-warning" data-tip={pod.address}>
@@ -244,26 +237,23 @@
                       <td>{makeDateReadable(pod.creation)}</td>
                       <td>{makeDateReadable(pod.modified)}</td>
                       <td>
-                        <!-- <button 
-                          class="btn btn-accent"
-                          onclick={() => { activePod = pod; uploadPodModal.showModal(); }}>
-                          u
-                        </button> -->
-                        <button 
-                          class="btn btn-accent btn-square"
-                          onclick={() => { activePod = pod; uploadSinglePod(); }}>
-                          <img src="/app-icons/cloud-data-upload-icon.svg" alt="upload icon" width="24" height="24" />
-                        </button>
-                        <button 
-                          class="btn btn-warning btn-square"
-                          onclick={() => { activePod = pod; editPodModal.showModal(); }}>
-                          <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
-                        </button>
-                        <button 
-                          class="btn btn-error btn-square"
-                          onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
-                          <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
-                        </button>
+                        {#if pod.name !== "User Configuration"}
+                          <button
+                            class="btn btn-accent btn-square"
+                            onclick={() => { activePod = pod; uploadSinglePod(); }}>
+                            <img src="/app-icons/cloud-data-upload-icon.svg" alt="upload icon" width="24" height="24" />
+                          </button>
+                          <button 
+                            class="btn btn-warning btn-square"
+                            onclick={() => { activePod = pod; editPodModal.showModal(); }}>
+                            <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
+                          </button>
+                          <button 
+                            class="btn btn-error btn-square"
+                            onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
+                            <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
+                          </button>
+                        {/if}
                       </td>
                     </tr>
                   {/each}
@@ -292,9 +282,8 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <!-- if there is a button in form, it will close the modal -->
-          <button 
-            class="btn btn-primary" 
+          <button
+            class="btn btn-primary"
             type= "button"
             onclick={createPod}
             disabled={!newPodName}
@@ -385,7 +374,6 @@
                   <td>{file.extension}</td>
                   <td></td>
                   <td>
-                    <!-- operations per file -->
                   </td>
                 </tr>
               {/each}
@@ -447,7 +435,7 @@
 .utility-bar {
   display: flex;
   align-items: center;
-  gap: 5px; /* Space between utility items */
+  gap: 5px;
 }
 .upload-info {
   display: flex;
@@ -503,7 +491,7 @@
 
 .table th:last-child,
 .table td:last-child {
-  min-width: 170px; /* Adjust to your desired minimum width */
+  min-width: 170px;
 }
 
 </style>

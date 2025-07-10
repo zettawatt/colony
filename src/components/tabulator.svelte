@@ -3,13 +3,14 @@
   import { TabulatorFull as Tabulator } from 'tabulator-tables';
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { DateTime } from "luxon";
+  import { globalTheme } from '../stores/globals';
 
   export let columns, data, rowMenu, initialSort;
 
   let tableComponent;
   let tabulatorInstance;
   let unlisten;
-  let currentTheme = 'light'; // default
+  let currentTheme = $globalTheme; // default
 
   function switchTabulatorTheme(theme) {
     const link = document.getElementById('tabulator-theme');
@@ -22,14 +23,14 @@
     }
   }
 
-
   onMount(async () => {
-
+    // const currentTheme = await getCurrentWindow().theme();
     // Create Tabulator instance
     tabulatorInstance = new Tabulator(tableComponent, {
       columns,
       height: 300,
-      maxHeight: 700,
+      minHeight: 300,
+      maxHeight: "100%",
       data,
       rowContextMenu: rowMenu,
       reactiveData: false,
@@ -42,6 +43,7 @@
 
     // Listen for theme changes from Tauri
     unlisten = await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
+      console.log("theme changed", theme)
       switchTabulatorTheme(theme);
     });
   });
@@ -53,6 +55,10 @@
 
   $: if (tabulatorInstance && Array.isArray(data)) {
     tabulatorInstance.replaceData(data);
+  }
+
+  $: if (typeof $globalTheme === 'string') {
+    switchTabulatorTheme($globalTheme);
   }
 </script>
 

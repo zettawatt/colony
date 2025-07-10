@@ -2,6 +2,8 @@
   import { setTheme } from '@tauri-apps/api/app';
   import { onMount } from 'svelte';
   import ps from '../stores/persistantStorage';
+  // import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { globalTheme } from '../stores/globals';
 
   type Theme = 'auto' | 'light' | 'dark';
   let theme: Theme = 'auto';
@@ -36,6 +38,9 @@
       } else {
         await setTheme(t);
       }
+
+      // let currentTheme = await getCurrentWindow().theme();
+      $globalTheme = (t !== undefined) ? t : 'light';
     } catch (error) {
       console.error(error);
     }

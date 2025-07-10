@@ -160,12 +160,12 @@
 <main class="search-container">
   <div class="tabs tabs-box">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Status"/>
-    <div class="tab-content border-base-300 bg-base-100 p-10">
+    <div class="tab-content border-base-300 bg-base-100 p-10" style="height: 100%;">
       <TabulatorTable data={transfers} columns={statusColumns} initialSort={statusInitialSort} />
     </div>
 
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" checked={true}/>
-    <div class="tab-content border-base-300 bg-base-100 p-10 pt-3">
+    <div class="tab-content border-base-300 bg-base-100 p-10 pt-3" style="height: 100%;">
       <div class="row mb-3">
         <label class="input mr-2">
           <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -226,7 +226,6 @@
       </div>
     </div>
   </dialog>
-  <!-- <TabulatorTable data={torrentsData} columns={torrentsColumns} /> -->
 </main>
 
 <style>
