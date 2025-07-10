@@ -8,7 +8,7 @@
     <div class="flex-1">
       <a href="/screens/app-info" class="btn btn-ghost text-xl">
         <span><img src="/logo.svg" class="logo svelte-kit" alt="Colony Logo" width="24" height="24"/></span>
-        Colony
+        <span class="colony-logo-text">Colony</span>
       </a>
     </div>
     <div class="flex-3 flex justify-center">

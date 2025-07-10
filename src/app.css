@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@font-face {
+  font-family: "Hi.";
+  src: url("./assets/fonts/HiBlack-n3a1.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+}
+
 .h1 {
   @apply text-5xl font-extrabold dark:text-white;
 }
@@ -15,6 +22,13 @@
 
 .h4 {
   @apply text-2xl font-bold dark:text-white;
+}
+
+.colony-logo-text {
+  font-family: "Hi.";
+  font-weight: 800;
+  font-size: 35px;
+  color: #e28743;
 }
 
 :root {
