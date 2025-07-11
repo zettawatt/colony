@@ -8,6 +8,7 @@
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
+  import { Sortable, MultiDrag } from 'sortablejs';
 
   type PodInfo = {
     address: string
@@ -339,6 +340,43 @@
     </div>
   </dialog>
   <dialog id="editPodModal" class="modal">
+    <div class="modal-box w-10/12 max-w-5xl max-h-lg">
+      <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
+      <div class="py-2 flex items-center justify-center gap-x-5">
+        <div class="flex flex-col items-center">
+          <h4 class="text-center font-semibold">Pod Items</h4>
+          <ul id="podItems" class="item-container flex flex-col">
+            <li>asdfasdfkasdkfjdsfkja;sldkfjadlsjdflaksdjf</li>
+            <li>Fallout-4-Vault-Dweller's-Survival-Guide-Prima-Official-Game-Guide.pdf</li>
+            <li>music.mp3</li>
+            <li>report.pdf</li>
+          </ul>
+        </div>
+
+        <div class="mx-4 text-center text-gray-400 font-semibold whitespace-nowrap">
+          drag and drop
+        </div>
+
+        <div class="flex flex-col items-center">
+          <h4 class="text-center font-semibold">Available Files</h4>
+          <ul id="files" class="item-container flex flex-col">
+            <li>some_book.pdk</li>
+            <li>some_virus.exe</li>
+            <li>song.mp3</li>
+            <li>hello.jpg</li>
+            <li>Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-primary" onclick={() => addFilesToPod()}>Save Pod</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <!-- <dialog id="editPodModalOld" class="modal">
     <div class="modal-box w-10/12 max-w-3xl max-h-lg">
       <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
       <div class="py-2" style="justify-content: center;">
@@ -390,7 +428,7 @@
         </form>
       </div>
     </div>
-  </dialog>
+  </dialog> -->
   <dialog id="editFileMetadataModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">File Metadata</h3>
@@ -454,13 +492,16 @@
   filter: drop-shadow(0 0 2em #ff3e00);
 }
 
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
+.item-container {
+  min-width: 200px;
+  /* max-width: 300px; */
+  min-height: 300px;
+  height: 300px;
+  overflow-y: auto;
+  overflow-x: scroll;
+  border: 2px solid #ccc;
+  margin: 10px;
+  padding: 10px;
 }
 
 .logo {
