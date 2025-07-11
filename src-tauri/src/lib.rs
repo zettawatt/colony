@@ -13,6 +13,7 @@ use colonylib::pod::Error as PodError;
 use colonylib::{DataStore, Graph, KeyStore, PodManager};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::write;
 use std::io::Error as IoError;
@@ -941,7 +942,6 @@ async fn list_my_pods(state: State<'_, Mutex<AppState>>) -> Result<Vec<PodMetaDa
             .as_array()
             .ok_or(Error::Message("Unexpected pod list format".into()))?;
 
-        use std::collections::HashMap;
         let mut pods: HashMap<String, PodMetaData> = HashMap::new();
 
         for bind in bindings {
@@ -1672,10 +1672,27 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
         .clone();
 
     // Call the keystore list_wallets function to get the list of wallet names
-    let wallets = keystore.get_wallet_keys();
+    let wallet_keys = keystore.get_wallet_keys();
+    let wallet_addresses = keystore.get_wallet_addresses();
 
-    // Map the wallet names and keys to a single JSON Value object
-    let wallets: Value = serde_json::json!(wallets);
+    // Create a json object with the wallet name as the key and a lower level json object with a key called 'key' that has the wallet key as the value
+    // and another key called 'address' that has the wallet address as the value
+
+    let wallets: Value = serde_json::json!(wallet_keys
+        .iter()
+        .filter_map(|(name, key)| {
+            // Get the wallet address from the wallet addresses map
+            // If it doesn't exist, skip this wallet gracefully and continue
+            let address = match wallet_addresses.get(name) {
+                Some(address) => address,
+                None => {
+                    error!("Wallet address not found for wallet: {}", name);
+                    return None;
+                }
+            };
+            Some((name, serde_json::json!({"key": key, "address": address})))
+        })
+        .collect::<HashMap<_, _>>());
 
     info!("Wallets listed");
     Ok(wallets)
