@@ -1675,14 +1675,10 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
     let wallet_keys = keystore.get_wallet_keys();
     let wallet_addresses = keystore.get_wallet_addresses();
 
-    // Create a json object with the wallet name as the key and a lower level json object with a key called 'key' that has the wallet key as the value
-    // and another key called 'address' that has the wallet address as the value
-
-    let wallets: Value = serde_json::json!(wallet_keys
+    // Build an array of wallet objects
+    let wallets: Vec<Value> = wallet_keys
         .iter()
         .filter_map(|(name, key)| {
-            // Get the wallet address from the wallet addresses map
-            // If it doesn't exist, skip this wallet gracefully and continue
             let address = match wallet_addresses.get(name) {
                 Some(address) => address,
                 None => {
@@ -1690,12 +1686,16 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
                     return None;
                 }
             };
-            Some((name, serde_json::json!({"key": key, "address": address})))
+            Some(serde_json::json!({
+                "name": name,
+                "key": key,
+                "address": address
+            }))
         })
-        .collect::<HashMap<_, _>>());
+        .collect();
 
     info!("Wallets listed");
-    Ok(wallets)
+    Ok(serde_json::json!(wallets))
 }
 
 #[tauri::command]
