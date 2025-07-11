@@ -10,12 +10,14 @@
   let storedWallets = $state([]);
   let activeWallet = $state<any>({
     name: "",
-    privateKey: "",
+    key: "",
+    address: "",
     makePrimary: false,
   });
   let referenceWallet = $state<any>({
     name: "",
-    privateKey: ""
+    key: "",
+    address: ""
   });
 
 
@@ -61,19 +63,12 @@
     }
   }
 
-  // List wallets (returns object of { walletName: privateKey } or similar)
+  // List wallets (returns object of { walletName: key } or similar)
   export async function listWallets() {
     try {
       const wallets = await invoke('list_wallets');
       console.log("wallets", wallets)
-      const remappedWallets = [];
-      for (const [key, value] of Object.entries(wallets)) {
-        remappedWallets.push({
-          name: key,
-          privateKey: value
-        })
-      }
-      return remappedWallets;
+      return wallets;
     } catch (error) {
       console.error('Error listing wallets:', error);
       return [];
@@ -94,14 +89,20 @@
     }
   }
   
+  async function addNewWallet(){
+    const addRes = await addWallet(activeWallet.name, activeWallet.key);
+    console.log("addNewWallet response:", addRes);
+    await loadTable();
+  }
+
   async function updateWallet() {
     if (activeWallet.name !== referenceWallet.name) {
       const removeRes = await removeWallet(referenceWallet.name);
       console.log("removeWallet response:", removeRes);
-      const addRes = await addWallet(activeWallet.name, activeWallet.privateKey);
+      const addRes = await addWallet(activeWallet.name, activeWallet.key);
       console.log("addWallet response:", addRes);
-    } else if (activeWallet.privateKey !== referenceWallet.privateKey) {
-      const addRes = await addWallet(activeWallet.name, activeWallet.privateKey);
+    } else if (activeWallet.key !== referenceWallet.key) {
+      const addRes = await addWallet(activeWallet.name, activeWallet.key);
       console.log("addWallet response:", addRes);
     }
     if (activeWallet.makePrimary) {
@@ -136,14 +137,10 @@
         onclick={()=>{
           activeWallet = {
             name: "",
-            privateKey: "",
+            key: "",
             makePrimary: false,
           };
-          referenceWallet = {
-            name: "",
-            privateKey: "",
-            makePrimary: false,
-          };
+          referenceWallet = activeWallet;
           addWalletModal.showModal()
         }}>Add New Wallet</button>
     </div>
@@ -169,10 +166,10 @@
                     <th>{idx + 1}</th>
                     <td>{wallet.name}</td>
                     <td>
-                      <div class="tooltip tooltip-warning" data-tip={wallet.privateKey}>
+                      <div class="tooltip tooltip-warning" data-tip={wallet.key}>
                         <button
                           class="address-tooltip"
-                          data-address={wallet.privateKey}
+                          data-address={wallet.key}
                           onclick={handleCopyAddress}
                           tabindex="0"
                           style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
@@ -224,7 +221,7 @@
           type="input" 
           class="input" 
           placeholder="New Private Key"
-          bind:value={activeWallet.privateKey}
+          bind:value={activeWallet.key}
         />
         <!-- <p class="text-xs text-gray-400 mt-1">
           Empty values will result in no changes for the private key.
@@ -257,7 +254,7 @@
           type="input" 
           class="input" 
           placeholder="New Private Key" 
-          bind:value={activeWallet.privateKey}
+          bind:value={activeWallet.key}
         />
       </div>
       <div class="pb-3 flex flex-col">
@@ -268,7 +265,7 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary" onclick={()=>{updateWallet()}}>Save</button>
+          <button class="btn btn-primary" onclick={()=>{addNewWallet()}}>Save</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
