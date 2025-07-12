@@ -7,7 +7,7 @@
   <div class="navbar bg-base-100 shadow-sm">
     <div class="flex-1">
       <a href="/screens/app-info" class="btn btn-ghost text-xl">
-        <span><img src="/logo.svg" class="logo svelte-kit" alt="Colony Logo" width="30" height="30"/></span>
+        <span><img src="/logo.svg" class="logo svelte-kit" alt="Colony Logo" width="40" height="40"/></span>
         <span class="colony-logo-text">Colony</span>
       </a>
     </div>
@@ -34,3 +34,19 @@
     </div>
   </div>
 </header>
+
+<style>
+  @font-face {
+    font-family: "ColonyFont";
+    src: url("/fonts/HiBlack-n3a1.otf") format("opentype");
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  .colony-logo-text {
+    font-family: "ColonyFont", sans-serif;
+    font-weight: 800;
+    font-size: 30px;
+    color: #e28743;
+  }
+</style>
