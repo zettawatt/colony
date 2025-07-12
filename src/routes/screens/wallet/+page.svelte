@@ -7,6 +7,7 @@
 
   const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  let primaryWalletName = $state("");
   let storedWallets = $state([]);
   let activeWallet = $state<any>({
     name: "",
@@ -114,12 +115,20 @@
 
   async function loadTable() {
     try {
-      storedWallets = await listWallets();
+      primaryWalletName = await ps.getPrimaryWallet();
+      let wallets = await listWallets();
+      // Sort so primary wallet is first
+      storedWallets = wallets.sort((a, b) => {
+        if (a.name === primaryWalletName) return -1;
+        if (b.name === primaryWalletName) return 1;
+        return 0;
+      });
       console.log("storedWallets", storedWallets);
     } catch (error) {
       console.error(error)
     }
   }
+
 
   onMount(async () => {
     // await addWallet();
@@ -164,8 +173,12 @@
                 {#each storedWallets as wallet, idx}
                   <tr>
                     <th>{idx + 1}</th>
-                    <td>{wallet.name}</td>
-                    <td>
+                      <td>
+                        {wallet.name}
+                        {#if wallet.name === primaryWalletName}
+                          <span title="Primary Wallet" style="margin-left:4px; color: #ffc940; font-size: 1.1rem;">💰</span>
+                        {/if}
+                      </td>                    <td>
                       <div class="" data-tip={wallet.address}>
                         <button
                           class="address-tooltip"
