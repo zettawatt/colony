@@ -8,7 +8,58 @@
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
-  import { Sortable, MultiDrag } from 'sortablejs';
+
+  let podListTemp = $state([
+    {
+      id: "1",
+      name: "907f7857974fef55dcba7f73529790925e91738d5df54f021cd18b92f533e68946c1a416e144b00d869e68c080bda3ac",
+      disabled: true,
+      selected: false
+    },
+    {
+      id: "2",
+      name: "Fallout-4-Vault-Dweller's-Survival-Guide-Prima-Official-Game-Guide.pdf",
+      selected: false
+    },
+    {
+      id: "3",
+      name: "music.mp3",
+      selected: false
+    },
+    {
+      id: "4",
+      name: "report.pdf",
+      selected: false
+    }
+  ])
+
+  let filesListTemp = $state([
+    {
+      id: "5",
+      name: "some_book.epub",
+      selected: false
+    },
+    {
+      id: "6",
+      name: "some_virus.ext",
+      selected: false
+    },
+    {
+      id: "7",
+      name: "song.mp3",
+      selected: false
+    },
+    {
+      id: "8",
+      name: "hello.jpg",
+      selected: false
+    },
+    {
+      id: "9",
+      name: "Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf",
+      selected: false
+    }
+  ]);
 
   type PodInfo = {
     address: string
@@ -186,6 +237,22 @@
     }
   }
 
+  function toggleSelection(list: any[], id: string) {
+    console.log('here maxx');
+    
+    return list.map(item =>
+      item.id === id ? {...item, selected: !item.selected} : item
+    );
+  }
+
+  function transferItems(from: any[], to: any[]) {
+    const selectedItems = from.filter(item => item.selected);
+    return {
+      newFrom: from.map(item => ({...item, selected: false})),
+      newTo: [...to, ...selectedItems.map(item => ({...item, selected: false}))]
+    };
+  }
+
   onMount(async () => {
     // await initPodManager();
     await loadTable();
@@ -342,37 +409,75 @@
   <dialog id="editPodModal" class="modal">
     <div class="modal-box w-10/12 max-w-5xl max-h-lg">
       <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
-      <div class="py-2 flex items-center justify-center gap-x-5">
+      <div class="py-2 flex items-center justify-center gap-x-1">
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Pod Items</h4>
           <ul id="podItems" class="item-container flex flex-col mb-1">
-            <li class="item">asdfasdfkasdkfjdsfkja;sldkfjadlsjdflaksdjf</li>
-            <li class="item">Fallout-4-Vault-Dweller's-Survival-Guide-Prima-Official-Game-Guide.pdf</li>
-            <li class="item">music.mp3</li>
-            <li class="item">report.pdf</li>
+            {#each podListTemp as item (item.id)}
+              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <li
+                class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
+                onclick={() => {
+                  if (!item.disabled) {
+                    podListTemp = toggleSelection(podListTemp, item.id);
+                  }
+                }}
+              >
+                <span class="truncate">{item.name}</span>
+                <button
+                  class="edit-button btn btn-sm"
+                  onclick={() => editFileMetadataModal.showModal()}
+                >
+                  Edit
+                </button>
+              </li>
+            {/each}
           </ul>
           <div class="w-full ml-5">
             <button
               class="btn btn-neutral btn-xs"
-              onclick={() => console.log('Add Pod Ref clicked')}
+              onclick={() => addPodRefModal.showModal()}
             >
               Add Pod Ref
             </button>
           </div>
         </div>
 
-        <div class="mx-4 text-center text-gray-400 font-semibold whitespace-nowrap">
-          drag and drop
+        <div class="mx-4 flex flex-col gap-2 items-center">
+          <button class="btn btn-error btn-sm w-full" disabled={!podListTemp.some(f => f.selected)}>
+            Remove
+          </button>
+          <button 
+            class="btn btn-primary btn-sm" 
+            disabled={!filesListTemp.some(f => f.selected)}
+            onclick={() => {
+              const result = transferItems(filesListTemp, podListTemp);
+              filesListTemp = result.newFrom;
+              podListTemp = result.newTo;
+            }}
+          >
+            &larr;&nbsp;Transfer
+          </button>
         </div>
 
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Available Files</h4>
           <ul id="files" class="item-container flex flex-col mb-1">
-            <li class="item">some_book.pdk</li>
-            <li class="item">some_virus.exe</li>
-            <li class="item">song.mp3</li>
-            <li class="item">hello.jpg</li>
-            <li class="item">Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf</li>
+            {#each filesListTemp as item (item.id)}
+              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <li
+                class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
+                onclick={() => {
+                  if (!item.disabled) {
+                    filesListTemp = toggleSelection(filesListTemp, item.id);
+                  }
+                }}
+              >
+                <span class="truncate">{item.name}</span>
+              </li>
+            {/each}
           </ul>
           <div class="w-full invisible">
             <button class="btn btn-xs btn-outline">invisible</button>
@@ -463,6 +568,23 @@
       </div>
     </div>
   </dialog>
+  <dialog id="addPodRefModal" class="modal">
+    <div class="modal-box w-5/12 max-w-xl">
+      <h3 class="text-lg font-bold">Add Pod Reference</h3>
+      <div class="py-4" style="justify-content: center;">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Pod Address</legend>
+          <input type="text" class="input w-full" placeholder="some address" />
+        </fieldset>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-neutral">Add</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
 </main>
 
 <style>
@@ -488,45 +610,48 @@
 }
 
 .item {
+  justify-content: space-between;
   padding: 3px;
   background-color: #f2f2f2;
   border: 1px solid #d9d9d9;
   cursor: grab;
   user-select: none;
+  width: 100%;
 }
 
-.item:active {
-  cursor: grabbing;
-}
-
-.item.disabled {
+.item-disabled {
   color: #aaa;
   background-color: #eee;
   cursor: not-allowed;
 }
 
+.item-selected {
+  background-color: #f9c7c8 !important;
+  border: solid red 1px !important;
+  z-index: 1 !important;
+}
+
 .item-container {
-  min-width: 200px;
-  /* max-width: 300px; */
+  min-width: 300px;
+  max-width: 100%; /* Allow it to expand based on available space */
   min-height: 300px;
   height: 300px;
   overflow-y: auto;
   overflow-x: scroll;
   border: 2px solid #ccc;
   margin: 10px;
-  /* padding: 10px; */
-
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
+@media (min-width: 768px) {
+  .item-container {
+    max-width: 300px; /* Adjust as necessary for wider screens */
+  }
 }
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
+@media (min-width: 1024px) {
+  .item-container {
+    max-width: 400px; /* Further expand on even wider screens */
+  }
 }
 
 .row {
@@ -537,11 +662,6 @@
   /* padding-top: 2vh; */
   padding-bottom: 2vh;
   /* justify-content: center; */
-}
-
-
-#greet-input {
-  margin-right: 5px;
 }
 
 .table th:last-child,
@@ -564,6 +684,13 @@
   .modal-box {
     background-color: #1e1e1e;
     color: #f0f0f0;
+  }
+
+  .item-selected {
+    background-color: #e0282b !important;
+    color: black;
+    border: solid red 1px !important;
+    z-index: 1 !important;
   }
 }
 
