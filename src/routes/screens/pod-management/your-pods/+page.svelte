@@ -465,6 +465,7 @@
                     class="edit-button btn btn-sm"
                     onclick={() => {
                       editingPodItem = item;
+                      podAddress = item.address;
                       console.log("editingPodItem", editingPodItem)
                       event.stopPropagation();
                       editFileMetadataModal.showModal();
@@ -501,7 +502,10 @@
           <div class="w-full ml-5">
             <button
               class="btn btn-neutral btn-xs"
-              onclick={() => addPodRefModal.showModal()}
+              onclick={() => {
+                podAddress = "";
+                addPodRefModal.showModal()
+              }}
             >
               Add Pod Ref
             </button>
