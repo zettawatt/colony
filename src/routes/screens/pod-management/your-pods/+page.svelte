@@ -86,6 +86,7 @@
           return ['Title', 'Description', 'Comment'];
       }
   })
+  let userConfigPod = $state();
 
 
   async function addFilesToPod() {
@@ -150,12 +151,12 @@
   async function fetchPods() {
     try {
       const results = await invoke('list_my_pods');
+      const regularPods = results.filter(pod => pod.name !== "User Configuration");
+      userConfigPod = results.find(pod => pod.name === "User Configuration");
       // result will likely be { addresses: [ ..pod addresses.. ] }
-      console.log(JSON.stringify(results));
-      console.log(results);
       console.log('Pods:', results);
-      return results
-      // you can now use result.addresses in your UI
+      console.log('user config pod', userConfigPod)
+      return regularPods
     } catch (e) {
       console.error('Failed to fetch pods:', e);
     }
