@@ -11,94 +11,46 @@
 
   let podListTemp = $state([
     {
-      id: "1",
+      uuid: "1",
       name: "907f7857974fef55dcba7f73529790925e91738d5df54f021cd18b92f533e68946c1a416e144b00d869e68c080bda3ac",
       selected: false
     },
     {
-      id: "2",
-      name: "Fallout-4-Vault-Dweller's-Survival-Guide-Prima-Official-Game-Guide.pdf",
+      uuid: "2",
+      name: "Fallout-4-Vault-Dweller's-Survival-Guuuide-Prima-Official-Game-Guuuide.pdf",
       selected: false
     },
     {
-      id: "3",
+      uuid: "3",
       name: "music.mp3",
       selected: false
     },
     {
-      id: "4",
+      uuid: "4",
       name: "report.pdf",
       selected: false
     },
     {
-      id: "5",
+      uuid: "5",
       name: "another_document.docx",
       selected: false
     },
     {
-      id: "6",
-      name: "holiday-photo.png",
+      uuid: "6",
+      name: "holuuiday-photo.png",
       selected: false
     },
     {
-      id: "7",
+      uuid: "7",
       name: "presentation.pptx",
       selected: false
     },
     {
-      id: "8",
+      uuid: "8",
       name: "important_data.bak",
       selected: false
     }
   ])
-
-  let filesListTemp = $state([
-    {
-      id: "5",
-      name: "some_book.epub",
-      selected: false
-    },
-    {
-      id: "6",
-      name: "some_virus.ext",
-      selected: false
-    },
-    {
-      id: "7",
-      name: "song.mp3",
-      selected: false
-    },
-    {
-      id: "8",
-      name: "hello.jpg",
-      selected: false
-    },
-    {
-      id: "9",
-      name: "Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf",
-      selected: false
-    },
-    {
-      id: "10",
-      name: "video_clip.mp4",
-      selected: false
-    },
-    {
-      id: "11",
-      name: "work_notes.txt",
-      selected: false
-    },
-    {
-      id: "12",
-      name: "grocery_list.csv",
-      selected: false
-    },
-    {
-      id: "13",
-      name: "archive.zip",
-      selected: false
-    }
-  ]);
 
   type PodInfo = {
     address: string
@@ -116,7 +68,7 @@
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
   let activePod = $state<any>(null); // Holds the pod for the currently active modal
-  let uploadedFiles = $state<FileObj[]>([]);
+  let uploadedFiles = $state<any[]>([]);
   let selectedFileName = $state(""); // <-- Track the filename selected for adding
   let activeFileType = $state("other");
   let availableTypes = $state(['audio', 'video', 'image', 'book', 'other']);
@@ -297,7 +249,7 @@
     console.log('here maxx');
     
     return list.map(item =>
-      item.id === id ? {...item, selected: !item.selected} : item
+      item.uuid === id ? {...item, selected: !item.selected} : item
     );
   }
 
@@ -317,10 +269,14 @@
   onMount(async () => {
     // await initPodManager();
     await loadTable();
-    uploadedFiles = await ps.getUploadedFilesArray();
+    uploadedFiles = (await ps.getUploadedFilesArray()).map(file => ({
+      ...file,
+      disabled: false,
+      selected: false
+    }));
+    console.log(uploadedFiles)
   })
 </script>
-"1790e3a39334f0cbc2d04c5101cc64b7d96fabc7687e7624faa1613ed5336469"
 <main>
   <Drawer>
     <div slot="main">
@@ -474,14 +430,14 @@
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Pod Items</h4>
           <ul id="podItems" class="item-container flex flex-col mb-1">
-            {#each podListTemp as item (item.id)}
+            {#each podListTemp as item (item.uuid)}
               <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <li
                 class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
                 onclick={() => {
                   if (!item.disabled) {
-                    podListTemp = toggleSelection(podListTemp, item.id);
+                    podListTemp = toggleSelection(podListTemp, item.uuid);
                   }
                 }}
               >
@@ -521,10 +477,10 @@
           </button>
           <button 
             class="btn btn-primary btn-sm" 
-            disabled={!filesListTemp.some(f => f.selected)}
+            disabled={!uploadedFiles.some(f => f.selected)}
             onclick={() => {
-              const result = transferItems(filesListTemp, podListTemp);
-              filesListTemp = result.newFrom;
+              const result = transferItems(uploadedFiles, podListTemp);
+              uploadedFiles = result.newFrom;
               podListTemp = result.newTo;
             }}
           >
@@ -535,14 +491,14 @@
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Available Files</h4>
           <ul id="files" class="item-container flex flex-col mb-1">
-            {#each filesListTemp as item (item.id)}
+            {#each uploadedFiles as item (item.uuid)}
               <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <li
                 class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
                 onclick={() => {
                   if (!item.disabled) {
-                    filesListTemp = toggleSelection(filesListTemp, item.id);
+                    uploadedFiles = toggleSelection(uploadedFiles, item.uuid);
                   }
                 }}
               >
