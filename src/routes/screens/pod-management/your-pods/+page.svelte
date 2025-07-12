@@ -8,6 +8,7 @@
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
+  import { v4 as uuidv4 } from 'uuid';
 
   let podListTemp = $state([
     {
@@ -67,7 +68,7 @@
   let isLoading = $state(false);
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
-  let activePod = $state<any>(null); // Holds the pod for the currently active modal
+  let activePod = $state<any>({ fileObjs: [] }); // Holds the pod for the currently active modal
   let uploadedFiles = $state<any[]>([]);
   let selectedFileName = $state(""); // <-- Track the filename selected for adding
   let activeFileType = $state("other");
@@ -87,6 +88,11 @@
       }
   })
   let userConfigPod = $state();
+  let podAddress = $state("");
+
+  $effect(()=> {
+    console.log('activepod', activePod)
+  })
 
 
   async function addFilesToPod() {
@@ -216,7 +222,7 @@
     if (!activePod.fileObjs) activePod.fileObjs = [];
     // Find FileObj in uploadedFiles by name
     const fileToAdd = uploadedFiles.find(f => f.name === selectedFileName);
-    if (fileToAdd && !activePod.fileObjs.some(f => f.name === fileToAdd.name)) {
+    if (fileToAdd && !activePod?.fileObjs.some(f => f.name === fileToAdd.name)) {
       // Add only if not already present
       activePod.fileObjs = [...activePod.fileObjs, fileToAdd];
     }
@@ -265,6 +271,16 @@
   function removeItems(from: any[]){
     const selectedItems = from.filter(item => item.selected);
     return from.filter(item => !item.selected)
+  }
+
+  function addPodReference() {
+    if (!podAddress) return;
+    if (!activePod.fileObjs) activePod.fileObjs = [];
+    activePod.fileObjs.push({
+      address: podAddress,
+      type: "pod-ref",
+      uuid: uuidv4(),
+    })
   }
 
   onMount(async () => {
@@ -326,17 +342,17 @@
                         {#if pod.name !== "User Configuration"}
                           <button
                             class="btn btn-accent btn-square"
-                            onclick={() => { activePod = pod; uploadSinglePod(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; uploadSinglePod(); }}>
                             <img src="/app-icons/cloud-data-upload-icon.svg" alt="upload icon" width="24" height="24" />
                           </button>
                           <button 
                             class="btn btn-warning btn-square"
-                            onclick={() => { activePod = pod; editPodModal.showModal(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; editPodModal.showModal(); }}>
                             <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
                           </button>
                           <button 
                             class="btn btn-error btn-square"
-                            onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; deletePodModal.showModal(); }}>
                             <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
                           </button>
                         {/if}
@@ -431,28 +447,50 @@
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Pod Items</h4>
           <ul id="podItems" class="item-container flex flex-col mb-1">
-            {#each podListTemp as item (item.uuid)}
+            {#each activePod?.fileObjs as item (item.uuid)}
               <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
               <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <li
-                class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
-                onclick={() => {
-                  if (!item.disabled) {
-                    podListTemp = toggleSelection(podListTemp, item.uuid);
-                  }
-                }}
-              >
-                <span class="truncate">{item.name}</span>
-                <button
-                  class="edit-button btn btn-sm"
+              {#if item.type === 'pod-ref'}
+                <li
+                  class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
                   onclick={() => {
-                    event.stopPropagation();
-                    editFileMetadataModal.showModal()
+                    if (!item.disabled) {
+                      activePod.fileObjs = toggleSelection(activePod?.fileObjs, item.uuid);
+                    }
                   }}
                 >
-                  Edit
-                </button>
-              </li>
+                  <span class="truncate">{item.address}</span>
+                  <button
+                    class="edit-button btn btn-sm"
+                    onclick={() => {
+                      event.stopPropagation();
+                      editFileMetadataModal.showModal()
+                    }}
+                  >
+                    Edit
+                  </button>
+                </li>
+              {:else}
+                <li
+                  class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
+                  onclick={() => {
+                    if (!item.disabled) {
+                      activePod.fileObjs = toggleSelection(activePod?.fileObjs, item.uuid);
+                    }
+                  }}
+                >
+                  <span class="truncate">{item.name}</span>
+                  <button
+                    class="edit-button btn btn-sm"
+                    onclick={() => {
+                      event.stopPropagation();
+                      editFileMetadataModal.showModal()
+                    }}
+                  >
+                    Edit
+                  </button>
+                </li>
+              {/if}
             {/each}
           </ul>
           <div class="w-full ml-5">
@@ -468,21 +506,21 @@
         <div class="mx-4 flex flex-col gap-2 items-center">
           <button 
             class="btn btn-error btn-sm w-full" 
-            disabled={!podListTemp.some(f => f.selected)}
+            disabled={!activePod.fileObjs?.some(f => f.selected)}
             onclick={()=>{
-              const result = removeItems(podListTemp);
-              podListTemp = result;
+              const result = removeItems(activePod?.fileObjs);
+              activePod.fileObjs = result;
             }}  
           >
             Remove
           </button>
           <button 
             class="btn btn-primary btn-sm" 
-            disabled={!uploadedFiles.some(f => f.selected)}
+            disabled={!uploadedFiles?.some(f => f.selected)}
             onclick={() => {
-              const result = transferItems(uploadedFiles, podListTemp);
+              const result = transferItems(uploadedFiles, activePod?.fileObjs);
               uploadedFiles = result.newFrom;
-              podListTemp = result.newTo;
+              activePod.fileObjs = result.newTo;
             }}
           >
             &larr;&nbsp;Transfer
@@ -600,18 +638,18 @@
       </div>
     </div>
   </dialog>
-    <dialog id="addPodRefModal" class="modal">
+  <dialog id="addPodRefModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Add Pod Reference</h3>
       <div class="py-4" style="justify-content: center;">
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Pod Address</legend>
-          <input type="text" class="input w-full" placeholder="some address" />
+          <input type="text" class="input w-full" placeholder="some address" bind:value={podAddress}/>
         </fieldset>
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-neutral">Add</button>
+          <button class="btn btn-neutral" onclick={() => {addPodReference()}}>Add</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
