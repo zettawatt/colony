@@ -345,12 +345,20 @@
       <div class="py-2 flex items-center justify-center gap-x-5">
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Pod Items</h4>
-          <ul id="podItems" class="item-container flex flex-col">
-            <li>asdfasdfkasdkfjdsfkja;sldkfjadlsjdflaksdjf</li>
-            <li>Fallout-4-Vault-Dweller's-Survival-Guide-Prima-Official-Game-Guide.pdf</li>
-            <li>music.mp3</li>
-            <li>report.pdf</li>
+          <ul id="podItems" class="item-container flex flex-col mb-1">
+            <li class="item">asdfasdfkasdkfjdsfkja;sldkfjadlsjdflaksdjf</li>
+            <li class="item">Fallout-4-Vault-Dweller's-Survival-Guide-Prima-Official-Game-Guide.pdf</li>
+            <li class="item">music.mp3</li>
+            <li class="item">report.pdf</li>
           </ul>
+          <div class="w-full ml-5">
+            <button
+              class="btn btn-neutral btn-xs"
+              onclick={() => console.log('Add Pod Ref clicked')}
+            >
+              Add Pod Ref
+            </button>
+          </div>
         </div>
 
         <div class="mx-4 text-center text-gray-400 font-semibold whitespace-nowrap">
@@ -359,13 +367,16 @@
 
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Available Files</h4>
-          <ul id="files" class="item-container flex flex-col">
-            <li>some_book.pdk</li>
-            <li>some_virus.exe</li>
-            <li>song.mp3</li>
-            <li>hello.jpg</li>
-            <li>Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf</li>
+          <ul id="files" class="item-container flex flex-col mb-1">
+            <li class="item">some_book.pdk</li>
+            <li class="item">some_virus.exe</li>
+            <li class="item">song.mp3</li>
+            <li class="item">hello.jpg</li>
+            <li class="item">Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf</li>
           </ul>
+          <div class="w-full invisible">
+            <button class="btn btn-xs btn-outline">invisible</button>
+          </div>
         </div>
       </div>
       <div class="modal-action">
@@ -475,21 +486,23 @@
   align-items: center;
   gap: 5px;
 }
-.upload-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.user-pods-container {
-  text-align: center;
+
+.item {
+  padding: 3px;
+  background-color: #f2f2f2;
+  border: 1px solid #d9d9d9;
+  cursor: grab;
+  user-select: none;
 }
 
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+.item:active {
+  cursor: grabbing;
 }
 
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
+.item.disabled {
+  color: #aaa;
+  background-color: #eee;
+  cursor: not-allowed;
 }
 
 .item-container {
@@ -501,7 +514,8 @@
   overflow-x: scroll;
   border: 2px solid #ccc;
   margin: 10px;
-  padding: 10px;
+  /* padding: 10px; */
+
 }
 
 .logo {
@@ -533,6 +547,24 @@
 .table th:last-child,
 .table td:last-child {
   min-width: 170px;
+}
+
+@media (prefers-color-scheme: dark) {
+
+  .item {
+    background-color: #333;
+    border-color: #666;
+    color: #ddd;
+  }
+
+  .item-container {
+    border-color: #666;
+  }
+
+  .modal-box {
+    background-color: #1e1e1e;
+    color: #f0f0f0;
+  }
 }
 
 </style>

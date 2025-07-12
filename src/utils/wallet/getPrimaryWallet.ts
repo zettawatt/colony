@@ -9,12 +9,13 @@ export async function getPrimaryWallet() {
     console.log("Primary Wallet", primaryWallet)
     const wallets = await invoke('list_wallets');
     console.log(wallets)
-    for (const [key, value] of Object.entries(wallets)) {
-      if (key === primaryWallet) {
+    for (const wallet of wallets) {
+      if (wallet.name === primaryWallet) {
         console.log("hit")
         return {
           name: primaryWallet,
-          privateKey: value
+          privateKey: wallet.key,
+          address: wallet.address
         };
       }
     }
