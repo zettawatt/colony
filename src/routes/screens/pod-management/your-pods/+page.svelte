@@ -253,13 +253,18 @@
     };
   }
 
+  function removeItems(from: any[]){
+    const selectedItems = from.filter(item => item.selected);
+    return from.filter(item => !item.selected)
+  }
+
   onMount(async () => {
     // await initPodManager();
     await loadTable();
     uploadedFiles = await ps.getUploadedFilesArray();
   })
 </script>
-
+"1790e3a39334f0cbc2d04c5101cc64b7d96fabc7687e7624faa1613ed5336469"
 <main>
   <Drawer>
     <div slot="main">
@@ -445,7 +450,14 @@
         </div>
 
         <div class="mx-4 flex flex-col gap-2 items-center">
-          <button class="btn btn-error btn-sm w-full" disabled={!podListTemp.some(f => f.selected)}>
+          <button 
+            class="btn btn-error btn-sm w-full" 
+            disabled={!podListTemp.some(f => f.selected)}
+            onclick={()=>{
+              const result = removeItems(podListTemp);
+              podListTemp = result;
+            }}  
+          >
             Remove
           </button>
           <button 
