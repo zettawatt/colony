@@ -74,7 +74,7 @@
   let activeFileType = $state("other");
   let availableTypes = $state(['audio', 'video', 'image', 'book', 'other']);
   let displayFields = $derived.by(() => {
-          switch (activeFileType) {
+      switch (activeFileType) {
         case 'audio':
           return ['Title', 'Artist', 'Album', 'Release Date', 'Comment'];
         case 'video':
@@ -90,6 +90,7 @@
   let userConfigPod = $state();
   let podAddress = $state("");
   let editingPodItem = $state();
+  let editMetadataFields = $state({});
 
   $effect(()=> {
     console.log('activepod', activePod)
@@ -126,6 +127,82 @@
         console.error(error) 
       }
     }
+  }
+
+  async function savePod() {
+    console.log("savePod", activePod)
+
+    if (activePod.fileObjs.length > 0) {
+      for (const file of activePod.fileObjs) {
+        if (file.type === 'file'){
+          const metadataJson = generateFileMetaJson(file)
+          console.log({
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            data: JSON.stringify(metadataJson)
+          })
+          const result = await invoke<string>('put_subject_data', {request: {
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            data: JSON.stringify(metadataJson)
+          }});
+          addToast(`Successfilly added ${file.name} to pod!`, "success")
+        } else if (file.type === 'pod-ref'){
+          // do something else to add pod reference
+        }
+      }
+    }
+  }
+
+  function generateFileMetaJson(file: any) {
+    const fileMetaJson = {
+      "@context": { "schema": "http://schema.org/" },
+      "@type": "",
+      "@id": `ant://${file.autonomiAddress}`,
+      "schema:name": "",
+      "schema:description": "",
+      "schema:contentSize": file.fileSize
+    };
+    switch (file.metadata.type) {
+      case 'audio':
+        fileMetaJson["@type"] = "schema:MusicRecording";
+        fileMetaJson["schema:name"] = file.name;
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:byArtist"] = file.metadata["Artist"];
+        fileMetaJson["schema:inAlbum"] = file.metadata["Album"];
+        fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+      case 'video':
+        fileMetaJson["@type"] = "schema:VideoObject";
+        fileMetaJson["schema:name"] = file.name;
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:director"] = file.metadata["Director"];
+        fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
+        fileMetaJson["schema:duration"] = file.metadata["Duration"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+      case 'image':
+        fileMetaJson["@type"] = "schema:ImageObject";
+        fileMetaJson["schema:name"] = file.name;
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:description"] = file.metadata["Description"];
+        fileMetaJson["schema:dateCreated"] = file.metadata["Date Taken"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+      case 'book':
+        fileMetaJson["@type"] = "schema:Book";
+        fileMetaJson["schema:name"] = file.name;
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:author"] = file.metadata["Author"];
+        fileMetaJson["schema:publisher"] = file.metadata["Publisher"];
+        fileMetaJson["schema:datePublished"] = file.metadata["Publication Date"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+      default:
+        fileMetaJson["@type"] = "schema:CreativeWork";
+        fileMetaJson["schema:name"] = file.name;
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:description"] = file.metadata["Description"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+    }
+    return fileMetaJson;
   }
 
   async function uploadAllPods() {
@@ -265,7 +342,7 @@
     const selectedItems = from.filter(item => item.selected);
     return {
       newFrom: from.map(item => ({...item, selected: false})),
-      newTo: [...to, ...selectedItems.map(item => ({...item, selected: false}))]
+      newTo: [...to, ...selectedItems.map(item => ({...item, selected: false, metadata: {}, type: 'file'}))]
     };
   }
 
@@ -283,6 +360,30 @@
       uuid: uuidv4(),
     })
   }
+
+  function saveMetaDataToItem() {
+    if (editingPodItem) {
+      editingPodItem.metadata = {...editMetadataFields}; // copy values
+      addToast('Metadata saved!', 'success');
+    }
+    console.log(editingPodItem)
+    editFileMetadataModal.close();
+  }
+
+  function openEditMetadata(item) {
+    editingPodItem = item;
+    // Shallow copy to avoid direct binding unless you want live updating
+    editMetadataFields = {...(item.metadata || {})};
+    // If there are new fields, ensure they're in the object
+    editMetadataFields["type"] = activeFileType;
+    for (const field of displayFields) {
+      if (!(field in editMetadataFields)) {
+        editMetadataFields[field] = "";
+      }
+    }
+    editFileMetadataModal.showModal();
+  }
+
 
   onMount(async () => {
     // await initPodManager();
@@ -302,7 +403,7 @@
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
           <button class="btn btn-neutral btn-soft" onclick={() => refreshReference(0)} disabled={$podsSyncing}>Sync Pods</button>
-          <button class="btn btn-neutral btn-soft" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
+          <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
       </div>
@@ -341,11 +442,11 @@
                       <td>{makeDateReadable(pod.modified)}</td>
                       <td>
                         {#if pod.name !== "User Configuration"}
-                          <button
+                          <!-- <button
                             class="btn btn-accent btn-square"
                             onclick={() => { activePod = pod; activePod.fileObjs = []; uploadSinglePod(); }}>
                             <img src="/app-icons/cloud-data-upload-icon.svg" alt="upload icon" width="24" height="24" />
-                          </button>
+                          </button> -->
                           <button 
                             class="btn btn-warning btn-square"
                             onclick={() => { activePod = pod; activePod.fileObjs = []; editPodModal.showModal(); }}>
@@ -487,10 +588,12 @@
                   <button
                     class="edit-button btn btn-sm"
                     onclick={() => {
-                      editingPodItem = item;
-                      console.log("editingPodItem", editingPodItem)
                       event.stopPropagation();
-                      editFileMetadataModal.showModal();
+                      openEditMetadata(item);
+                      // editingPodItem = item;
+                      // console.log("editingPodItem", editingPodItem)
+                      // event.stopPropagation();
+                      // editFileMetadataModal.showModal();
                     }}
                   >
                     Edit
@@ -561,7 +664,7 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary" onclick={() => addFilesToPod()}>Save Pod</button>
+          <button class="btn btn-primary" onclick={() => savePod()}>Save Pod</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
@@ -641,14 +744,19 @@
 
             {#each displayFields as field}
               <legend class="fieldset-legend">{field}</legend>
-              <input type="text" class="input" placeholder={field} />
+              <input
+                type="text"
+                class="input"
+                placeholder={field}
+                bind:value={editMetadataFields[field]}
+              />
             {/each}
           </fieldset>
         {/if}
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary">Save</button>
+          <button class="btn btn-primary" type="button" onclick={saveMetaDataToItem}>Save</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
