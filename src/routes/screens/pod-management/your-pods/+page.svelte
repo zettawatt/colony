@@ -89,6 +89,7 @@
   })
   let userConfigPod = $state();
   let podAddress = $state("");
+  let editingPodItem = $state();
 
   $effect(()=> {
     console.log('activepod', activePod)
@@ -463,8 +464,10 @@
                   <button
                     class="edit-button btn btn-sm"
                     onclick={() => {
+                      editingPodItem = item;
+                      console.log("editingPodItem", editingPodItem)
                       event.stopPropagation();
-                      editFileMetadataModal.showModal()
+                      editFileMetadataModal.showModal();
                     }}
                   >
                     Edit
@@ -483,8 +486,10 @@
                   <button
                     class="edit-button btn btn-sm"
                     onclick={() => {
+                      editingPodItem = item;
+                      console.log("editingPodItem", editingPodItem)
                       event.stopPropagation();
-                      editFileMetadataModal.showModal()
+                      editFileMetadataModal.showModal();
                     }}
                   >
                     Edit
@@ -613,22 +618,29 @@
   </dialog> -->
   <dialog id="editFileMetadataModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
-      <h3 class="text-lg font-bold">File Metadata</h3>
+      <h3 class="text-lg font-bold">Editing Metadata</h3>
       <div class="py-4" style="justify-content: center;">
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">File Type</legend>
-          <select class="input" bind:value={activeFileType}>
-            <option disabled selected value="">Select a file type</option>
-            {#each availableTypes as type}
-              <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-            {/each}
-          </select>
+        {#if editingPodItem?.type === "pod-ref"}
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Pod Address</legend>
+            <input type="text" class="input w-full" placeholder="some address" bind:value={podAddress}/>
+          </fieldset>
+        {:else}
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">File Type</legend>
+            <select class="input" bind:value={activeFileType}>
+              <option disabled selected value="">Select a file type</option>
+              {#each availableTypes as type}
+                <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+              {/each}
+            </select>
 
-          {#each displayFields as field}
-            <legend class="fieldset-legend">{field}</legend>
-            <input type="text" class="input" placeholder={field} />
-          {/each}
-        </fieldset>
+            {#each displayFields as field}
+              <legend class="fieldset-legend">{field}</legend>
+              <input type="text" class="input" placeholder={field} />
+            {/each}
+          </fieldset>
+        {/if}
       </div>
       <div class="modal-action">
         <form method="dialog">
