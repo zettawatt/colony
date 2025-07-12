@@ -22,11 +22,11 @@
             <li><a href="/screens/pod-management/downloads">Downloads</a></li>
           </ul>
         </li>
-        <li><a>Colonies</a></li>
+        <!-- <li><a>Colonies</a></li> -->
         <li><a href="/screens/wallet">Wallet</a></li>
         <li><a href="/screens/configuration">Configuration</a></li>
-        <li><a href="/user-intro">Steps</a></li>
-        <li><a href="/screens/test">Test</a></li>
+        <!-- <li><a href="/user-intro">Steps</a></li> -->
+        <!-- <li><a href="/screens/test">Test</a></li> -->
       </ul>
     </div>
     <div class="flex-1 flex justify-end">
