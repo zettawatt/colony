@@ -30,7 +30,7 @@
       selectedFileName = filePath.split(/[/\\]/).pop() || "";
       let selectedFileExtension = selectedFileName.split('.').pop() || "";
       console.log('Selected file path:', selectedPath);
-      uploadCost = await uploadPreview(); // Trigger upload cost preview
+      // uploadCost = await uploadPreview(); // Trigger upload cost preview
       isPreviewLoading = false;
 
       // TODO: in the future, when we let users select multiple files for upload
@@ -200,17 +200,23 @@
             style="min-width: 100%;"
           />
         </div>
-        <p id="uploadCostText" class="mt-4">{(uploadCost && !wasUploadCanceled) ? uploadCost : "Your upload cost to the Autonomi network will be shown here..."}</p>
+        <!-- <p id="uploadCostText" class="mt-4">{(uploadCost && !wasUploadCanceled) ? uploadCost : "Your upload cost to the Autonomi network will be shown here..."}</p> -->
+        {#if selectedPath}
+          <p id="uploadText" class="mt-4">{`Are you sure you want to upload your selected file to the Autonomi network?`}</p>
+        {/if}
       </div>
       <div class="modal-action">
         <form method="dialog">
           <button class="btn btn-primary" disabled={isPreviewLoading || !selectedPath} onclick={uploadFile}>
+              Upload to Autonomi
+          </button>
+          <!-- <button class="btn btn-primary" disabled={isPreviewLoading || !selectedPath} onclick={uploadFile}>
             {#if isPreviewLoading}
               <span class="loading loading-spinner"></span> Checking price
             {:else}
               Upload to Autonomi
             {/if}
-          </button>
+          </button> -->
           <button class="btn btn-soft btn-error" onclick={resetUploadState}>Cancel Upload</button>
         </form>
       </div>
