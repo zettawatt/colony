@@ -166,14 +166,14 @@
                     <th>{idx + 1}</th>
                     <td>{wallet.name}</td>
                     <td>
-                      <div class="tooltip tooltip-warning" data-tip={wallet.key}>
+                      <div class="" data-tip={wallet.address}>
                         <button
                           class="address-tooltip"
-                          data-address={wallet.key}
+                          data-address={wallet.address}
                           onclick={handleCopyAddress}
                           tabindex="0"
                           style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                        >wallet private key</button>
+                        >{wallet.address}</button>
                       </div>
                     </td>
                     <td>
