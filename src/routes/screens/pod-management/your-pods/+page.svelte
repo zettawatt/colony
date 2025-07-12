@@ -13,7 +13,6 @@
     {
       id: "1",
       name: "907f7857974fef55dcba7f73529790925e91738d5df54f021cd18b92f533e68946c1a416e144b00d869e68c080bda3ac",
-      disabled: true,
       selected: false
     },
     {
@@ -29,6 +28,26 @@
     {
       id: "4",
       name: "report.pdf",
+      selected: false
+    },
+    {
+      id: "5",
+      name: "another_document.docx",
+      selected: false
+    },
+    {
+      id: "6",
+      name: "holiday-photo.png",
+      selected: false
+    },
+    {
+      id: "7",
+      name: "presentation.pptx",
+      selected: false
+    },
+    {
+      id: "8",
+      name: "important_data.bak",
       selected: false
     }
   ])
@@ -58,6 +77,26 @@
       id: "9",
       name: "Fallout 4 Vault Dweller's Survival Guide - Prima Official Game Guide.pdf",
       selected: false
+    },
+    {
+      id: "10",
+      name: "video_clip.mp4",
+      selected: false
+    },
+    {
+      id: "11",
+      name: "work_notes.txt",
+      selected: false
+    },
+    {
+      id: "12",
+      name: "grocery_list.csv",
+      selected: false
+    },
+    {
+      id: "13",
+      name: "archive.zip",
+      selected: false
     }
   ]);
 
@@ -79,6 +118,23 @@
   let activePod = $state<any>(null); // Holds the pod for the currently active modal
   let uploadedFiles = $state<FileObj[]>([]);
   let selectedFileName = $state(""); // <-- Track the filename selected for adding
+  let activeFileType = $state("other");
+  let availableTypes = $state(['audio', 'video', 'image', 'book', 'other']);
+  let displayFields = $derived.by(() => {
+          switch (activeFileType) {
+        case 'audio':
+          return ['Title', 'Artist', 'Album', 'Release Date', 'Comment'];
+        case 'video':
+          return ['Title', 'Director', 'Release Date', 'Duration', 'Comment'];
+        case 'image':
+          return ['Title', 'Description', 'Date Taken', 'Comment'];
+        case 'book':
+          return ['Title', 'Author', 'Publisher', 'Publication Date', 'Comment'];
+        default:
+          return ['Title', 'Description', 'Comment'];
+      }
+  })
+
 
   async function addFilesToPod() {
     const files = activePod.fileObjs as FileObj[];
@@ -432,7 +488,10 @@
                 <span class="truncate">{item.name}</span>
                 <button
                   class="edit-button btn btn-sm"
-                  onclick={() => editFileMetadataModal.showModal()}
+                  onclick={() => {
+                    event.stopPropagation();
+                    editFileMetadataModal.showModal()
+                  }}
                 >
                   Edit
                 </button>
@@ -562,25 +621,29 @@
       <h3 class="text-lg font-bold">File Metadata</h3>
       <div class="py-4" style="justify-content: center;">
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Title</legend>
-          <input type="text" class="input" placeholder="Media Title" />
-          <legend class="fieldset-legend">Artist</legend>
-          <input type="text" class="input" placeholder="Artist" />
-          <legend class="fieldset-legend">Album</legend>
-          <input type="text" class="input" placeholder="Album" />
-          <legend class="fieldset-legend">Release Date</legend>
-          <input type="text" class="input" placeholder="mm/dd/yyyy" />
+          <legend class="fieldset-legend">File Type</legend>
+          <select class="input" bind:value={activeFileType}>
+            <option disabled selected value="">Select a file type</option>
+            {#each availableTypes as type}
+              <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+            {/each}
+          </select>
+
+          {#each displayFields as field}
+            <legend class="fieldset-legend">{field}</legend>
+            <input type="text" class="input" placeholder={field} />
+          {/each}
         </fieldset>
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-error">Delete</button>
+          <button class="btn btn-primary">Save</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
     </div>
   </dialog>
-  <dialog id="addPodRefModal" class="modal">
+    <dialog id="addPodRefModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Add Pod Reference</h3>
       <div class="py-4" style="justify-content: center;">
