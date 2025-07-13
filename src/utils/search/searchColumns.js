@@ -30,7 +30,7 @@ export const searchColumns = [
   {
     title: "Size", 
     field: "size",
-    width: 70,
+    width: 80,
     hozAlign: "right"
   },
   {
