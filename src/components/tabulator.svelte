@@ -15,7 +15,9 @@
   let tableHeight = 300;
 
   function setTableHeight() {
-    tableHeight = Math.max(300, Math.min(window.innerHeight * 0.75, 1500));
+    if (window) {
+      tableHeight = Math.max(300, Math.min(window.innerHeight * 0.75, 1500));
+    }
   }
 
   function switchTabulatorTheme(theme) {
@@ -69,7 +71,7 @@
     switchTabulatorTheme($globalTheme);
   }
 
-  $: if (tabulatorInstance && tableHeight) {
+  $: if (tabulatorInstance && tableReady && tableHeight) {
     tabulatorInstance.setHeight(tableHeight);
   }
 </script>
