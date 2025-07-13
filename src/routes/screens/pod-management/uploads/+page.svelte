@@ -10,6 +10,7 @@
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
 
   let fileObjs: FileObj[] = [];
+  let stagedFileObj: FileObj | null = null;
   let workingFileObj: FileInfo | undefined;
   let isPreviewLoading = $state(false);
   let selectedPath = $state("");
@@ -21,29 +22,25 @@
 
   async function selectFile() {
     resetUploadState();
+
     const filePath = await open({ multiple: false, directory: false });
     if (filePath) {
-      const fileSize = await invoke('get_file_size', { path: filePath }) as number;
       isPreviewLoading = true;
-      wasUploadCanceled = false;
-      selectedPath = filePath;
-      selectedFileName = filePath.split(/[/\\]/).pop() || "";
-      let selectedFileExtension = selectedFileName.split('.').pop() || "";
-      console.log('Selected file path:', selectedPath);
-      // uploadCost = await uploadPreview(); // Trigger upload cost preview
-      isPreviewLoading = false;
+      const fileSize = await invoke('get_file_size', { path: filePath }) as number;
+      const name = filePath.split(/[/\\]/).pop() || "";
+      const ext = name.split('.').pop() || "";
 
-      // TODO: in the future, when we let users select multiple files for upload
-      const newFileObj = new FileObj(
-        {
-          name: selectedFileName,
-          path: filePath,
-          extension: selectedFileExtension,
-          previewCost: uploadCost,
-          fileSize: fileSize
-        }
-      );
-      fileObjs.push(newFileObj);
+      stagedFileObj = new FileObj({
+        name,
+        path: filePath,
+        extension: ext,
+        previewCost: "", // optional
+        fileSize,
+      });
+
+      selectedPath = filePath;
+      selectedFileName = name;
+      isPreviewLoading = false;
     }
   }
 
@@ -63,33 +60,28 @@
     return `Estimated upload cost ${uploadCostResult} ANT`;
   }
 
-  async function uploadFile() {
-    let uploadResult = "";
-    let address = "";
-    if (selectedPath) {
-      addToast("uploading file to the network...", "info", 7000)
-      try {
-        [uploadResult, address] = await invoke('upload_data', {
-          request: { 
-            id: fileObjs[0].uuid,
-            file_path: selectedPath 
-          }
-        });
-        if (fileObjs[0]) {
-          fileObjs[0].setActualCost(uploadResult);
-          fileObjs[0].setAutonomiAddress(address);
-          await ps.addUploadedFileObj(fileObjs[0]);
-          addToast(`Uploaded ${fileObjs[0].name} at address ${fileObjs[0].autonomiAddress}`, "success")
+  async function uploadFile(fileObj: FileObj) {
+    addToast(`Uploading ${fileObj.name}...`, "info", 7000);
+    try {
+      const [uploadResult, address] = await invoke('upload_data', {
+        request: {
+          id: fileObj.uuid,
+          file_path: fileObj.path
         }
-        console.log(fileObjs[0].toJSON())
-        loadTable();
-        resetUploadState();
-      } catch (e) {
-        uploadResult = 'Error: ' + e;
-      }
+      });
+
+      fileObj.setActualCost(uploadResult);
+      fileObj.setAutonomiAddress(address);
+      await ps.addUploadedFileObj(fileObj);
+
+      addToast(`Uploaded ${fileObj.name} to ${fileObj.autonomiAddress}`, "success");
+      await loadTable();
+    } catch (e) {
+      console.error(`Upload error for ${fileObj.name}:`, e);
+      addToast(`Failed to upload ${fileObj.name}`, "error");
     }
-    console.log('uploadResult', uploadResult)
   }
+
 
   function resetUploadState() {
     selectedPath = "";
@@ -97,6 +89,7 @@
     uploadCost = "";
     wasUploadCanceled = true;
     fileObjs = [];
+    stagedFileObj = null; // clear state
   }
 
   function updateTotalUploadedCounter() {
@@ -207,8 +200,18 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary" disabled={isPreviewLoading || !selectedPath} onclick={uploadFile}>
-              Upload to Autonomi
+          <button
+            class="btn btn-primary"
+            disabled={isPreviewLoading || !stagedFileObj}
+            onclick={() => {
+              if (stagedFileObj) {
+                void uploadFile(stagedFileObj); // start upload in background
+                resetUploadState();   // hide modal, reset UI
+                uploadNewFile.close();
+              }
+            }}
+          >
+            Upload to Autonomi
           </button>
           <!-- <button class="btn btn-primary" disabled={isPreviewLoading || !selectedPath} onclick={uploadFile}>
             {#if isPreviewLoading}
