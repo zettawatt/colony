@@ -191,6 +191,20 @@
     }
   }
 
+  async function deletePod(podName: string) {
+    try {
+      const response = await invoke('remove_pod', {
+        request: { name: podName }
+      });
+      // response will be { address: podName }
+      console.log('Pod removed:', response);
+      return response;
+    } catch (error) {
+      console.error('Error removing pod:', error);
+    }
+  }
+
+
   function generateFileMetaJson(file: any) {
     const fileMetaJson = {
       "@context": { "schema": "http://schema.org/" },
@@ -310,7 +324,7 @@
     }
   }
 
-  async function refreshReference(depthValue: number) {
+  async function syncPods(depthValue: number) {
     try {
       podsSyncing.set(true);
       addToast("Refreshing pods....", "info");
@@ -322,6 +336,7 @@
       console.log('Success:', response);
       podsSyncing.set(false);
       addToast("Pods have been synced", "info");
+      await loadTable();
     } catch (e) {
       console.error('Failed to sync:', e);
       addToast("Failed to sync pods", "error");
@@ -340,10 +355,11 @@
       }
       try {
         isLoading = true;
+        const pw = await getPassword();
         const podInfo = await invoke('add_pod', { request: {name: newPodName} }) as PodInfo;
         podObj["address"] = podInfo.address;
         addToast('Pod created at address:'+ podInfo.address, "info")
-        await invoke("write_keystore_to_file", {password: await getPassword()})
+        await invoke("write_keystore_to_file", {password: pw})
         await loadTable();
         console.log('Pod created at address:', podInfo.address);
       } catch (err) {
@@ -370,10 +386,24 @@
     selectedFileName = ""; // Optionally reset selection
   }
 
+  async function deletePodHandler() {
+    try {
+      const pw = await getPassword();
+      deletePodModal.close();
+      await deletePod(activePod.name);
+      await invoke("write_keystore_to_file", {password: pw})
+      await loadTable();
+      addToast("Pod deleted!", "success");
+    } catch (error) {
+      console.error(error);
+      addToast("Error removing pod. Check logs...", "error");
+    }
+  }
+
   async function loadTable() {
     // createdPods = await ps.getPodCache() as [];
     createdPods = await fetchPods();
-    console.log(createdPods)
+    console.log("createdPods", createdPods)
   }
 
   function makeDateReadable(date: string | undefined) {
@@ -503,7 +533,7 @@
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
-          <button class="btn btn-neutral btn-soft" onclick={() => refreshReference(0)} disabled={$podsSyncing}>Sync Pods</button>
+          <button class="btn btn-neutral btn-soft" onclick={() => syncPods(0)} disabled={$podsSyncing}>Sync Pods</button>
           <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
@@ -637,7 +667,7 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-error">Delete</button>
+          <button class="btn btn-error" onclick={()=>{deletePodHandler()}}>Delete</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
