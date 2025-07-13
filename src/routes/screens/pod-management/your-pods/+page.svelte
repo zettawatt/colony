@@ -394,11 +394,16 @@
 
   function transferItems(from: any[], to: any[]) {
     const selectedItems = from.filter(item => item.selected);
+
+    // Filter out items whose uuid is already present in 'to'
+    const toUuids = new Set(to.map(item => item.uuid));
+    const newItems = selectedItems.filter(item => !toUuids.has(item.uuid));
+
     return {
-      newFrom: from.map(item => ({...item, selected: false})),
+      newFrom: from.map(item => ({ ...item, selected: false })),
       newTo: [
-        ...to, 
-        ...selectedItems.map(item => ({
+        ...to,
+        ...newItems.map(item => ({
           ...item,
           selected: false,
           metadata: {},
