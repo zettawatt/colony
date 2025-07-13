@@ -12,6 +12,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import ps from '../../stores/persistantStorage';
   import { startDweb } from '../../utils/dweb/dwebCommands';
+  import { addToast } from '../../stores/toast';
 
   let currentStep = 0;
   let password = "";
@@ -131,8 +132,10 @@
       const podManager = await invoke("initialize_pod_manager");
       await startDweb(walletPrivateKey);
       reroute("/screens/search");
+      addToast("Connected to Autonomi Network!", "success");
       return true;
     } catch (error) {
+      addToast("Encounted an error on start up, see logs...", "error");
       console.error(error);
       return false;
     }
