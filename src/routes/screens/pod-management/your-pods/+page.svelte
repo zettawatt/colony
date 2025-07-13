@@ -9,6 +9,7 @@
   import { getPassword } from "../../../../utils/password/session";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
   import { v4 as uuidv4 } from 'uuid';
+  import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
 
   let podListTemp = $state([
     {
@@ -259,9 +260,9 @@
     try {
       // Call the Tauri command "get_subject_data"
       const result = await invoke('get_subject_data', { request: { subject_address: subjectAddress } });
+      const parsedResult = JSON.parse(result.data);
       // result will be your SubjectDataResult struct as a JS object, ex: { data: ... }
-      console.log(result.data);
-      return result;
+      return parsedResult;
     } catch (e) {
       console.error('Failed to get subject data:', e);
       return null;
@@ -398,13 +399,19 @@
 
   async function openEditPod() {
     const subjects = await fetchPodSubjects(activePod.address)
+    const tempPodItems = [];
     if (subjects.length > 0) {
       for (let subject of subjects) {
-        console.log("subject", subject)
+        // console.log("subject", subject)
         const data = await fetchSubjectData(subject)
-        console.log("subject data", data)
+        const item = parseSubjectData(data, activePod.address, subject)
+        if ('type' in item){
+          tempPodItems.push(item);
+        }
       }
     }
+    console.log("tempPodItems", tempPodItems)
+    activePod.fileObjs = tempPodItems;
     editPodModal.showModal();
   }
 
