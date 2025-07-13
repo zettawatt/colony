@@ -137,11 +137,11 @@
       for (const file of activePod.fileObjs) {
         if (file.type === 'file' && file.modified === true){
           const metadataJson = generateFileMetaJson(file)
-          console.log({
-            pod_address: activePod.address,
-            subject_address: file.autonomiAddress,
-            data: JSON.stringify(metadataJson)
-          })
+          // console.log({
+          //   pod_address: activePod.address,
+          //   subject_address: file.autonomiAddress,
+          //   data: JSON.stringify(metadataJson)
+          // })
           const result = await invoke<string>('put_subject_data', {request: {
             pod_address: activePod.address,
             subject_address: file.autonomiAddress,
@@ -172,6 +172,7 @@
         fileMetaJson["schema:inAlbum"] = file.metadata["Album"];
         fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
       case 'video':
         fileMetaJson["@type"] = "schema:VideoObject";
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
@@ -179,12 +180,14 @@
         fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
         fileMetaJson["schema:duration"] = file.metadata["Duration"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
       case 'image':
         fileMetaJson["@type"] = "schema:ImageObject";
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:description"] = file.metadata["Description"];
         fileMetaJson["schema:dateCreated"] = file.metadata["Date Taken"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
       case 'book':
         fileMetaJson["@type"] = "schema:Book";
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
@@ -192,11 +195,13 @@
         fileMetaJson["schema:publisher"] = file.metadata["Publisher"];
         fileMetaJson["schema:datePublished"] = file.metadata["Publication Date"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
       default:
         fileMetaJson["@type"] = "schema:CreativeWork";
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:description"] = file.metadata["Description"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
     }
     return fileMetaJson;
   }
@@ -396,6 +401,7 @@
 
   function openEditMetadata(item) {
     editingPodItem = item;
+    activeFileType = item.metadata.type;
     // Shallow copy to avoid direct binding unless you want live updating
     editMetadataFields = {...(item.metadata || {})};
     // If there are new fields, ensure they're in the object
@@ -415,7 +421,7 @@
         // console.log("subject", subject)
         const data = await fetchSubjectData(subject)
         const item = parseSubjectData(data, activePod.address, subject)
-        if ('type' in item){
+        if ('type' in item && (item.type === 'pod-ref' || item.type === 'file')){
           tempPodItems.push(item);
         }
       }
