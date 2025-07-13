@@ -21,7 +21,7 @@
   let confirmSeedWords = [];
   let isSeedPhraseMatching = false;
   let showMatchingString = false;
-  let walletPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  let walletPrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
   let initWalletName = "main";
 
   $: {
@@ -115,15 +115,17 @@
         console.error("password was null");
       }
       const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
-      await invoke("add_wallet", {
+      const addWallet = await invoke("add_wallet", {
         request: {
           name: initWalletName,
           key: walletPrivateKey
         }
       })
+      console.log("addWallet", addWallet)
       await invoke("write_keystore_to_file", {password: pw})
       await ps.setUserCompletedIntro(true);
       await ps.setPrimaryWallet(initWalletName)
+      await invoke('set_active_wallet', { initWalletName });
       const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
       const podManager = await invoke("initialize_pod_manager");
       reroute("/screens/search");

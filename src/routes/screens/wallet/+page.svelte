@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import { handleCopyAddress } from "../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../utils/password/session";
+    import { addToast } from "../../../stores/toast";
 
   const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -83,7 +84,9 @@
       const response = await invoke('switch_wallet', { name });
       await invoke("write_keystore_to_file", {password: pw})
       await ps.setPrimaryWallet(name);
+      await setActiveWallet(name);
       console.log(response); // "Wallet switched"
+      addToast("Primary wallet has been switched! Please restart the app", "success");
       return response;
     } catch (error) {
       console.error('Error switching wallet:', error);
@@ -112,6 +115,24 @@
     }
     await loadTable();
   }
+
+  const getActiveWallet = async () => {
+    try {
+      const [name, address] = await invoke('get_active_wallet');
+      console.log('Active wallet:', name, address);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const setActiveWallet = async (name) => {
+    try {
+      const [walletName, address] = await invoke('set_active_wallet', { name });
+      console.log('Set active wallet:', walletName, address);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   async function loadTable() {
     try {
