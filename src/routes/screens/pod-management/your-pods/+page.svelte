@@ -135,7 +135,7 @@
 
     if (activePod.fileObjs.length > 0) {
       for (const file of activePod.fileObjs) {
-        if (file.type === 'file'){
+        if (file.type === 'file' && file.modified === true){
           const metadataJson = generateFileMetaJson(file)
           console.log({
             pod_address: activePod.address,
@@ -355,7 +355,16 @@
     const selectedItems = from.filter(item => item.selected);
     return {
       newFrom: from.map(item => ({...item, selected: false})),
-      newTo: [...to, ...selectedItems.map(item => ({...item, selected: false, metadata: {}, type: 'file'}))]
+      newTo: [
+        ...to, 
+        ...selectedItems.map(item => ({
+          ...item,
+          selected: false,
+          metadata: {},
+          type: 'file',
+          modified: true,
+        }))
+      ]
     };
   }
 
@@ -378,6 +387,7 @@
     if (editingPodItem) {
       editingPodItem.metadata = {...editMetadataFields}; // copy values
       editingPodItem.metadata["type"] = activeFileType;
+      editingPodItem.modified = true;
       addToast('Metadata saved!', 'success');
     }
     console.log(editingPodItem)
