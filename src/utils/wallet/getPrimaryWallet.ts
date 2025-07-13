@@ -8,10 +8,8 @@ export async function getPrimaryWallet() {
     let primaryWallet = await ps.getPrimaryWallet();
     console.log("Primary Wallet", primaryWallet)
     const wallets = await invoke('list_wallets');
-    console.log(wallets)
     for (const wallet of wallets) {
       if (wallet.name === primaryWallet) {
-        console.log("hit")
         return {
           name: primaryWallet,
           privateKey: wallet.key,

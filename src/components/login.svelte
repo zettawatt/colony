@@ -29,7 +29,6 @@
     await tick();
     try {
       const colony = await initColony(password);
-      console.log(colony)
       loginModal?.close(); 
     } catch (error) {
       invalidMessage = "An error occurred. Please check the logs."
