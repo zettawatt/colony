@@ -9,19 +9,19 @@
 }
 
 .h1 {
-  @apply text-5xl font-extrabold dark:text-white;
+  @apply text-5xl font-extrabold;
 }
 
 .h2 {
-  @apply text-4xl font-bold dark:text-white;
+  @apply text-4xl font-bold;
 }
 
 .h3 {
-  @apply text-3xl font-bold dark:text-white;
+  @apply text-3xl font-bold;
 }
 
 .h4 {
-  @apply text-2xl font-bold dark:text-white;
+  @apply text-2xl font-bold;
 }
 
 :root {
@@ -30,8 +30,8 @@
   line-height: 24px;
   font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+  /* color: #0f0f0f;
+  background-color: #f6f6f6; */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -40,7 +40,7 @@
   -webkit-text-size-adjust: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root, body {
     color: #f6f6f6;
     background-color: #2f2f2f;
@@ -73,4 +73,4 @@
   button:active {
     background-color: #33364d;
   }
-}
+} */

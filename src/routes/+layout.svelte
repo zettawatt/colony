@@ -3,7 +3,7 @@
     import Toast from '../components/toast.svelte';
 </script>
 
-<div class="">
+<div class="bg-base-200">
   <slot/>
   <Toast />
 </div>

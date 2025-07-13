@@ -343,6 +343,7 @@
 .row {
   display: flex;
   justify-content: center;
+  padding-bottom: 2vh;
 }
 
 .input{

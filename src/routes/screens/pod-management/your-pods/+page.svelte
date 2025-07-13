@@ -533,7 +533,7 @@
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
-          <button class="btn btn-neutral btn-soft" onclick={() => syncPods(0)} disabled={$podsSyncing}>Sync Pods</button>
+          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPods(0)} disabled={$podsSyncing}>Sync Pods</button>
           <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
