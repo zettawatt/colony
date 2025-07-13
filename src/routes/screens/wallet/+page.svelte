@@ -96,6 +96,10 @@
   async function addNewWallet(){
     const addRes = await addWallet(activeWallet.name, activeWallet.key);
     console.log("addNewWallet response:", addRes);
+    if (activeWallet.makePrimary) {
+      const switchRes = await switchWallet(activeWallet.name);
+      console.log("switchWallet response:", switchRes);
+    }
     await loadTable();
   }
 
