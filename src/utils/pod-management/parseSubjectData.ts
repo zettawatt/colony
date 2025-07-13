@@ -12,16 +12,24 @@ const jsonKeyToFieldName: Record<string, string> = {
   dateCreated: "Date Taken",
   author: "Author",
   publisher: "Publisher",
-  contentSize: "File Size"
 };
+
+const typeToFieldName: Record<string, string> = {
+  "MusicRecording": "audio",
+  "VideoObject": "video",
+  "ImageObject": "image",
+  "Book": "book",
+  "CreativeWork": "other"
+}
 
 export function parseSubjectData(subjectData: any, podAddress: string, subjectAddress: string) {
   const parsedSubject = {
-    address: subjectAddress,
-    pod: podAddress,
+    autonomiAddress: subjectAddress,
+    podAddress: podAddress,
     modified: false,
     selected: false,
     uuid: uuidv4(),
+    type: "",
     metadata: {}
   };
   if (
@@ -36,10 +44,19 @@ export function parseSubjectData(subjectData: any, podAddress: string, subjectAd
         key = key.replace('http://www.w3.org/1999/02/22-rdf-syntax-ns#', '')
 
         if (key === 'type') {
-          parsedSubject[key] = (binding.object.value).replace('http://schema.org/', '');
+          let type = (binding.object.value).replace('http://schema.org/', '');
+          if (type in typeToFieldName) {
+            parsedSubject.type = 'file';
+            parsedSubject.metadata["type"] = typeToFieldName[type];
+          } else {
+            parsedSubject.type = 'pod-ref';
+            parsedSubject.metadata["type"] = type
+          }
         } else if (key in jsonKeyToFieldName) {
           let fieldKey = jsonKeyToFieldName[key];
           parsedSubject.metadata[fieldKey] = binding.object.value;
+        } else if (key === "contentSize") {
+          parsedSubject["fileSize"] = binding.object.value;
         } else {
           parsedSubject[key] = binding.object.value;
         }
@@ -47,8 +64,4 @@ export function parseSubjectData(subjectData: any, podAddress: string, subjectAd
     }
   }
   return parsedSubject;
-}
-
-function jsonKeyToUIField(key: string): string {
-  return jsonKeyToFieldName[key] ?? key;
 }
