@@ -10,7 +10,13 @@
   let tableComponent;
   let tabulatorInstance;
   let unlisten;
-  let currentTheme = $globalTheme; // default
+  let currentTheme = $globalTheme;
+  let tableReady = false;
+  let tableHeight = 300;
+
+  function setTableHeight() {
+    tableHeight = Math.max(300, Math.min(window.innerHeight * 0.75, 1500));
+  }
 
   function switchTabulatorTheme(theme) {
     const link = document.getElementById('tabulator-theme');
@@ -18,30 +24,31 @@
       link.href = theme === 'dark'
         ? '/css/tabulator_midnight.min.css'
         : '/css/tabulator.min.css';
-      // Redraw table in case dimensions changed
       if (tabulatorInstance) tabulatorInstance.redraw(true);
     }
   }
 
   onMount(async () => {
-    // const currentTheme = await getCurrentWindow().theme();
-    // Create Tabulator instance
+    setTableHeight();
+    window.addEventListener('resize', setTableHeight);
+
     tabulatorInstance = new Tabulator(tableComponent, {
       columns,
-      height: 300,
+      height: tableHeight,
       minHeight: 300,
-      maxHeight: "100%",
       data,
       rowContextMenu: rowMenu,
       reactiveData: false,
       layout: 'fitDataStretch',
-      dependencies:{
-        DateTime:DateTime,
+      dependencies: {
+        DateTime: DateTime,
       }, 
       initialSort: initialSort,
+      tableBuilt: function() {
+        tableReady = true;
+      }
     });
 
-    // Listen for theme changes from Tauri
     unlisten = await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
       console.log("theme changed", theme)
       switchTabulatorTheme(theme);
@@ -51,6 +58,7 @@
   onDestroy(() => {
     if (unlisten) unlisten();
     if (tabulatorInstance) tabulatorInstance.destroy();
+    window.removeEventListener('resize', setTableHeight);
   });
 
   $: if (tabulatorInstance && Array.isArray(data)) {
@@ -59,6 +67,10 @@
 
   $: if (typeof $globalTheme === 'string') {
     switchTabulatorTheme($globalTheme);
+  }
+
+  $: if (tabulatorInstance && tableHeight) {
+    tabulatorInstance.setHeight(tableHeight);
   }
 </script>
 
