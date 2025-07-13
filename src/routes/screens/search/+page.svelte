@@ -13,6 +13,7 @@
   import LoginModal from '../../../components/login.svelte';
   import { downloadFile } from '../../../utils/file/download';
   import { parseBrowseSparqlResults, parseTextSparqlResults } from '../../../utils/search/parseSparql';
+  import { openDweb } from '../../../utils/dweb/dwebCommands';
 
 
   let searchInput = "";
@@ -51,13 +52,17 @@
   searchColumns[1].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
 
-    const request = {
-      name: activeRow.name,
-      address: activeRow.address,
-      bytes: activeRow.bytes ?? 0
-    }
+    if ('type' in activeRow && !activeRow.type.includes('dweb')) {
+      const request = {
+        name: activeRow.name,
+        address: activeRow.address,
+        bytes: activeRow.bytes ?? 0
+      }
 
-    downloadFile(request);
+      downloadFile(request);
+    } else {
+      openDweb(activeRow.address)
+    }
   }
 
 

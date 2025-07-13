@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { setPassword } from "../password/session";
 import { getPrimaryWallet } from "../wallet/getPrimaryWallet";
+import { startDweb } from "../dweb/dwebCommands";
 
 export async function initColony(password: string) {
   try {
@@ -8,9 +9,9 @@ export async function initColony(password: string) {
     await setPassword(password);
     const primaryWallet = await getPrimaryWallet();
     const walletKey = primaryWallet?.privateKey
-    console.log("primaryWallet", primaryWallet)
     const client = await invoke("initialize_autonomi_client", { walletKey });
     const podManager = await invoke("initialize_pod_manager");
+    await startDweb(walletKey)
   } catch (error) {
     console.error(error)
     throw error;

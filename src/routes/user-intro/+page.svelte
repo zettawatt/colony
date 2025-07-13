@@ -11,6 +11,7 @@
   import { getPassword, setPassword } from '../../utils/password/session';
   import { invoke } from '@tauri-apps/api/core';
   import ps from '../../stores/persistantStorage';
+  import { startDweb } from '../../utils/dweb/dwebCommands';
 
   let currentStep = 0;
   let password = "";
@@ -125,9 +126,10 @@
       await invoke("write_keystore_to_file", {password: pw})
       await ps.setUserCompletedIntro(true);
       await ps.setPrimaryWallet(initWalletName)
-      await invoke('set_active_wallet', { initWalletName });
+      await invoke('set_active_wallet', { name: initWalletName });
       const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
       const podManager = await invoke("initialize_pod_manager");
+      await startDweb(walletPrivateKey);
       reroute("/screens/search");
       return true;
     } catch (error) {
