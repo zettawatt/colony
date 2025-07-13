@@ -12,6 +12,7 @@
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
   import { downloadFile } from '../../../utils/file/download';
+  import { parseBrowseSparqlResults, parseTextSparqlResults } from '../../../utils/search/parseSparql';
 
 
   let searchInput = "";
@@ -75,7 +76,7 @@
       // const request = {query: "beg"}
       const response = await invoke('search', { request });
       // console.log(response)
-      const parsedResults = parseSparqlResults(response.results)
+      const parsedResults = parseTextSparqlResults(response.results)
       // console.log(parsedResults)
       isSearching = false;
       tableSearchResults = parsedResults;
@@ -85,62 +86,42 @@
     }
   }
 
-  function parseSparqlResults(results) {
+  async function browseSearch() {
+    isSearching = true;
     try {
-      const aggregate = {};
-      const searchResults = {
-        metadata: {
-          pods_found: results.pods_found,
-          result_count: results.result_count,
-          search_timestamp: results.search_timestamp
+      if (searchInput !== "") return;
+      const request = {
+        query: {
+          // Put your search parameters here, e.g.:
+            "type": "browse",
+            "limit": 200
         },
-        variables: results.sparql_results.head.vars,
-        bindings: results.sparql_results.results.bindings,
-      }
-
-      for (let i = 0; i < searchResults.bindings.length; i++) {
-        const binding = searchResults.bindings[i];
-        if (!(binding.subject.value in aggregate)){
-          aggregate[binding.subject.value] = {
-            id: i+1,
-            pod: binding.graph.value.startsWith("ant://") 
-              ? binding.graph.value.slice(6) : binding.graph.value,
-            address: binding.subject.value.startsWith("ant://") 
-              ? binding.subject.value.slice(6) : binding.subject.value,
-            depth: binding.depth?.value || undefined,
-            name: "",
-            description: "",
-            size: "?",
-            bytes: 0,
-            type: ""
-          };
-        }
-        switch (binding.predicate.value) {
-          case 'http://schema.org/name':
-            aggregate[binding.subject.value].name = binding.object.value;
-            break;
-          case 'http://schema.org/description':
-            aggregate[binding.subject.value].description = binding.object.value;
-            break;
-          case 'http://schema.org/contentSize':
-            aggregate[binding.subject.value].size = formatFileSize(Number(binding.object.value));
-            aggregate[binding.subject.value].bytes = Number(binding.object.value);
-            break;
-          case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type':
-            aggregate[binding.subject.value].type = binding.object.value;
-            break;
-        }
-      }
-      return Object.values(aggregate);
+      };
+      // const request = {query: "beg"}
+      const response = await invoke('search', { request });
+      console.log(response)
+      const parsedResults = parseBrowseSparqlResults(response.results)
+      console.log(parsedResults)
+      isSearching = false;
+      tableSearchResults = parsedResults;
     } catch (error) {
       console.error(error)
-      return;
+      isSearching = false;
     }
   }
+
+  async function searchHandler() {
+    if (searchInput === "") {
+      await browseSearch();
+    } else {
+      await simpleSearch();
+    }
+  }
+
   
   async function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter') {
-      await simpleSearch();
+      await searchHandler();
     }
   }
 
@@ -180,11 +161,13 @@
               <path d="m21 21-4.3-4.3"></path>
             </g>
           </svg>
-          <input type="search" required placeholder="Search" bind:value={searchInput} onkeydown={handleKeydown}/>
+          <input type="search" required placeholder="Press Browse to see what's on the network..." bind:value={searchInput} onkeydown={handleKeydown}/>
         </label>
-        <button class="btn btn-sof btn-warning" onclick={()=>simpleSearch()}>
+        <button class="btn btn-sof btn-warning" onclick={()=>searchHandler()}>
           {#if isSearching}
             <span class="loading loading-spinner"></span>
+          {:else if searchInput === ""}
+            Browse
           {:else}
             Search
           {/if}
