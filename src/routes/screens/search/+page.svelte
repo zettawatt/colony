@@ -14,6 +14,7 @@
   import { downloadFile } from '../../../utils/file/download';
   import { parseBrowseSparqlResults, parseTextSparqlResults } from '../../../utils/search/parseSparql';
   import { openDweb } from '../../../utils/dweb/dwebCommands';
+  import { addToast } from '../../../stores/toast';
 
 
   let searchInput = "";
@@ -131,7 +132,12 @@
   }
 
   onMount(async () => {
-    await transferManager.init();
+    try {
+      await transferManager.init();
+    } catch (error) {
+      addToast("Failed to init transfer manager, see logs...", "error");
+      console.error(error);
+    }
     const pw = await getPassword();
     if (pw === null) {
       console.error("password was null");
