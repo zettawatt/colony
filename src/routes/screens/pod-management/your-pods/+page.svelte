@@ -89,7 +89,7 @@
       }
   })
   let userConfigPod = $state();
-  let podAddress = $state("");
+  let podRefAddress = $state(""); // address of the pod reference user wants to add
   let editingPodItem = $state();
   let editMetadataFields = $state({});
   let deletedPodItems = $state([]);
@@ -99,35 +99,56 @@
   })
 
 
-  async function addFilesToPod() {
-    const files = activePod.fileObjs as FileObj[];
-    if (files) {
-      try {
-        for(let file of files) {
-          const fileMetaJson = {
-            "@context": { "schema": "http://schema.org/" },
-            "@type": "schema:MediaObject",
-            "@id": `ant://${file.autonomiAddress}`,
-            "schema:name": file.name,
-            "schema:description": "",
-            "schema:contentSize": file.fileSize
-          };
-          console.log({
-            pod_address: activePod.address,
-            subject_address: file.autonomiAddress,
-            data: JSON.stringify(fileMetaJson)
-          })
-          const result = await invoke<string>('put_subject_data', {request: {
-            pod_address: activePod.address,
-            subject_address: file.autonomiAddress,
-            data: JSON.stringify(fileMetaJson)
-          }});
-          addToast(`Successfilly added ${file.name} to pod!`, "success")
-          console.log(result)
-        }        
-      } catch (error) {
-        console.error(error) 
-      }
+  async function addPodRef(podAddress, podRefAddress) {
+    try {
+      const response = await invoke('add_pod_ref', {
+        request: {
+          pod_address: podAddress,
+          pod_ref_address: podRefAddress
+        }
+      });
+      console.log('Pod added:', response);
+      // response.address is the pod's address (from your Rust PodInfo)
+      return response;
+    } catch (error) {
+      console.error('Error adding pod ref:', error);
+      throw error;
+    }
+  }
+
+  async function removePodRef(podAddress, podRefAddress) {
+    try {
+      const response = await invoke('remove_pod_ref', {
+        request: {
+          pod_address: podAddress,
+          pod_ref_address: podRefAddress,
+        }
+      });
+      // response is an object like: { address: 'the pod address' }
+      console.log('Removed pod ref:', response);
+      return response;
+    } catch (error) {
+      console.error('Error removing pod ref:', error);
+      throw error;
+    }
+  }
+
+  async function putSubjectData(podAddress, subjectAddress, data) {
+    try {
+      let jsonData = JSON.stringify(data);
+      const result = await invoke('put_subject_data', {
+        request: {
+          pod_address: podAddress,
+          subject_address: subjectAddress,
+          data: jsonData,
+        }
+      });
+      // `result` will be a String: "Successfully put data for subject ... in pod ..."
+      console.log(result);
+      return result;
+    } catch (error) {
+      console.error('Error putting subject data:', error);
+      throw error;
     }
   }
 
@@ -143,28 +164,27 @@
           //   subject_address: file.autonomiAddress,
           //   data: JSON.stringify(metadataJson)
           // })
-          const result = await invoke<string>('put_subject_data', {request: {
-            pod_address: activePod.address,
-            subject_address: file.autonomiAddress,
-            // data: JSON.stringify({})
-            data: JSON.stringify(metadataJson)
-          }});
+          // const result = await invoke<string>('put_subject_data', {request: {
+          //   pod_address: activePod.address,
+          //   subject_address: file.autonomiAddress,
+          //   // data: JSON.stringify({})
+          //   data: JSON.stringify(metadataJson)
+          // }});
+          const result = await putSubjectData(activePod.address, file.autonomiAddress, metadataJson)
           addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
-          // do something else to add pod reference
+          const result = await addPodRef(activePod.address, file.autonomiAddress)
+          console.log(result);
         }
       }
 
       // remove any deleted items
       for (const file of deletedPodItems) {
         if (file.type === 'file'){
-          const result = await invoke<string>('put_subject_data', {request: {
-            pod_address: activePod.address,
-            subject_address: file.autonomiAddress,
-            data: JSON.stringify({})
-          }});
+          const result = await putSubjectData(activePod.address, file.autonomiAddress, {})
           // addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
+          const result = await removePodRef(activePod.address, file.autonomiAddress)
           // do something else to add pod reference
         }
       }
@@ -396,10 +416,10 @@
   }
 
   function addPodReference() {
-    if (!podAddress) return;
+    if (!podRefAddress) return;
     if (!activePod.fileObjs) activePod.fileObjs = [];
     activePod.fileObjs.push({
-      address: podAddress,
+      autonomiAddress: podRefAddress,
       type: "pod-ref",
       uuid: uuidv4(),
     })
@@ -453,7 +473,7 @@
     activePod = { fileObjs: [] };
     editingPodItem = undefined;
     editMetadataFields = {};
-    podAddress = "";
+    podRefAddress = "";
     activeFileType = "other";
     // Optionally deselect any files in uploadedFiles too:
     uploadedFiles = uploadedFiles.map(f => ({ ...f, selected: false }));
@@ -637,12 +657,12 @@
                     }
                   }}
                 >
-                  <span class="truncate">{item.address}</span>
+                  <span class="truncate">{item.autonomiAddress}</span>
                   <button
                     class="edit-button btn btn-sm"
                     onclick={() => {
                       editingPodItem = item;
-                      podAddress = item.address;
+                      podRefAddress = item.autonomiAddress;
                       console.log("editingPodItem", editingPodItem)
                       event.stopPropagation();
                       editFileMetadataModal.showModal();
@@ -682,7 +702,7 @@
             <button
               class="btn btn-neutral btn-xs"
               onclick={() => {
-                podAddress = "";
+                podRefAddress = "";
                 addPodRefModal.showModal()
               }}
             >
@@ -806,7 +826,7 @@
         {#if editingPodItem?.type === "pod-ref"}
           <fieldset class="fieldset">
             <legend class="fieldset-legend">Pod Address</legend>
-            <input type="text" class="input w-full" placeholder="some address" bind:value={podAddress}/>
+            <input type="text" class="input w-full" placeholder="some address" bind:value={podRefAddress}/>
           </fieldset>
         {:else}
           <fieldset class="fieldset">
@@ -844,13 +864,13 @@
       <div class="py-4" style="justify-content: center;">
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Pod Address</legend>
-          <input type="text" class="input w-full" placeholder="some address" bind:value={podAddress}/>
+          <input type="text" class="input w-full" placeholder="some address" bind:value={podRefAddress}/>
         </fieldset>
       </div>
       <div class="modal-action">
         <form method="dialog">
           <button class="btn btn-neutral" onclick={() => {addPodReference()}}>Add</button>
-          <button class="btn btn-soft btn-error">Cancel</button>
+          <button class="btn btn-soft btn-error" onclick={()=>{podRefAddress=""}}>Cancel</button>
         </form>
       </div>
     </div>
