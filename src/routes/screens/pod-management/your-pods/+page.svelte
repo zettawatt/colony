@@ -159,14 +159,13 @@
       "@context": { "schema": "http://schema.org/" },
       "@type": "",
       "@id": `ant://${file.autonomiAddress}`,
-      "schema:name": "",
+      "schema:name": file.name,
       "schema:description": "",
       "schema:contentSize": file.fileSize
     };
     switch (file.metadata.type) {
       case 'audio':
         fileMetaJson["@type"] = "schema:MusicRecording";
-        fileMetaJson["schema:name"] = file.name;
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:byArtist"] = file.metadata["Artist"];
         fileMetaJson["schema:inAlbum"] = file.metadata["Album"];
@@ -174,7 +173,6 @@
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
       case 'video':
         fileMetaJson["@type"] = "schema:VideoObject";
-        fileMetaJson["schema:name"] = file.name;
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:director"] = file.metadata["Director"];
         fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
@@ -182,14 +180,12 @@
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
       case 'image':
         fileMetaJson["@type"] = "schema:ImageObject";
-        fileMetaJson["schema:name"] = file.name;
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:description"] = file.metadata["Description"];
         fileMetaJson["schema:dateCreated"] = file.metadata["Date Taken"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
       case 'book':
         fileMetaJson["@type"] = "schema:Book";
-        fileMetaJson["schema:name"] = file.name;
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:author"] = file.metadata["Author"];
         fileMetaJson["schema:publisher"] = file.metadata["Publisher"];
@@ -197,7 +193,6 @@
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
       default:
         fileMetaJson["@type"] = "schema:CreativeWork";
-        fileMetaJson["schema:name"] = file.name;
         fileMetaJson["schema:alternateName"] = file.metadata["Title"];
         fileMetaJson["schema:description"] = file.metadata["Description"];
         fileMetaJson["schema:comment"] = file.metadata["Comment"];
@@ -243,6 +238,33 @@
       return regularPods
     } catch (e) {
       console.error('Failed to fetch pods:', e);
+    }
+  }
+
+  async function fetchPodSubjects(address) {
+    try {
+      // The name must exactly match your Rust function (snake_case)
+      const result = await invoke('list_pod_subjects', { address });
+      // result will be your AddressList Rust struct as a JS object
+      console.log(result.addresses);
+      return result.addresses;
+    } catch (error) {
+      // Handle error from Rust
+      console.error("Error calling list_pod_subjects:", error);
+      return null;
+    }
+  }
+
+  async function fetchSubjectData(subjectAddress) {
+    try {
+      // Call the Tauri command "get_subject_data"
+      const result = await invoke('get_subject_data', { request: { subject_address: subjectAddress } });
+      // result will be your SubjectDataResult struct as a JS object, ex: { data: ... }
+      console.log(result.data);
+      return result;
+    } catch (e) {
+      console.error('Failed to get subject data:', e);
+      return null;
     }
   }
 
@@ -293,7 +315,6 @@
     }
   }
 
-
   function addFileToActivePod() {
     // console.log("activePod", activePod)
     if (!selectedFileName) return;
@@ -305,15 +326,6 @@
       activePod.fileObjs = [...activePod.fileObjs, fileToAdd];
     }
     selectedFileName = ""; // Optionally reset selection
-  }
-
-  function formatFileSize(size: number): string {
-    if (!size) return "0 B";
-    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
-    if (size >= gb) return (size/gb).toFixed(2) + ' GB';
-    if (size >= mb) return (size/mb).toFixed(2) + ' MB';
-    if (size >= kb) return (size/kb).toFixed(2) + ' KB';
-    return size + ' B';
   }
 
   async function loadTable() {
@@ -364,6 +376,7 @@
   function saveMetaDataToItem() {
     if (editingPodItem) {
       editingPodItem.metadata = {...editMetadataFields}; // copy values
+      editingPodItem.metadata["type"] = activeFileType;
       addToast('Metadata saved!', 'success');
     }
     console.log(editingPodItem)
@@ -375,7 +388,6 @@
     // Shallow copy to avoid direct binding unless you want live updating
     editMetadataFields = {...(item.metadata || {})};
     // If there are new fields, ensure they're in the object
-    editMetadataFields["type"] = activeFileType;
     for (const field of displayFields) {
       if (!(field in editMetadataFields)) {
         editMetadataFields[field] = "";
@@ -384,6 +396,17 @@
     editFileMetadataModal.showModal();
   }
 
+  async function openEditPod() {
+    const subjects = await fetchPodSubjects(activePod.address)
+    if (subjects.length > 0) {
+      for (let subject of subjects) {
+        console.log("subject", subject)
+        const data = await fetchSubjectData(subject)
+        console.log("subject data", data)
+      }
+    }
+    editPodModal.showModal();
+  }
 
   onMount(async () => {
     // await initPodManager();
@@ -449,7 +472,7 @@
                           </button> -->
                           <button 
                             class="btn btn-warning btn-square"
-                            onclick={() => { activePod = pod; activePod.fileObjs = []; editPodModal.showModal(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; openEditPod(); }}>
                             <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
                           </button>
                           <button 
