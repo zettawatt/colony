@@ -92,6 +92,7 @@
   let podAddress = $state("");
   let editingPodItem = $state();
   let editMetadataFields = $state({});
+  let deletedPodItems = $state([]);
 
   $effect(()=> {
     console.log('activepod', activePod)
@@ -133,7 +134,7 @@
   async function savePod() {
     console.log("savePod", activePod)
 
-    if (activePod.fileObjs.length > 0) {
+    if (activePod.fileObjs.length > 0 || deletedPodItems.length > 0) {
       for (const file of activePod.fileObjs) {
         if (file.type === 'file' && file.modified === true){
           const metadataJson = generateFileMetaJson(file)
@@ -145,9 +146,24 @@
           const result = await invoke<string>('put_subject_data', {request: {
             pod_address: activePod.address,
             subject_address: file.autonomiAddress,
+            // data: JSON.stringify({})
             data: JSON.stringify(metadataJson)
           }});
           addToast(`Successfilly added ${file.name} to pod!`, "success")
+        } else if (file.type === 'pod-ref'){
+          // do something else to add pod reference
+        }
+      }
+
+      // remove any deleted items
+      for (const file of deletedPodItems) {
+        if (file.type === 'file'){
+          const result = await invoke<string>('put_subject_data', {request: {
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            data: JSON.stringify({})
+          }});
+          // addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
           // do something else to add pod reference
         }
@@ -375,6 +391,7 @@
 
   function removeItems(from: any[]){
     const selectedItems = from.filter(item => item.selected);
+    deletedPodItems = deletedPodItems.concat(selectedItems);
     return from.filter(item => !item.selected)
   }
 
@@ -429,6 +446,19 @@
     console.log("tempPodItems", tempPodItems)
     activePod.fileObjs = tempPodItems;
     editPodModal.showModal();
+  }
+
+  function resetState() {
+    deletedPodItems = [];
+    activePod = { fileObjs: [] };
+    editingPodItem = undefined;
+    editMetadataFields = {};
+    podAddress = "";
+    activeFileType = "other";
+    // Optionally deselect any files in uploadedFiles too:
+    uploadedFiles = uploadedFiles.map(f => ({ ...f, selected: false }));
+    // Close the modal if open for manual or programmatic triggers (defensive)
+    editPodModal.close();
   }
 
   onMount(async () => {
@@ -711,7 +741,7 @@
       <div class="modal-action">
         <form method="dialog">
           <button class="btn btn-primary" onclick={() => savePod()}>Save Pod</button>
-          <button class="btn btn-soft btn-error">Cancel</button>
+          <button class="btn btn-soft btn-error" onclick={() => resetState()}>Cancel</button>
         </form>
       </div>
     </div>
