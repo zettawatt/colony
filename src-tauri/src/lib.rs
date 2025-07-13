@@ -1717,6 +1717,55 @@ async fn get_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<S
 }
 
 #[tauri::command]
+async fn get_active_wallet(state: State<'_, Mutex<AppState>>) -> Result<(String, String), Error> {
+    let state = state.lock().unwrap();
+    let datastore = state
+        .datastore
+        .lock()
+        .unwrap()
+        .as_ref()
+        .ok_or("DataStore not initialized")?
+        .clone();
+
+    // Call the keystore get_active_wallet function to get the active wallet name
+    let (name, address) = datastore.get_active_wallet()?;
+
+    info!("Active wallet retrieved: {name}");
+    Ok((name, address))
+}
+
+#[tauri::command]
+async fn set_active_wallet(
+    state: State<'_, Mutex<AppState>>,
+    name: String,
+) -> Result<(String, String), Error> {
+    let state = state.lock().unwrap();
+
+    let mut keystore = state
+        .keystore
+        .lock()
+        .unwrap()
+        .as_ref()
+        .ok_or("KeyStore not initialized")?
+        .clone();
+
+    let datastore = state
+        .datastore
+        .lock()
+        .unwrap()
+        .as_ref()
+        .ok_or("DataStore not initialized")?
+        .clone();
+
+    // Set the active wallet
+    let (name, address) = keystore.set_active_wallet(&name)?;
+    datastore.set_active_wallet(&name, &address)?;
+
+    info!("Active wallet retrieved: {name}");
+    Ok((name, address))
+}
+
+#[tauri::command]
 async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet_key, evm_network) = {
@@ -1729,7 +1778,7 @@ async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Resul
             .take()
             .ok_or("Client not initialized")?;
 
-        let keystore = state
+        let mut keystore = state
             .keystore
             .lock()
             .unwrap()
@@ -1737,8 +1786,20 @@ async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Resul
             .ok_or("KeyStore not initialized")?
             .clone();
 
+        let datastore = state
+            .datastore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("DataStore not initialized")?
+            .clone();
+
         // Call the keystore get_wallet_key function to get the wallet private key
         let wallet_key = keystore.get_wallet_key(&name)?;
+
+        // Set the active wallet
+        let (name, address) = keystore.set_active_wallet(&name)?;
+        datastore.set_active_wallet(&name, &address)?;
 
         // Get the EVM network from the existing client
         let evm_network = client.evm_network().clone();
@@ -2102,6 +2163,8 @@ pub fn run(network: &str) {
             remove_wallet,
             list_wallets,
             get_wallet,
+            get_active_wallet,
+            set_active_wallet,
             switch_wallet,
             dweb_serve,
             dweb_stop,
