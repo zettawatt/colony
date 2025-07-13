@@ -8,6 +8,8 @@
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
+  import { v4 as uuidv4 } from 'uuid';
+  import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
 
   let podListTemp = $state([
     {
@@ -67,13 +69,13 @@
   let isLoading = $state(false);
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
-  let activePod = $state<any>(null); // Holds the pod for the currently active modal
+  let activePod = $state<any>({ fileObjs: [] }); // Holds the pod for the currently active modal
   let uploadedFiles = $state<any[]>([]);
   let selectedFileName = $state(""); // <-- Track the filename selected for adding
   let activeFileType = $state("other");
   let availableTypes = $state(['audio', 'video', 'image', 'book', 'other']);
   let displayFields = $derived.by(() => {
-          switch (activeFileType) {
+      switch (activeFileType) {
         case 'audio':
           return ['Title', 'Artist', 'Album', 'Release Date', 'Comment'];
         case 'video':
@@ -87,6 +89,14 @@
       }
   })
   let userConfigPod = $state();
+  let podAddress = $state("");
+  let editingPodItem = $state();
+  let editMetadataFields = $state({});
+  let deletedPodItems = $state([]);
+
+  $effect(()=> {
+    console.log('activepod', activePod)
+  })
 
 
   async function addFilesToPod() {
@@ -119,6 +129,97 @@
         console.error(error) 
       }
     }
+  }
+
+  async function savePod() {
+    console.log("savePod", activePod)
+
+    if (activePod.fileObjs.length > 0 || deletedPodItems.length > 0) {
+      for (const file of activePod.fileObjs) {
+        if (file.type === 'file' && file.modified === true){
+          const metadataJson = generateFileMetaJson(file)
+          // console.log({
+          //   pod_address: activePod.address,
+          //   subject_address: file.autonomiAddress,
+          //   data: JSON.stringify(metadataJson)
+          // })
+          const result = await invoke<string>('put_subject_data', {request: {
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            // data: JSON.stringify({})
+            data: JSON.stringify(metadataJson)
+          }});
+          addToast(`Successfilly added ${file.name} to pod!`, "success")
+        } else if (file.type === 'pod-ref'){
+          // do something else to add pod reference
+        }
+      }
+
+      // remove any deleted items
+      for (const file of deletedPodItems) {
+        if (file.type === 'file'){
+          const result = await invoke<string>('put_subject_data', {request: {
+            pod_address: activePod.address,
+            subject_address: file.autonomiAddress,
+            data: JSON.stringify({})
+          }});
+          // addToast(`Successfilly added ${file.name} to pod!`, "success")
+        } else if (file.type === 'pod-ref'){
+          // do something else to add pod reference
+        }
+      }
+    }
+  }
+
+  function generateFileMetaJson(file: any) {
+    const fileMetaJson = {
+      "@context": { "schema": "http://schema.org/" },
+      "@type": "",
+      "@id": `ant://${file.autonomiAddress}`,
+      "schema:name": file.name,
+      "schema:description": "",
+      "schema:contentSize": file.fileSize
+    };
+    switch (file.metadata.type) {
+      case 'audio':
+        fileMetaJson["@type"] = "schema:MusicRecording";
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:byArtist"] = file.metadata["Artist"];
+        fileMetaJson["schema:inAlbum"] = file.metadata["Album"];
+        fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
+      case 'video':
+        fileMetaJson["@type"] = "schema:VideoObject";
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:director"] = file.metadata["Director"];
+        fileMetaJson["schema:datePublished"] = file.metadata["Release Date"];
+        fileMetaJson["schema:duration"] = file.metadata["Duration"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
+      case 'image':
+        fileMetaJson["@type"] = "schema:ImageObject";
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:description"] = file.metadata["Description"];
+        fileMetaJson["schema:dateCreated"] = file.metadata["Date Taken"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
+      case 'book':
+        fileMetaJson["@type"] = "schema:Book";
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:author"] = file.metadata["Author"];
+        fileMetaJson["schema:publisher"] = file.metadata["Publisher"];
+        fileMetaJson["schema:datePublished"] = file.metadata["Publication Date"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
+      default:
+        fileMetaJson["@type"] = "schema:CreativeWork";
+        fileMetaJson["schema:alternateName"] = file.metadata["Title"];
+        fileMetaJson["schema:description"] = file.metadata["Description"];
+        fileMetaJson["schema:comment"] = file.metadata["Comment"];
+        break;
+    }
+    return fileMetaJson;
   }
 
   async function uploadAllPods() {
@@ -159,6 +260,33 @@
       return regularPods
     } catch (e) {
       console.error('Failed to fetch pods:', e);
+    }
+  }
+
+  async function fetchPodSubjects(address) {
+    try {
+      // The name must exactly match your Rust function (snake_case)
+      const result = await invoke('list_pod_subjects', { address });
+      // result will be your AddressList Rust struct as a JS object
+      console.log(result.addresses);
+      return result.addresses;
+    } catch (error) {
+      // Handle error from Rust
+      console.error("Error calling list_pod_subjects:", error);
+      return null;
+    }
+  }
+
+  async function fetchSubjectData(subjectAddress) {
+    try {
+      // Call the Tauri command "get_subject_data"
+      const result = await invoke('get_subject_data', { request: { subject_address: subjectAddress } });
+      const parsedResult = JSON.parse(result.data);
+      // result will be your SubjectDataResult struct as a JS object, ex: { data: ... }
+      return parsedResult;
+    } catch (e) {
+      console.error('Failed to get subject data:', e);
+      return null;
     }
   }
 
@@ -209,27 +337,17 @@
     }
   }
 
-
   function addFileToActivePod() {
     // console.log("activePod", activePod)
     if (!selectedFileName) return;
     if (!activePod.fileObjs) activePod.fileObjs = [];
     // Find FileObj in uploadedFiles by name
     const fileToAdd = uploadedFiles.find(f => f.name === selectedFileName);
-    if (fileToAdd && !activePod.fileObjs.some(f => f.name === fileToAdd.name)) {
+    if (fileToAdd && !activePod?.fileObjs.some(f => f.name === fileToAdd.name)) {
       // Add only if not already present
       activePod.fileObjs = [...activePod.fileObjs, fileToAdd];
     }
     selectedFileName = ""; // Optionally reset selection
-  }
-
-  function formatFileSize(size: number): string {
-    if (!size) return "0 B";
-    const kb = 1024, mb = kb * 1024, gb = mb * 1024;
-    if (size >= gb) return (size/gb).toFixed(2) + ' GB';
-    if (size >= mb) return (size/mb).toFixed(2) + ' MB';
-    if (size >= kb) return (size/kb).toFixed(2) + ' KB';
-    return size + ' B';
   }
 
   async function loadTable() {
@@ -258,13 +376,89 @@
     const selectedItems = from.filter(item => item.selected);
     return {
       newFrom: from.map(item => ({...item, selected: false})),
-      newTo: [...to, ...selectedItems.map(item => ({...item, selected: false}))]
+      newTo: [
+        ...to, 
+        ...selectedItems.map(item => ({
+          ...item,
+          selected: false,
+          metadata: {},
+          type: 'file',
+          modified: true,
+        }))
+      ]
     };
   }
 
   function removeItems(from: any[]){
     const selectedItems = from.filter(item => item.selected);
+    deletedPodItems = deletedPodItems.concat(selectedItems);
     return from.filter(item => !item.selected)
+  }
+
+  function addPodReference() {
+    if (!podAddress) return;
+    if (!activePod.fileObjs) activePod.fileObjs = [];
+    activePod.fileObjs.push({
+      address: podAddress,
+      type: "pod-ref",
+      uuid: uuidv4(),
+    })
+  }
+
+  function saveMetaDataToItem() {
+    if (editingPodItem) {
+      editingPodItem.metadata = {...editMetadataFields}; // copy values
+      editingPodItem.metadata["type"] = activeFileType;
+      editingPodItem.modified = true;
+      addToast('Metadata saved!', 'success');
+    }
+    console.log(editingPodItem)
+    editFileMetadataModal.close();
+  }
+
+  function openEditMetadata(item) {
+    editingPodItem = item;
+    activeFileType = item.metadata.type;
+    // Shallow copy to avoid direct binding unless you want live updating
+    editMetadataFields = {...(item.metadata || {})};
+    // If there are new fields, ensure they're in the object
+    for (const field of displayFields) {
+      if (!(field in editMetadataFields)) {
+        editMetadataFields[field] = "";
+      }
+    }
+    editFileMetadataModal.showModal();
+  }
+
+  async function openEditPod() {
+    const subjects = await fetchPodSubjects(activePod.address)
+    const tempPodItems = [];
+    if (subjects.length > 0) {
+      for (let subject of subjects) {
+        // console.log("subject", subject)
+        const data = await fetchSubjectData(subject)
+        const item = parseSubjectData(data, activePod.address, subject)
+        if ('type' in item && (item.type === 'pod-ref' || item.type === 'file')){
+          tempPodItems.push(item);
+        }
+      }
+    }
+    console.log("tempPodItems", tempPodItems)
+    activePod.fileObjs = tempPodItems;
+    editPodModal.showModal();
+  }
+
+  function resetState() {
+    deletedPodItems = [];
+    activePod = { fileObjs: [] };
+    editingPodItem = undefined;
+    editMetadataFields = {};
+    podAddress = "";
+    activeFileType = "other";
+    // Optionally deselect any files in uploadedFiles too:
+    uploadedFiles = uploadedFiles.map(f => ({ ...f, selected: false }));
+    // Close the modal if open for manual or programmatic triggers (defensive)
+    editPodModal.close();
   }
 
   onMount(async () => {
@@ -285,7 +479,7 @@
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
           <button class="btn btn-neutral btn-soft" onclick={() => refreshReference(0)} disabled={$podsSyncing}>Sync Pods</button>
-          <button class="btn btn-neutral btn-soft" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
+          <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
       </div>
@@ -324,19 +518,19 @@
                       <td>{makeDateReadable(pod.modified)}</td>
                       <td>
                         {#if pod.name !== "User Configuration"}
-                          <button
+                          <!-- <button
                             class="btn btn-accent btn-square"
-                            onclick={() => { activePod = pod; uploadSinglePod(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; uploadSinglePod(); }}>
                             <img src="/app-icons/cloud-data-upload-icon.svg" alt="upload icon" width="24" height="24" />
-                          </button>
+                          </button> -->
                           <button 
                             class="btn btn-warning btn-square"
-                            onclick={() => { activePod = pod; editPodModal.showModal(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; openEditPod(); }}>
                             <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
                           </button>
                           <button 
                             class="btn btn-error btn-square"
-                            onclick={() => { activePod = pod; deletePodModal.showModal(); }}>
+                            onclick={() => { activePod = pod; activePod.fileObjs = []; deletePodModal.showModal(); }}>
                             <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
                           </button>
                         {/if}
@@ -431,34 +625,66 @@
         <div class="flex flex-col items-center">
           <h4 class="text-center font-semibold">Pod Items</h4>
           <ul id="podItems" class="item-container flex flex-col mb-1">
-            {#each podListTemp as item (item.uuid)}
+            {#each activePod?.fileObjs as item (item.uuid)}
               <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
               <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <li
-                class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
-                onclick={() => {
-                  if (!item.disabled) {
-                    podListTemp = toggleSelection(podListTemp, item.uuid);
-                  }
-                }}
-              >
-                <span class="truncate">{item.name}</span>
-                <button
-                  class="edit-button btn btn-sm"
+              {#if item.type === 'pod-ref'}
+                <li
+                  class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
                   onclick={() => {
-                    event.stopPropagation();
-                    editFileMetadataModal.showModal()
+                    if (!item.disabled) {
+                      activePod.fileObjs = toggleSelection(activePod?.fileObjs, item.uuid);
+                    }
                   }}
                 >
-                  Edit
-                </button>
-              </li>
+                  <span class="truncate">{item.address}</span>
+                  <button
+                    class="edit-button btn btn-sm"
+                    onclick={() => {
+                      editingPodItem = item;
+                      podAddress = item.address;
+                      console.log("editingPodItem", editingPodItem)
+                      event.stopPropagation();
+                      editFileMetadataModal.showModal();
+                    }}
+                  >
+                    Edit
+                  </button>
+                </li>
+              {:else}
+                <li
+                  class="flex item {item.selected ? 'item-selected' : ''} {item.disabled ? 'item-disabled' : ''}"
+                  onclick={() => {
+                    if (!item.disabled) {
+                      activePod.fileObjs = toggleSelection(activePod?.fileObjs, item.uuid);
+                    }
+                  }}
+                >
+                  <span class="truncate">{item.name}</span>
+                  <button
+                    class="edit-button btn btn-sm"
+                    onclick={() => {
+                      event.stopPropagation();
+                      openEditMetadata(item);
+                      // editingPodItem = item;
+                      // console.log("editingPodItem", editingPodItem)
+                      // event.stopPropagation();
+                      // editFileMetadataModal.showModal();
+                    }}
+                  >
+                    Edit
+                  </button>
+                </li>
+              {/if}
             {/each}
           </ul>
           <div class="w-full ml-5">
             <button
               class="btn btn-neutral btn-xs"
-              onclick={() => addPodRefModal.showModal()}
+              onclick={() => {
+                podAddress = "";
+                addPodRefModal.showModal()
+              }}
             >
               Add Pod Ref
             </button>
@@ -468,21 +694,21 @@
         <div class="mx-4 flex flex-col gap-2 items-center">
           <button 
             class="btn btn-error btn-sm w-full" 
-            disabled={!podListTemp.some(f => f.selected)}
+            disabled={!activePod.fileObjs?.some(f => f.selected)}
             onclick={()=>{
-              const result = removeItems(podListTemp);
-              podListTemp = result;
+              const result = removeItems(activePod?.fileObjs);
+              activePod.fileObjs = result;
             }}  
           >
             Remove
           </button>
           <button 
             class="btn btn-primary btn-sm" 
-            disabled={!uploadedFiles.some(f => f.selected)}
+            disabled={!uploadedFiles?.some(f => f.selected)}
             onclick={() => {
-              const result = transferItems(uploadedFiles, podListTemp);
+              const result = transferItems(uploadedFiles, activePod?.fileObjs);
               uploadedFiles = result.newFrom;
-              podListTemp = result.newTo;
+              activePod.fileObjs = result.newTo;
             }}
           >
             &larr;&nbsp;Transfer
@@ -514,8 +740,8 @@
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary" onclick={() => addFilesToPod()}>Save Pod</button>
-          <button class="btn btn-soft btn-error">Cancel</button>
+          <button class="btn btn-primary" onclick={() => savePod()}>Save Pod</button>
+          <button class="btn btn-soft btn-error" onclick={() => resetState()}>Cancel</button>
         </form>
       </div>
     </div>
@@ -575,43 +801,55 @@
   </dialog> -->
   <dialog id="editFileMetadataModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
-      <h3 class="text-lg font-bold">File Metadata</h3>
+      <h3 class="text-lg font-bold">Editing Metadata</h3>
       <div class="py-4" style="justify-content: center;">
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">File Type</legend>
-          <select class="input" bind:value={activeFileType}>
-            <option disabled selected value="">Select a file type</option>
-            {#each availableTypes as type}
-              <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-            {/each}
-          </select>
+        {#if editingPodItem?.type === "pod-ref"}
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Pod Address</legend>
+            <input type="text" class="input w-full" placeholder="some address" bind:value={podAddress}/>
+          </fieldset>
+        {:else}
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">File Type</legend>
+            <select class="input" bind:value={activeFileType}>
+              <option disabled selected value="">Select a file type</option>
+              {#each availableTypes as type}
+                <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+              {/each}
+            </select>
 
-          {#each displayFields as field}
-            <legend class="fieldset-legend">{field}</legend>
-            <input type="text" class="input" placeholder={field} />
-          {/each}
-        </fieldset>
+            {#each displayFields as field}
+              <legend class="fieldset-legend">{field}</legend>
+              <input
+                type="text"
+                class="input"
+                placeholder={field}
+                bind:value={editMetadataFields[field]}
+              />
+            {/each}
+          </fieldset>
+        {/if}
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-primary">Save</button>
+          <button class="btn btn-primary" type="button" onclick={saveMetaDataToItem}>Save</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
     </div>
   </dialog>
-    <dialog id="addPodRefModal" class="modal">
+  <dialog id="addPodRefModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Add Pod Reference</h3>
       <div class="py-4" style="justify-content: center;">
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Pod Address</legend>
-          <input type="text" class="input w-full" placeholder="some address" />
+          <input type="text" class="input w-full" placeholder="some address" bind:value={podAddress}/>
         </fieldset>
       </div>
       <div class="modal-action">
         <form method="dialog">
-          <button class="btn btn-neutral">Add</button>
+          <button class="btn btn-neutral" onclick={() => {addPodReference()}}>Add</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
