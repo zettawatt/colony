@@ -39,6 +39,7 @@
       await ps.setPreferredLightTheme(preferredLightTheme);
       await ps.setPreferredDarkTheme(preferredDarkTheme);
       addToast("Saved config!", "success");
+      addToast("Cycle through light and dark mode to reset themes if necessary...", "warning", 7000);
     } catch (error) {
       console.error(error)
       addToast("Could not save config", "error")
