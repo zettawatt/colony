@@ -7,13 +7,27 @@
   // Optional: show Rust logs in DevTools
   // attachConsole();
 
-  // This forwards browser logs to Tauri
+  function serialize(arg) {
+    if (Array.isArray(arg) || (typeof arg === "object" && arg !== null)) {
+      try {
+        return JSON.stringify(arg);
+      } catch {
+        return "[Unserializable Object]";
+      }
+    }
+    return String(arg);
+  }
+
   function forwardConsole(fnName, logger) {
+    // Prevent duplicate patching (important with HMR)
+    if (console[fnName]._isPatchedByApp) return;
+
     const original = console[fnName];
     console[fnName] = (...args) => {
-      original(...args); // still show logs in DevTools
-      logger(args.map(String).join(' ')); // send logs to Tauri
+      original(...args); // Continue DevTools logging
+      logger(args.map(serialize).join(' ')); // Forward to Tauri
     };
+    console[fnName]._isPatchedByApp = true;
   }
 
   // Hook up all the console methods to Tauri logger
