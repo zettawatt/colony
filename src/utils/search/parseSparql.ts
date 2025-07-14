@@ -98,8 +98,8 @@ export function parseBrowseSparqlResults(results: any) {
           depth: binding.depth?.value ?? undefined,
           name: binding.name?.value ?? "",
           description: "",
-          size: binding.size?.value ? formatFileSize(Number(binding.size.value)) : "Unknown",
-          bytes: Number(binding.size?.value) ?? 0,
+          size: Number.isFinite(Number(binding.size?.value)) ? formatFileSize(Number(binding.size.value)) : "Unknown",
+          bytes: Number.isFinite(Number(binding.size?.value)) ? Number(binding.size.value) : 0,
           type: binding.type?.value ?? "",
         };
       }
