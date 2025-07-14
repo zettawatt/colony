@@ -1973,6 +1973,81 @@ async fn upload_data(
 }
 
 #[tauri::command]
+async fn upload_directory(
+    state: State<'_, Mutex<AppState>>,
+    request: UploadFileRequest,
+    app: tauri::AppHandle,
+) -> Result<(String, String), Error> {
+    let (client, wallet) = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        let wallet = state
+            .wallet
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Wallet not initialized")?
+            .clone();
+
+        (client, wallet)
+    }; // All MutexGuards are dropped here
+
+    // Read file
+    let data = std::fs::read(&request.file_path)?;
+    let data_len = data.len();
+    app.emit(
+        "upload-started",
+        serde_json::json!({
+            "id": request.id,
+            "size": data_len,
+            "path": request.file_path,
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+
+    let payment = PaymentOption::Wallet(wallet);
+    let (cost, data_addr) = match client
+        .dir_upload_public(request.file_path.clone().into(), payment)
+        .await
+    {
+        Ok(result) => result,
+        Err(e) => {
+            app.emit(
+                "upload-error",
+                serde_json::json!({
+                    "id": request.id,
+                    "path": request.file_path,
+                    "message": format!("Upload failed: {}", e)
+                }),
+            )
+            .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+            return Err(Error::Message(format!("Emit failed: {e}")));
+        }
+    };
+
+    app.emit(
+        "upload-complete",
+        serde_json::json!({
+            "id": request.id,
+            "path": request.file_path,
+            "address": data_addr.to_string(),
+            "cost": cost.to_string()
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+
+    Ok((cost.to_string(), data_addr.to_string()))
+}
+
+#[tauri::command]
 async fn download_data(
     state: State<'_, Mutex<AppState>>,
     request: DownloadFileRequest,
@@ -2215,6 +2290,7 @@ pub fn run(network: &str) {
             initialize_graph,
             upload_cost,
             upload_data,
+            upload_directory,
             download_data,
             download_directory,
             add_wallet,
