@@ -53,16 +53,24 @@
   searchColumns[1].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
 
-    if ('type' in activeRow && !activeRow.type.includes('dweb')) {
+    if ('type' in activeRow && activeRow.type.includes("dweb")) {
+      openDweb(activeRow.address)
+    } else if(activeRow.type.includes("directory")) {
       const request = {
         name: activeRow.name,
         address: activeRow.address,
         bytes: activeRow.bytes ?? 0
       }
 
-      downloadFile(request);
+      downloadFile(request, 'directory');
     } else {
-      openDweb(activeRow.address)
+      const request = {
+        name: activeRow.name,
+        address: activeRow.address,
+        bytes: activeRow.bytes ?? 0
+      }
+
+      downloadFile(request, 'file');
     }
   }
 
