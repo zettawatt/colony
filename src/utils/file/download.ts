@@ -10,8 +10,9 @@ type DownloadRequest = {
   bytes?: number
 }
 
-export async function downloadFile(downloadReq: DownloadRequest) {
+export async function downloadFile(downloadReq: DownloadRequest, type: "file" | "directory") {
   addToast(`Added file to downloads`, "info")
+  console.log('type', type)
   const downloadDir = await ps.getDownloadDir();
   const request = {
     id: uuidv4(),
@@ -20,7 +21,12 @@ export async function downloadFile(downloadReq: DownloadRequest) {
     size: downloadReq.bytes ?? 0
   };
   try {
-    const msg = await invoke<string>('download_data', { request });
+    let msg;
+    if (type === 'directory') {
+      msg = await invoke<string>('download_directory', { request });
+    } else {
+      msg = await invoke<string>('download_data', { request });
+    }
     console.log(msg);
     addToast(msg, "info");
     const newFileObj = new FileObj(
@@ -37,6 +43,6 @@ export async function downloadFile(downloadReq: DownloadRequest) {
     await ps.addDownloadedFile(newFileObj);
   } catch (err) {
     console.error("Download failed", err);
-    addToast(String(err), "error");
+    addToast("Failed to download files, see logs", "error");
   }
 }
