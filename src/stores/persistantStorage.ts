@@ -8,7 +8,9 @@ let store: LazyStore | null = null;
 
 type UserConfig = {
   "downloadsDirectory": string,
-  "theme": 'auto' | 'light' | 'dark'
+  "theme": 'auto' | 'light' | 'dark',
+  "preferredLightTheme": string,
+  "preferredDarkTheme": string
 }
 
 
@@ -35,7 +37,9 @@ export async function initStore() {
     await store.set('hasUserCompletedIntro', false);
     await store.set('userConfig', {
       "downloadsDirectory": defaultDownloadDir,
-      "theme": "auto" // undefined is default for automatic switching
+      "theme": "auto", // undefined is default for automatic switching
+      "preferredLightTheme": "light",
+      "preferredDarkTheme": "dark"
     });
     await store.set('primaryWallet', "");
     return store;
@@ -190,6 +194,42 @@ export async function getTheme(): Promise<string> {
   }
 }
 
+export async function getPreferredLightTheme(): Promise<string> {
+  const store = await getStore();
+  const config = await store.get("userConfig") as UserConfig;
+  if ("preferredLightTheme" in config) {
+    return config.preferredLightTheme;
+  } else {
+    return "light";
+  }
+}
+
+export async function setPreferredLightTheme(t: string) {
+  const store = await getStore();
+  const config = await store.get("userConfig") as UserConfig;
+  config.preferredLightTheme = t;
+  await store.set("userConfig", config);
+  return config.preferredLightTheme;
+}
+
+export async function getPreferredDarkTheme(): Promise<string> {
+  const store = await getStore();
+  const config = await store.get("userConfig") as UserConfig;
+  if ("preferredDarkTheme" in config) {
+    return config.preferredDarkTheme as string;
+  } else {
+    return "dark";
+  }
+}
+
+export async function setPreferredDarkTheme(t: string) {
+  const store = await getStore();
+  const config = await store.get("userConfig") as UserConfig;
+  config.preferredDarkTheme = t;
+  await store.set("userConfig", config);
+  return config.preferredDarkTheme;
+}
+
 
 const ps = {
   getPodCache,
@@ -212,7 +252,11 @@ const ps = {
   getPrimaryWallet,
   setPrimaryWallet,
   getTheme,
-  setTheme
+  setTheme,
+  getPreferredLightTheme,
+  setPreferredLightTheme,
+  getPreferredDarkTheme,
+  setPreferredDarkTheme
 };
 
 export default ps;

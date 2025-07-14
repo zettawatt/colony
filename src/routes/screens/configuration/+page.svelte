@@ -7,6 +7,7 @@
   import { open } from '@tauri-apps/plugin-dialog';
   import { addToast } from "../../../stores/toast";
   import { setPassword, getPassword } from "../../../utils/password/session";
+  import { lightDaisyThemes, darkDaisyThemes } from "../../../utils/theme/daisyUIThemes";
 
   let name = $state("");
   let greetMsg = $state("");
@@ -17,6 +18,12 @@
   let confirmPassword = $state("");
   let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
   let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
+  let preferredLightTheme = $state("light");
+  let preferredDarkTheme = $state("dark");
+
+  function previewTheme(theme: string) {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
 
   async function selectPath() {
     const newDownloadPath = await open({ multiple: false, directory: true });
@@ -29,7 +36,10 @@
     try {
       if (!downloadPath) return;
       const newDownloadPath = await ps.setDownloadDir(downloadPath);
+      await ps.setPreferredLightTheme(preferredLightTheme);
+      await ps.setPreferredDarkTheme(preferredDarkTheme);
       addToast("Saved config!", "success");
+      addToast("Cycle through light and dark mode to reset themes if necessary...", "warning", 7000);
     } catch (error) {
       console.error(error)
       addToast("Could not save config", "error")
@@ -54,8 +64,20 @@
   }
 
   onMount(async() => {
-    downloadPath = await ps.getDownloadDir();
-    appDataPath = await appDataDir();
+    try {
+      downloadPath = await ps.getDownloadDir();
+      appDataPath = await appDataDir(); 
+    } catch (error) {
+      console.error(error)
+      addToast("Failed to get app directories, see logs...", "error");
+    }
+
+    try {
+      preferredLightTheme = await ps.getPreferredLightTheme();
+      preferredDarkTheme = await ps.getPreferredDarkTheme();
+    } catch (error) {
+      console.error(error)
+    }
   })
 </script>
 
@@ -81,6 +103,22 @@
             <div class="row pt-3">
               <label>Colony Application Data Path:</label>
               <input bind:value={appDataPath} type="text" class="input appData w-full" disabled placeholder="/home/usr/downloads" />
+            </div>
+            <div class="row pt-3">
+              <label>Preferred Light Theme</label>
+              <select class="select" bind:value={preferredLightTheme} onchange={() => previewTheme(preferredLightTheme)}>
+                {#each lightDaisyThemes as theme}
+                  <option value={theme}>{theme}</option>
+                {/each}
+              </select>
+            </div>
+            <div class="row pt-3">
+              <label>Preferred Dark Theme</label>
+              <select class="select" bind:value={preferredDarkTheme} onchange={() => previewTheme(preferredDarkTheme)}>
+                {#each darkDaisyThemes as theme}
+                  <option value={theme}>{theme}</option>
+                {/each}
+              </select>
               <div class="mt-4">
                 <button class="btn btn-primary" onclick={()=>(saveConfig())}>Save</button>
               </div>

@@ -16,7 +16,7 @@
 <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-3">
   {#each items as toast (toast.id)}
     <div
-      class={`flex items-start gap-3 p-4 rounded-lg shadow-lg border-l-4 transition-opacity duration-200
+      class={`flex items-center gap-3 p-4 rounded-lg shadow-lg border-l-4 transition-opacity duration-200
         ${toast.type === 'info'
           ? 'bg-blue-50 border-blue-400 text-blue-800 dark:bg-blue-900 dark:border-blue-300 dark:text-blue-100'
           : toast.type === 'error'
@@ -30,7 +30,7 @@
       in:fade={{ duration: 200 }}
       out:fade={{ duration: 200 }}
     >
-      <span class="pt-0.5">
+      <span>
         {#if toast.type === 'info'}
           <svg 
             class="h-6 w-6 text-blue-400 dark:text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
