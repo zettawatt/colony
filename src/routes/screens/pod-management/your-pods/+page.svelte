@@ -258,14 +258,17 @@
 
   async function uploadAllPods() {
     try {
+      addToast("Uploading all pods to the network...", "info");
       allPodsUploading.set(true);
       const result = await invoke<string>('upload_all');
       addToast(result, "success");
       allPodsUploading.set(false);
+      addToast("All pods have been uploaded!", "success");
       console.log(result); // "Successfully uploaded all updated pods to Autonomi"
     } catch (error) {
       console.error('Upload failed:', error);
       allPodsUploading.set(false);
+      addToast("There was an error uploading all pods. See logs...", "error");
     }
   }
 
