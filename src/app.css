@@ -1,11 +1,6 @@
 @import "tailwindcss";
-@plugin "daisyui";
-
-@font-face {
-  font-family: "Hi.";
-  src: url("./assets/fonts/HiBlack-n3a1.otf") format("opentype");
-  font-weight: 800;
-  font-style: normal;
+@plugin "daisyui" {
+  themes: all;
 }
 
 .h1 {

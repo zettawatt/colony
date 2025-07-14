@@ -2,7 +2,7 @@
   import { setTheme } from '@tauri-apps/api/app';
   import { onMount } from 'svelte';
   import ps from '../stores/persistantStorage';
-  // import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { globalTheme } from '../stores/globals';
 
   type Theme = 'auto' | 'light' | 'dark';
@@ -21,6 +21,10 @@
   onMount(async() => {
     theme = await getUserTheme()
     setAppTheme(theme);
+    const unlisten = await getCurrentWindow().onThemeChanged(async ({ payload: theme }) => {
+      console.log(theme)
+      await setAppTheme(theme);
+    });
   });
 
   function cycleTheme() {
@@ -32,11 +36,20 @@
 
   async function setAppTheme(t: Theme) {
     try {
+      const preferredLightTheme = await ps.getPreferredLightTheme();
+      const preferredDarkTheme = await ps.getPreferredDarkTheme();
       await ps.setTheme(t);
       if (t === 'auto') {
         await setTheme(undefined);
+        const tauriTheme = await getCurrentWindow().theme();
+        const preferredTheme = (tauriTheme === 'light') ? preferredLightTheme : preferredDarkTheme
+        document.documentElement.setAttribute("data-theme", preferredTheme);
+      } else if (t === 'light') {
+        await setTheme(t);
+        document.documentElement.setAttribute("data-theme", preferredLightTheme);
       } else {
         await setTheme(t);
+        document.documentElement.setAttribute("data-theme", preferredDarkTheme);
       }
 
       // let currentTheme = await getCurrentWindow().theme();
