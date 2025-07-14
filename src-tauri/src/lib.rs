@@ -22,6 +22,8 @@ use std::sync::{MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_shell::{process::CommandChild, Error as ShellError, ShellExt};
 use tracing::{error, info};
+use tauri_plugin_log::{Target, TargetKind};
+use tauri::Manager;
 
 #[tauri::command]
 fn get_file_size(path: String) -> Result<u64, String> {
@@ -2251,6 +2253,31 @@ pub fn run(network: &str) {
     };
 
     tauri::Builder::default()
+        .setup(|app| {
+            // Get the app_data_dir using the path_resolver
+            let log_dir = app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("./logs"));
+            // Ensure the directory exists
+            std::fs::create_dir_all(&log_dir)
+                .expect("Failed to create log directory");
+
+            // Initialize the logger plugin with the custom log directory
+            app.handle().plugin(
+                tauri_plugin_log::Builder::new()
+                    .filter(|metadata| {
+                            let t = metadata.target();
+                            t == "webview" || t.contains("colony")
+                    })
+                    .target(tauri_plugin_log::Target::new(
+                        tauri_plugin_log::TargetKind::Folder {
+                            path: log_dir,
+                            file_name: None,
+                        },
+                    ))
+                    .build()
+            );
+
+            Ok(())
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
