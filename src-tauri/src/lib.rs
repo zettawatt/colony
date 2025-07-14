@@ -2030,6 +2030,63 @@ async fn download_data(
 }
 
 #[tauri::command]
+async fn download_directory(
+    state: State<'_, Mutex<AppState>>,
+    request: DownloadFileRequest,
+    app: AppHandle,
+) -> Result<String, Error> {
+    // Extract all data we need and drop all locks before any await
+    app.emit(
+        "download-started",
+        serde_json::json!({
+            "id": request.id,
+            "address": request.address,
+            "path": request.destination_path,
+            "size": request.size
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+
+    let client = {
+        let state = state.lock().unwrap();
+
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+
+        client
+    }; // All MutexGuards are dropped here
+
+    // Data address of the cat picture directory
+    let data_address = DataAddress::from_hex(request.address.trim())?;
+
+    // Download the directory of cat pictures
+    client
+        .dir_download_public(&data_address, request.destination_path.clone().into())
+        .await
+        .map_err(|e| Error::Message(format!("Download directory failed: {e}")))?;
+
+    app.emit(
+        "download-complete",
+        serde_json::json!({
+            "id": request.id,
+            "address": request.address,
+            "path": request.destination_path
+        }),
+    )
+    .map_err(|e| Error::Message(format!("Emit failed: {e}")))?;
+
+    Ok(format!(
+        "Directory downloaded from {} to {}",
+        request.address, request.destination_path
+    ))
+}
+
+#[tauri::command]
 async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
     let process = state.lock().unwrap().dweb_process.lock().unwrap().take();
 
@@ -2159,6 +2216,7 @@ pub fn run(network: &str) {
             upload_cost,
             upload_data,
             download_data,
+            download_directory,
             add_wallet,
             remove_wallet,
             list_wallets,
