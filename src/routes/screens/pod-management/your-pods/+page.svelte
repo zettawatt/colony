@@ -10,6 +10,7 @@
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
   import { v4 as uuidv4 } from 'uuid';
   import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
+  import { templates } from "../../../../utils/pod-management/jsonLDTemplates";
 
   let podListTemp = $state([
     {
@@ -66,6 +67,8 @@
     depth?: string | undefined;
   };
 
+  let selectedType = $state("Book");
+  let jsonText = $state(JSON.stringify(templates[selectedType], null, 2));
   let isLoading = $state(false);
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
@@ -93,11 +96,39 @@
   let editingPodItem = $state();
   let editMetadataFields = $state({});
   let deletedPodItems = $state([]);
+  let isValid = $state(false);
+  let error = $state(null);
+  let parsed = $state(null);
+
 
   $effect(()=> {
     console.log('activepod', activePod)
   })
 
+  function loadTemplate(type) {
+    selectedType = type;
+    const template = templates[type];
+    jsonText = JSON.stringify(template, null, 2);
+    isValid = false;
+    error = null;
+    parsed = null;
+  }
+
+  function validateJsonLd() {
+    try {
+      const obj = JSON.parse(jsonText);
+      if (!obj["@context"] || !obj["@type"]) {
+        throw new Error("Missing required @context or @type fields.");
+      }
+      parsed = obj;
+      isValid = true;
+      error = null;
+    } catch (e) {
+      isValid = false;
+      error = e.message;
+      parsed = null;
+    }
+  }
 
   async function addPodRef(podAddress, podRefAddress) {
     try {
@@ -804,59 +835,6 @@
       </div>
     </div>
   </dialog>
-  <!-- <dialog id="editPodModalOld" class="modal">
-    <div class="modal-box w-10/12 max-w-3xl max-h-lg">
-      <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
-      <div class="py-2" style="justify-content: center;">
-        <div class="join">
-          <select class="select" bind:value={selectedFileName}>
-            <option disabled selected>File Reference</option>
-            {#if uploadedFiles.length > 0}
-              {#each uploadedFiles as file}
-                <option>{file.name}</option>
-              {/each}
-            {/if}
-          </select>
-          <button class="btn join-item" onclick={addFileToActivePod} disabled={!selectedFileName}>
-            Add File To Pod
-          </button>
-        </div>
-        <table class="table" id="pod">
-          <thead>
-            <tr>
-              <th>File name</th>
-              <th>File size</th>
-              <th>File type</th>
-              <th>File Metadata</th>
-              <th>Operations</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#if activePod?.fileObjs && activePod.fileObjs.length > 0}
-              {#each activePod.fileObjs as file}
-                <tr>
-                  <td>{file.name}</td>
-                  <td>{formatFileSize(file.fileSize)}</td>
-                  <td>{file.extension}</td>
-                  <td></td>
-                  <td>
-                  </td>
-                </tr>
-              {/each}
-            {:else}
-              <tr><td colspan="5" style="text-align:center;">No files in pod</td></tr>
-            {/if}
-          </tbody>
-        </table>
-      </div>
-      <div class="modal-action">
-        <form method="dialog">
-          <button class="btn btn-primary" onclick={() => addFilesToPod()}>Save Pod</button>
-          <button class="btn btn-soft btn-error">Cancel</button>
-        </form>
-      </div>
-    </div>
-  </dialog> -->
   <dialog id="editFileMetadataModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Editing Metadata</h3>
@@ -867,25 +845,26 @@
             <input type="text" class="input w-full" placeholder="some address" bind:value={podRefAddress}/>
           </fieldset>
         {:else}
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">File Type</legend>
-            <select class="input" bind:value={activeFileType}>
-              <option disabled selected value="">Select a file type</option>
-              {#each availableTypes as type}
-                <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              {/each}
-            </select>
-
-            {#each displayFields as field}
-              <legend class="fieldset-legend">{field}</legend>
-              <input
-                type="text"
-                class="input"
-                placeholder={field}
-                bind:value={editMetadataFields[field]}
-              />
+          <label class="block mb-2 font-semibold">Choose a type:</label>
+          <select class="mb-4 p-2 border rounded" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
+            {#each Object.keys(templates) as type}
+              <option value={type}>{type}</option>
             {/each}
+          </select>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">File Metadata (JSON-LD)</legend>
+            <textarea class="textarea code-input" style="min-height: 300px; width:100%" placeholder="" bind:value={jsonText}></textarea>
           </fieldset>
+          <button class="mt-4 btn btn-primary" onclick={validateJsonLd}>
+            Validate
+          </button>
+
+          {#if isValid}
+            <p class="mt-4 text-green-600 font-medium">✅ Valid JSON-LD!</p>
+          {:else if error}
+            <p class="mt-4 text-red-600">❌ {error}</p>
+          {/if}
         {/if}
       </div>
       <div class="modal-action">
@@ -1035,5 +1014,7 @@
     z-index: 1 !important;
   }
 }
+
+.code-input { font-family: monospace; }
 
 </style>
