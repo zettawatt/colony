@@ -14,14 +14,15 @@
     <div class="flex-3 flex justify-center">
       <ul class="menu menu-horizontal px-1 flex justify-between w-full">
         <li><a href="/screens/search">Search</a></li>
-        <li class="dropdown">
-          <div tabindex="0" role="button" class="btn-ghost">Pod Management</div>
+        <li><a href="/screens/pod-management/your-pods">File Management</a></li>
+        <!-- <li class="dropdown">
+          <div tabindex="0" role="button" class="btn-ghost">File Management</div>
           <ul tabindex="0" class="menu dropdown-content bg-base-100 rounded-box w-52 shadow p-2 z-[1000]">
             <li><a href="/screens/pod-management/your-pods">Your Pods</a></li>
             <li><a href="/screens/pod-management/uploads">Uploads</a></li>
             <li><a href="/screens/pod-management/downloads">Downloads</a></li>
           </ul>
-        </li>
+        </li> -->
         <!-- <li><a>Colonies</a></li> -->
         <li><a href="/screens/wallet">Wallet</a></li>
         <li><a href="/screens/configuration">Configuration</a></li>
