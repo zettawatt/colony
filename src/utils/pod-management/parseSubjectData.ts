@@ -37,31 +37,41 @@ export function parseSubjectData(subjectData: any, podAddress: string, subjectAd
     "results" in subjectData &&
     "bindings" in subjectData["results"]
   ) {
-    for (const binding of subjectData["results"]["bindings"]){
+    for (const binding of subjectData["results"]["bindings"]) {
       if (binding["graph"]["value"] === `ant://${podAddress}`) {
         let key = binding.predicate.value;
-        key = key.replace('http://schema.org/', '');
-        key = key.replace('http://www.w3.org/1999/02/22-rdf-syntax-ns#', '')
+        key = key.replace('http://schema.org/', 'schema:');
+        key = key.replace('http://www.w3.org/1999/02/22-rdf-syntax-ns#', '');
 
+        // Special handling for type
         if (key === 'type') {
-          let type = (binding.object.value).replace('http://schema.org/', '');
-          if (type in typeToFieldName) {
+          let typeVal = (binding.object.value).replace('http://schema.org/', '');
+          parsedSubject.metadata["@type"] = `schema:${typeVal}`;
+          if (typeVal in typeToFieldName) {
             parsedSubject.type = 'file';
-            parsedSubject.metadata["type"] = typeToFieldName[type];
-          } else {
+          } else if (!typeVal || typeVal.includes("pod") || typeVal.includes("ref")) {
             parsedSubject.type = 'pod-ref';
-            parsedSubject.metadata["type"] = type
           }
-        } else if (key in jsonKeyToFieldName) {
-          let fieldKey = jsonKeyToFieldName[key];
-          parsedSubject.metadata[fieldKey] = binding.object.value;
-        } else if (key === "contentSize") {
-          parsedSubject["fileSize"] = binding.object.value;
-        } else {
-          parsedSubject[key] = binding.object.value;
+        } 
+        else if (key === "schema:contentSize") {
+          parsedSubject.fileSize = binding.object.value;
+          parsedSubject.metadata[key] = binding.object.value;
+        }
+        else if (key === "schema:name") {
+          parsedSubject.name = binding.object.value;
+          parsedSubject.metadata[key] = binding.object.value;
+        }
+        else {
+          // Put all other schema.org keys directly into metadata:
+          parsedSubject.metadata[key] = binding.object.value;
         }
       }
     }
   }
+
+  if (!("@context" in parsedSubject["metadata"]) && parsedSubject.type === 'file') {
+    parsedSubject["metadata"]["@context"] = { "schema": "http://schema.org/" };
+  }
+
   return parsedSubject;
 }
