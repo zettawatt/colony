@@ -172,5 +172,13 @@ export const templates = {
     "schema:operatingSystem": "Linux",
     "schema:contentSize": "8000000",
     "schema:applicationCategory": "Application"
-  }
+  },
+  Simple: {
+    "@context": { "schema": "http://schema.org/" },
+    "@type": "schema:CreativeWork",
+    "schema:name": "creativework-3a6f11.pdf",
+    "schema:alternateName": "",
+    "schema:description": "",
+    "schem:comment": ""
+  },
 };
