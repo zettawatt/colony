@@ -10,6 +10,7 @@
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
   import { v4 as uuidv4 } from 'uuid';
   import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
+  import { templates } from "../../../../utils/pod-management/jsonLDTemplates";
 
   let podListTemp = $state([
     {
@@ -66,6 +67,8 @@
     depth?: string | undefined;
   };
 
+  let selectedType = $state("Book");
+  let jsonInputText = $state(JSON.stringify(templates[selectedType], null, 2));
   let isLoading = $state(false);
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
@@ -93,11 +96,39 @@
   let editingPodItem = $state();
   let editMetadataFields = $state({});
   let deletedPodItems = $state([]);
+  let isValid = $state(false);
+  let error = $state(null);
+  let parsed = $state(null);
+
 
   $effect(()=> {
     console.log('activepod', activePod)
   })
 
+  function loadTemplate(type) {
+    selectedType = type;
+    const template = templates[type];
+    jsonInputText = JSON.stringify(template, null, 2);
+    isValid = false;
+    error = null;
+    parsed = null;
+  }
+
+  function validateJsonLd() {
+    try {
+      const obj = JSON.parse(jsonInputText);
+      if (!obj["@context"] || !obj["@type"]) {
+        throw new Error("Missing required @context or @type fields.");
+      }
+      parsed = obj;
+      isValid = true;
+      error = null;
+    } catch (e) {
+      isValid = false;
+      error = e.message;
+      parsed = null;
+    }
+  }
 
   async function addPodRef(podAddress, podRefAddress) {
     try {
@@ -158,7 +189,22 @@
     if (activePod.fileObjs.length > 0 || deletedPodItems.length > 0) {
       for (const file of activePod.fileObjs) {
         if (file.type === 'file' && file.modified === true){
-          const metadataJson = generateFileMetaJson(file)
+          if (("metadata" in file) && Object.keys(file.metadata).length === 0){
+            file.metadata = JSON.parse(JSON.stringify(templates["Simple"]));
+            if ("uploadedDate" in file) {
+              file.metadata["schema:contentSize"] = file.fileSize ?? "0";
+              file.metadata["schema:name"] = file.name;
+            }
+          }
+          if ("autonomiAddress" in file) {
+            file.metadata["@id"] = `ant://${file.autonomiAddress}`;
+          } else {
+            addToast("File couldn't be added to pod because it's never been uploaded to the network before.", "error");
+            console.error("file doesn't have an Autonomi address for some reason");
+            continue;
+          }
+          console.log(file.metadata)
+          // const metadataJson = generateFileMetaJson(file)
           // console.log({
           //   pod_address: activePod.address,
           //   subject_address: file.autonomiAddress,
@@ -170,11 +216,11 @@
           //   // data: JSON.stringify({})
           //   data: JSON.stringify(metadataJson)
           // }});
-          const result = await putSubjectData(activePod.address, file.autonomiAddress, metadataJson)
+          const result = await putSubjectData(activePod.address, file.autonomiAddress, file.metadata)
           addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
           const result = await addPodRef(activePod.address, file.autonomiAddress)
-          console.log(result);
+          // console.log(result);
         }
       }
 
@@ -463,28 +509,53 @@
     })
   }
 
+
   function saveMetaDataToItem() {
-    if (editingPodItem) {
-      editingPodItem.metadata = {...editMetadataFields}; // copy values
-      editingPodItem.metadata["type"] = activeFileType;
-      editingPodItem.modified = true;
-      addToast('Metadata saved!', 'success');
+    try {
+      if (editingPodItem) {
+        editingPodItem.metadata = JSON.parse(jsonInputText);
+        editingPodItem.modified = true;
+
+        if (Object.keys(editingPodItem.metadata).length === 0){
+          throw Error("Metadata can't be empty!")
+        }
+
+        if ("uploadedDate" in editingPodItem) {
+          editingPodItem.metadata["schema:contentSize"] = editingPodItem.fileSize ?? "0";
+          editingPodItem.metadata["schema:name"] = editingPodItem.name;
+        }
+        addToast('Metadata saved!', 'success');
+      }
+      console.log(editingPodItem)
+      editFileMetadataModal.close();  
+    } catch (error) {
+      console.error(error);
+      addToast("Could not save your metadata, ensure that it's valid JSON first.", "error");
     }
-    console.log(editingPodItem)
-    editFileMetadataModal.close();
   }
 
   function openEditMetadata(item) {
-    editingPodItem = item;
-    activeFileType = item.metadata.type;
-    // Shallow copy to avoid direct binding unless you want live updating
-    editMetadataFields = {...(item.metadata || {})};
-    // If there are new fields, ensure they're in the object
-    for (const field of displayFields) {
-      if (!(field in editMetadataFields)) {
-        editMetadataFields[field] = "";
+    try {
+      if (Object.keys(item.metadata).length === 0) {
+        loadTemplate("Book")
+      } else {
+        jsonInputText = JSON.stringify(item.metadata, null, 2);
       }
+    } catch (error) {
+      console.error(error);
+      addToast("Couldn't parse metadata for some reason. See logs...", "error")
+      jsonInputText = JSON.stringify({}, null, 2);
     }
+    editingPodItem = item;
+    // activeFileType = item.metadata.type;
+    // Shallow copy to avoid direct binding unless you want live updating
+    // editMetadataFields = {...(item.metadata || {})};
+    // If there are new fields, ensure they're in the object
+    // for (const field of displayFields) {
+    //   if (!(field in editMetadataFields)) {
+    //     editMetadataFields[field] = "";
+    //   }
+    // }
     editFileMetadataModal.showModal();
   }
 
@@ -536,7 +607,7 @@
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
-          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPods(0)} disabled={$podsSyncing}>Sync Pods</button>
+          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>Sync Pods</button>
           <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
@@ -804,59 +875,6 @@
       </div>
     </div>
   </dialog>
-  <!-- <dialog id="editPodModalOld" class="modal">
-    <div class="modal-box w-10/12 max-w-3xl max-h-lg">
-      <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
-      <div class="py-2" style="justify-content: center;">
-        <div class="join">
-          <select class="select" bind:value={selectedFileName}>
-            <option disabled selected>File Reference</option>
-            {#if uploadedFiles.length > 0}
-              {#each uploadedFiles as file}
-                <option>{file.name}</option>
-              {/each}
-            {/if}
-          </select>
-          <button class="btn join-item" onclick={addFileToActivePod} disabled={!selectedFileName}>
-            Add File To Pod
-          </button>
-        </div>
-        <table class="table" id="pod">
-          <thead>
-            <tr>
-              <th>File name</th>
-              <th>File size</th>
-              <th>File type</th>
-              <th>File Metadata</th>
-              <th>Operations</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#if activePod?.fileObjs && activePod.fileObjs.length > 0}
-              {#each activePod.fileObjs as file}
-                <tr>
-                  <td>{file.name}</td>
-                  <td>{formatFileSize(file.fileSize)}</td>
-                  <td>{file.extension}</td>
-                  <td></td>
-                  <td>
-                  </td>
-                </tr>
-              {/each}
-            {:else}
-              <tr><td colspan="5" style="text-align:center;">No files in pod</td></tr>
-            {/if}
-          </tbody>
-        </table>
-      </div>
-      <div class="modal-action">
-        <form method="dialog">
-          <button class="btn btn-primary" onclick={() => addFilesToPod()}>Save Pod</button>
-          <button class="btn btn-soft btn-error">Cancel</button>
-        </form>
-      </div>
-    </div>
-  </dialog> -->
   <dialog id="editFileMetadataModal" class="modal">
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Editing Metadata</h3>
@@ -867,25 +885,36 @@
             <input type="text" class="input w-full" placeholder="some address" bind:value={podRefAddress}/>
           </fieldset>
         {:else}
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">File Type</legend>
-            <select class="input" bind:value={activeFileType}>
-              <option disabled selected value="">Select a file type</option>
-              {#each availableTypes as type}
-                <option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              {/each}
-            </select>
-
-            {#each displayFields as field}
-              <legend class="fieldset-legend">{field}</legend>
-              <input
-                type="text"
-                class="input"
-                placeholder={field}
-                bind:value={editMetadataFields[field]}
-              />
+          <label class="block mb-2 font-semibold">Choose a type:</label>
+          <select class="mb-4 p-2 select" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
+            {#each Object.keys(templates) as type}
+              <option value={type}>{type}</option>
             {/each}
+          </select>
+
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">File Metadata (JSON-LD)</legend>
+            <textarea 
+              class="textarea code-input" 
+              style="min-height: 300px; width:100%" 
+              placeholder="" 
+              bind:value={jsonInputText}
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            >
+            </textarea>
           </fieldset>
+          <button class="mt-4 btn btn-primary" onclick={validateJsonLd}>
+            Validate
+          </button>
+
+          {#if isValid}
+            <p class="mt-4 text-green-600 font-medium">✅ Valid JSON-LD!</p>
+          {:else if error}
+            <p class="mt-4 text-red-600">❌ {error}</p>
+            <p class="mt-4 text-red-600">❌ Check for invalid commas and that key value pairs are double quoted.</p>
+          {/if}
         {/if}
       </div>
       <div class="modal-action">
@@ -909,6 +938,20 @@
         <form method="dialog">
           <button class="btn btn-neutral" onclick={() => {addPodReference()}}>Add</button>
           <button class="btn btn-soft btn-error" onclick={()=>{podRefAddress=""}}>Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="syncPodsModal" class="modal">
+    <div class="modal-box w-5/12 max-w-xl">
+      <h3 class="text-lg font-bold">Warning</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p>Syncing pods attempts to sync your local pods with pods on the Autonomi Network. This will overwrite your local pods. If you have made any changes to your local pods that you want saved, you must upload your pods first!</p>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-neutral" onclick={() => {syncPods(0)}}>Sync Pods</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
     </div>
@@ -1021,5 +1064,7 @@
     z-index: 1 !important;
   }
 }
+
+.code-input { font-family: monospace; }
 
 </style>
