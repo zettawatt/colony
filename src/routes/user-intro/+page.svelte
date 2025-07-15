@@ -93,11 +93,12 @@
   }
 
   async function finishSteps() {
-    console.log({
-      confirmSeedWords,
-      password,
-      walletPrivateKey
-    })
+    // console.log({
+    //   confirmSeedWords,
+    //   password,
+    //   walletPrivateKey
+    // })
+    addToast("Finalizing setup, please wait...", "info");
     await firstTimeSetup();
   }
 
@@ -130,9 +131,9 @@
       await invoke('set_active_wallet', { name: initWalletName });
       const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
       const podManager = await invoke("initialize_pod_manager");
+      addToast("Connected to Autonomi Network!", "success");
       await startDweb(walletPrivateKey);
       reroute("/screens/search");
-      addToast("Connected to Autonomi Network!", "success");
       return true;
     } catch (error) {
       addToast("Encounted an error on start up, see logs...", "error");

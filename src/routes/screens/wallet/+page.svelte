@@ -69,7 +69,7 @@
   export async function listWallets() {
     try {
       const wallets = await invoke('list_wallets');
-      console.log("wallets", wallets)
+      // console.log("wallets", wallets)
       return wallets;
     } catch (error) {
       console.error('Error listing wallets:', error);
@@ -148,7 +148,7 @@
         if (b.name === primaryWalletName) return 1;
         return 0;
       });
-      console.log("storedWallets", storedWallets);
+      // console.log("storedWallets", storedWallets);
     } catch (error) {
       console.error(error)
     }
