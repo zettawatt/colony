@@ -854,7 +854,16 @@
 
           <fieldset class="fieldset">
             <legend class="fieldset-legend">File Metadata (JSON-LD)</legend>
-            <textarea class="textarea code-input" style="min-height: 300px; width:100%" placeholder="" bind:value={jsonText}></textarea>
+            <textarea 
+              class="textarea code-input" 
+              style="min-height: 300px; width:100%" 
+              placeholder="" 
+              bind:value={jsonText}
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            >
+            </textarea>
           </fieldset>
           <button class="mt-4 btn btn-primary" onclick={validateJsonLd}>
             Validate
