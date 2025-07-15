@@ -13,6 +13,7 @@
   let currentTheme = $globalTheme;
   let tableReady = false;
   let tableHeight = 300;
+  let windowScroll = [0, 0]; // store X, Y
 
   function setTableHeight() {
     if (window) {
@@ -28,6 +29,15 @@
         : '/css/tabulator.min.css';
       if (tabulatorInstance) tabulatorInstance.redraw(true);
     }
+  }
+
+  function replaceTableDataWithScrollRestore(newData) {
+    windowScroll = [window.scrollX, window.scrollY]; // save before replacing data
+    tabulatorInstance.replaceData(newData); // update data
+  }
+
+  function handleRenderComplete() {
+    window.scroll(windowScroll[0], windowScroll[1]);
   }
 
   onMount(async () => {
@@ -51,6 +61,8 @@
       }
     });
 
+    tabulatorInstance.on('renderComplete', handleRenderComplete);
+
     unlisten = await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
       console.log("theme changed", theme)
       switchTabulatorTheme(theme);
@@ -59,12 +71,15 @@
 
   onDestroy(() => {
     if (unlisten) unlisten();
-    if (tabulatorInstance) tabulatorInstance.destroy();
+    if (tabulatorInstance) {
+      tabulatorInstance.off('renderComplete', handleRenderComplete);
+      tabulatorInstance.destroy();
+    }
     window.removeEventListener('resize', setTableHeight);
   });
 
   $: if (tabulatorInstance && Array.isArray(data)) {
-    tabulatorInstance.replaceData(data);
+    replaceTableDataWithScrollRestore(data);
   }
 
   $: if (typeof $globalTheme === 'string') {
