@@ -68,7 +68,7 @@
   };
 
   let selectedType = $state("Book");
-  let jsonText = $state(JSON.stringify(templates[selectedType], null, 2));
+  let jsonInputText = $state(JSON.stringify(templates[selectedType], null, 2));
   let isLoading = $state(false);
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
@@ -108,7 +108,7 @@
   function loadTemplate(type) {
     selectedType = type;
     const template = templates[type];
-    jsonText = JSON.stringify(template, null, 2);
+    jsonInputText = JSON.stringify(template, null, 2);
     isValid = false;
     error = null;
     parsed = null;
@@ -116,7 +116,7 @@
 
   function validateJsonLd() {
     try {
-      const obj = JSON.parse(jsonText);
+      const obj = JSON.parse(jsonInputText);
       if (!obj["@context"] || !obj["@type"]) {
         throw new Error("Missing required @context or @type fields.");
       }
@@ -189,7 +189,18 @@
     if (activePod.fileObjs.length > 0 || deletedPodItems.length > 0) {
       for (const file of activePod.fileObjs) {
         if (file.type === 'file' && file.modified === true){
-          const metadataJson = generateFileMetaJson(file)
+          if (("metadata" in file) && Object.keys(file.metadata).length === 0){
+            file.metadata = JSON.parse(JSON.stringify(templates["Simple"]));
+            if ("uploadedDate" in file) {
+              file.metadata["schema:contentSize"] = file.fileSize ?? "0";
+              file.metadata["schema:name"] = file.name;
+            }
+          }
+          if ("autonomiAddress" in file) {
+            file.metadata["@id"] = `ant://${file.autonomiAddress}`;
+          }
+          console.log(file.metadata)
+          // const metadataJson = generateFileMetaJson(file)
           // console.log({
           //   pod_address: activePod.address,
           //   subject_address: file.autonomiAddress,
@@ -201,11 +212,11 @@
           //   // data: JSON.stringify({})
           //   data: JSON.stringify(metadataJson)
           // }});
-          const result = await putSubjectData(activePod.address, file.autonomiAddress, metadataJson)
+          const result = await putSubjectData(activePod.address, file.autonomiAddress, file.metadata)
           addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
           const result = await addPodRef(activePod.address, file.autonomiAddress)
-          console.log(result);
+          // console.log(result);
         }
       }
 
@@ -494,28 +505,53 @@
     })
   }
 
+
   function saveMetaDataToItem() {
-    if (editingPodItem) {
-      editingPodItem.metadata = {...editMetadataFields}; // copy values
-      editingPodItem.metadata["type"] = activeFileType;
-      editingPodItem.modified = true;
-      addToast('Metadata saved!', 'success');
+    try {
+      if (editingPodItem) {
+        editingPodItem.metadata = JSON.parse(jsonInputText);
+        editingPodItem.modified = true;
+
+        if (Object.keys(editingPodItem.metadata).length === 0){
+          throw Error("Metadata can't be empty!")
+        }
+
+        if ("uploadedDate" in editingPodItem) {
+          editingPodItem.metadata["schema:contentSize"] = editingPodItem.fileSize ?? "0";
+          editingPodItem.metadata["schema:name"] = editingPodItem.name;
+        }
+        addToast('Metadata saved!', 'success');
+      }
+      console.log(editingPodItem)
+      editFileMetadataModal.close();  
+    } catch (error) {
+      console.error(error);
+      addToast("Could not save your metadata, ensure that it's valid JSON first.", "error");
     }
-    console.log(editingPodItem)
-    editFileMetadataModal.close();
   }
 
   function openEditMetadata(item) {
-    editingPodItem = item;
-    activeFileType = item.metadata.type;
-    // Shallow copy to avoid direct binding unless you want live updating
-    editMetadataFields = {...(item.metadata || {})};
-    // If there are new fields, ensure they're in the object
-    for (const field of displayFields) {
-      if (!(field in editMetadataFields)) {
-        editMetadataFields[field] = "";
+    try {
+      if (Object.keys(item.metadata).length === 0) {
+        loadTemplate("Book")
+      } else {
+        jsonInputText = JSON.stringify(item.metadata, null, 2);
       }
+    } catch (error) {
+      console.error(error);
+      addToast("Couldn't parse metadata for some reason. See logs...", "error")
+      jsonInputText = JSON.stringify({}, null, 2);
     }
+    editingPodItem = item;
+    // activeFileType = item.metadata.type;
+    // Shallow copy to avoid direct binding unless you want live updating
+    // editMetadataFields = {...(item.metadata || {})};
+    // If there are new fields, ensure they're in the object
+    // for (const field of displayFields) {
+    //   if (!(field in editMetadataFields)) {
+    //     editMetadataFields[field] = "";
+    //   }
+    // }
     editFileMetadataModal.showModal();
   }
 
@@ -846,7 +882,7 @@
           </fieldset>
         {:else}
           <label class="block mb-2 font-semibold">Choose a type:</label>
-          <select class="mb-4 p-2 border rounded" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
+          <select class="mb-4 p-2 select" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
             {#each Object.keys(templates) as type}
               <option value={type}>{type}</option>
             {/each}
@@ -858,7 +894,7 @@
               class="textarea code-input" 
               style="min-height: 300px; width:100%" 
               placeholder="" 
-              bind:value={jsonText}
+              bind:value={jsonInputText}
               autocorrect="off"
               autocapitalize="off"
               spellcheck="false"
@@ -873,6 +909,7 @@
             <p class="mt-4 text-green-600 font-medium">✅ Valid JSON-LD!</p>
           {:else if error}
             <p class="mt-4 text-red-600">❌ {error}</p>
+            <p class="mt-4 text-red-600">❌ Check for invalid commas and that key value pairs are double quoted.</p>
           {/if}
         {/if}
       </div>
