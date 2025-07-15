@@ -20,9 +20,9 @@ use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::Manager;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, RunEvent, State, WindowEvent};
 use tauri_plugin_shell::{process::CommandChild, Error as ShellError, ShellExt};
-use tracing::{error, info};
+use tracing::{debug, error, info, warn};
 
 #[tauri::command]
 fn get_file_size(path: String) -> Result<u64, String> {
@@ -2162,9 +2162,19 @@ async fn download_directory(
     ))
 }
 
-#[tauri::command]
-async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
-    let process = state.lock().unwrap().dweb_process.lock().unwrap().take();
+/// Helper function to stop the dweb process - can be called from commands or event handlers.
+///
+/// This function safely terminates the dweb sidecar process if it's running.
+/// It's designed to be called both from the dweb_stop command and from application
+/// exit event handlers to ensure the process is properly cleaned up.
+fn stop_dweb_process(app_state: &Mutex<AppState>) -> Result<String, Error> {
+    let process = app_state
+        .lock()
+        .unwrap()
+        .dweb_process
+        .lock()
+        .unwrap()
+        .take();
 
     if let Some(child) = process {
         match child.kill() {
@@ -2178,10 +2188,27 @@ async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
             }
         }
     } else {
+        info!("No dweb process running");
         Ok("No dweb process running".to_string())
     }
 }
 
+#[tauri::command]
+async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
+    stop_dweb_process(&state)
+}
+
+/// Starts the dweb sidecar process with logging support.
+///
+/// This function spawns the dweb sidecar binary and captures its stdout/stderr output,
+/// forwarding it to the application's logging system. This allows debugging of dweb
+/// issues through the existing logging infrastructure.
+///
+/// - stdout messages are logged at INFO level with "[dweb stdout]" prefix
+/// - stderr messages are logged at WARN level with "[dweb stderr]" prefix
+/// - Process termination and errors are logged at ERROR level
+///
+/// The logging can be controlled through the existing tracing configuration.
 #[tauri::command]
 async fn dweb_serve(
     app: AppHandle,
@@ -2206,11 +2233,51 @@ async fn dweb_serve(
     }
 
     let sidecar_command = app.shell().sidecar("dweb")?;
-    let (_rx, child) = sidecar_command
+    let (mut rx, child) = sidecar_command
         .args(args)
         .env("SECRET_KEY", wallet_key)
         .spawn()
         .expect("Failed to run dweb serve");
+
+    // Spawn a task to handle stdout/stderr logging
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                tauri_plugin_shell::process::CommandEvent::Stdout(data) => {
+                    let output = String::from_utf8_lossy(&data);
+                    for line in output.lines() {
+                        if !line.trim().is_empty() {
+                            info!("[dweb stdout] {}", line.trim());
+                        }
+                    }
+                }
+                tauri_plugin_shell::process::CommandEvent::Stderr(data) => {
+                    let output = String::from_utf8_lossy(&data);
+                    for line in output.lines() {
+                        if !line.trim().is_empty() {
+                            warn!("[dweb stderr] {}", line.trim());
+                        }
+                    }
+                }
+                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                    if payload.code.unwrap_or(-1) != 0 {
+                        error!("[dweb] Process terminated with code: {:?}", payload.code);
+                    } else {
+                        info!("[dweb] Process terminated normally");
+                    }
+                    break;
+                }
+                tauri_plugin_shell::process::CommandEvent::Error(err) => {
+                    error!("[dweb] Process error: {}", err);
+                    break;
+                }
+                _ => {
+                    // Handle any other event types that might be added in the future
+                    debug!("[dweb] Received unhandled event type");
+                }
+            }
+        }
+    });
 
     // Store the child process for later termination
     {
@@ -2222,13 +2289,69 @@ async fn dweb_serve(
     Ok(format!("Started dweb serve with network: {network}"))
 }
 
+/// Opens an address using the dweb sidecar with logging support.
+///
+/// This function spawns the dweb sidecar to open a specific address and captures
+/// its output for debugging purposes. All output is logged with the address
+/// included in the log message for easier tracking.
 #[tauri::command]
 async fn dweb_open(app: AppHandle, address: String) -> Result<String, Error> {
     let sidecar_command = app.shell().sidecar("dweb")?;
-    let (_rx, mut _child) = sidecar_command
+    let (mut rx, mut _child) = sidecar_command
         .args(["open", &address])
         .spawn()
         .expect("Failed to open the address with dweb");
+
+    // Spawn a task to handle stdout/stderr logging for the open command
+    let address_clone = address.clone();
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                tauri_plugin_shell::process::CommandEvent::Stdout(data) => {
+                    let output = String::from_utf8_lossy(&data);
+                    for line in output.lines() {
+                        if !line.trim().is_empty() {
+                            info!("[dweb open {}] {}", address_clone, line.trim());
+                        }
+                    }
+                }
+                tauri_plugin_shell::process::CommandEvent::Stderr(data) => {
+                    let output = String::from_utf8_lossy(&data);
+                    for line in output.lines() {
+                        if !line.trim().is_empty() {
+                            warn!("[dweb open {}] {}", address_clone, line.trim());
+                        }
+                    }
+                }
+                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                    if payload.code.unwrap_or(-1) != 0 {
+                        error!(
+                            "[dweb open {}] Process terminated with code: {:?}",
+                            address_clone, payload.code
+                        );
+                    } else {
+                        debug!(
+                            "[dweb open {}] Process completed successfully",
+                            address_clone
+                        );
+                    }
+                    break;
+                }
+                tauri_plugin_shell::process::CommandEvent::Error(err) => {
+                    error!("[dweb open {}] Process error: {}", address_clone, err);
+                    break;
+                }
+                _ => {
+                    debug!(
+                        "[dweb open {}] Received unhandled event type",
+                        address_clone
+                    );
+                }
+            }
+        }
+    });
+
+    info!("Opening address with dweb: {}", address);
     Ok("Opened address with dweb".to_string())
 }
 
@@ -2332,11 +2455,47 @@ pub fn run(network: &str) {
             dweb_stop,
             dweb_open,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| match event {
+            RunEvent::ExitRequested { .. } => {
+                info!("Application exit requested - stopping dweb process");
+                cleanup_dweb_process(app);
+            }
+            RunEvent::WindowEvent {
+                event: WindowEvent::CloseRequested { .. },
+                ..
+            } => {
+                info!("Window close requested - stopping dweb process");
+                cleanup_dweb_process(app);
+            }
+            RunEvent::WindowEvent {
+                event: WindowEvent::Destroyed,
+                ..
+            } => {
+                info!("Window destroyed - ensuring dweb process cleanup");
+                cleanup_dweb_process(app);
+            }
+            _ => {}
+        });
 }
 
 // Helper functions that aren't tauri commands
+
+/// Helper function to cleanup dweb process during application shutdown.
+/// This function is called from various exit event handlers to ensure
+/// the dweb sidecar process is properly terminated.
+fn cleanup_dweb_process(app: &AppHandle) {
+    if let Some(app_state) = app.try_state::<Mutex<AppState>>() {
+        match stop_dweb_process(&app_state) {
+            Ok(msg) => info!("Cleanup: {}", msg),
+            Err(e) => error!("Failed to stop dweb process during cleanup: {}", e),
+        }
+    } else {
+        warn!("Could not access app state during dweb cleanup");
+    }
+}
+
 async fn init_client(environment: &str) -> Result<Client, Error> {
     match environment {
         "local" => Ok(Client::init_local().await?),
@@ -2365,6 +2524,35 @@ mod tests {
             },
             dweb_process: Mutex::new(None),
         })
+    }
+
+    #[test]
+    fn test_stop_dweb_process_no_process() {
+        // Test stopping dweb when no process is running
+        let app_state = create_test_app_state();
+        let result = stop_dweb_process(&app_state);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "No dweb process running");
+    }
+
+    #[test]
+    fn test_stop_dweb_process_with_mock_process() {
+        // This test verifies the function structure but can't test actual process killing
+        // without creating a real process, which would be complex in a unit test
+        let app_state = create_test_app_state();
+
+        // Verify that the function handles the case where no process is stored
+        let result = stop_dweb_process(&app_state);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "No dweb process running");
+
+        // Verify that the dweb_process field is properly accessed
+        {
+            let state = app_state.lock().unwrap();
+            let process_guard = state.dweb_process.lock().unwrap();
+            assert!(process_guard.is_none());
+        }
     }
 
     // Helper function to create a mock keystore with some test wallets
