@@ -536,7 +536,7 @@
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding-top:4vh;">
         <h2 class="h2">Your Pods</h2>
         <div class="utility-bar" style="display: flex;">
-          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPods(0)} disabled={$podsSyncing}>Sync Pods</button>
+          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>Sync Pods</button>
           <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
           <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
         </div>
@@ -909,6 +909,20 @@
         <form method="dialog">
           <button class="btn btn-neutral" onclick={() => {addPodReference()}}>Add</button>
           <button class="btn btn-soft btn-error" onclick={()=>{podRefAddress=""}}>Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="syncPodsModal" class="modal">
+    <div class="modal-box w-5/12 max-w-xl">
+      <h3 class="text-lg font-bold">Warning</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p>Syncing pods attempts to sync your local pods with pods on the Autonomi Network. This will overwrite your local pods. If you have made any changes to your local pods that you want saved, you must upload your pods first!</p>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-neutral" onclick={() => {syncPods(0)}}>Sync Pods</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
     </div>
