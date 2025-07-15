@@ -198,6 +198,10 @@
           }
           if ("autonomiAddress" in file) {
             file.metadata["@id"] = `ant://${file.autonomiAddress}`;
+          } else {
+            addToast("File couldn't be added to pod because it's never been uploaded to the network before.", "error");
+            console.error("file doesn't have an Autonomi address for some reason");
+            continue;
           }
           console.log(file.metadata)
           // const metadataJson = generateFileMetaJson(file)
