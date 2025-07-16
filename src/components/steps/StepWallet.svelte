@@ -2,18 +2,35 @@
 <script lang="ts">
   
   export let walletPrivateKey;
+  $: isValidPrivateKey = /^([a-fA-F0-9]{64})$/.test(walletPrivateKey);
 </script>
 
 <div>
   <h3 class="text-3xl font-extrabold dark:text-white" style="text-align: center;">Wallet</h3>
   <div class="row pt-3 pb-3">
-    <p>If you'd like to upload content to the network, you must input your wallet's private key. You may skip this step if you want to browse the network.</p>
-    <!-- <button class="btn">Default</button> -->
+    <p>
+      Welcome! 🚀 If you plan on uploading content to the network, please enter your wallet's private key below.<br>
+      <strong>You may <u>skip this step</u> by clicking Next if you just want to browse and download content from the network.</strong>
+    </p>    <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
     <label class="label">Wallet Private Key: </label>
-    <input bind:value={walletPrivateKey} type="text" class="input" placeholder="0x0000000000000000000000000000000000000000000000000000000000000000" />
+    <input 
+      bind:value={walletPrivateKey} 
+      type="text" 
+      class="input"
+      maxlength="64"
+      autocorrect="off"
+      spellcheck="false"
+      autocomplete="off"
+      autocapitalize="off"
+      placeholder="wallet private key" />
   </div>
+  {#if walletPrivateKey && !isValidPrivateKey}
+    <div class="row" style="color: red;">
+      Private key must be exactly 64 hexadecimal characters (0-9, a-f).
+    </div>
+  {/if}
 </div>
 
 <style>

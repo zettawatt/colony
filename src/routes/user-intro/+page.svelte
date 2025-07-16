@@ -98,7 +98,7 @@
     //   password,
     //   walletPrivateKey
     // })
-    addToast("Finalizing setup, please wait...", "info");
+    addToast("Finalizing setup, please wait...", "info", 8000);
     await firstTimeSetup();
   }
 
@@ -131,7 +131,7 @@
       await invoke('set_active_wallet', { name: initWalletName });
       const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
       const podManager = await invoke("initialize_pod_manager");
-      addToast("Connected to Autonomi Network!", "success");
+      // addToast("Connected to Autonomi Network!", "success");
       await startDweb(walletPrivateKey);
       reroute("/screens/search");
       return true;
