@@ -92,7 +92,44 @@ fn fetch_binaries() {
 }
 
 fn get_latest_release_tag() -> Result<String, Box<dyn std::error::Error>> {
+    const FALLBACK_VERSION: &str = "v0.10.1"; // Latest known working version as of 2025-07-15
+    const MAX_RETRIES: u32 = 4;
+    const RETRY_DELAY_SECONDS: u64 = 30;
+
     let url = "https://api.github.com/repos/happybeing/dweb/releases/latest";
+
+    for attempt in 1..=MAX_RETRIES {
+        match try_get_release_tag(url) {
+            Ok(tag) => return Ok(tag),
+            Err(e) => {
+                // Check if it's a 403 (rate limit) error
+                if let Some(ureq::Error::Status(403, _)) = e.downcast_ref::<ureq::Error>() {
+                    println!("cargo:warning=GitHub API rate limit hit (attempt {attempt}/{MAX_RETRIES}), waiting {RETRY_DELAY_SECONDS} seconds...");
+
+                    if attempt < MAX_RETRIES {
+                        std::thread::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECONDS));
+                        continue;
+                    } else {
+                        println!("cargo:warning=Max retries reached, falling back to hardcoded version: {FALLBACK_VERSION}");
+                        return Ok(FALLBACK_VERSION.to_string());
+                    }
+                }
+
+                // For non-403 errors, fail immediately
+                println!("cargo:warning=Failed to get release tag (attempt {attempt}): {e}");
+                if attempt == 1 {
+                    // If it's not a rate limit error, don't retry
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    // This should never be reached, but just in case
+    Ok(FALLBACK_VERSION.to_string())
+}
+
+fn try_get_release_tag(url: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = ureq::get(url).call()?;
     let json: serde_json::Value = response.into_json()?;
 
@@ -103,6 +140,36 @@ fn get_latest_release_tag() -> Result<String, Box<dyn std::error::Error>> {
 }
 
 fn download_file(url: &str, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    const MAX_RETRIES: u32 = 3;
+    const RETRY_DELAY_SECONDS: u64 = 10;
+
+    for attempt in 1..=MAX_RETRIES {
+        match try_download_file(url, path) {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                // Check if it's a 403 (rate limit) error
+                if let Some(ureq::Error::Status(403, _)) = e.downcast_ref::<ureq::Error>() {
+                    println!("cargo:warning=Rate limit hit downloading {url} (attempt {attempt}/{MAX_RETRIES}), waiting {RETRY_DELAY_SECONDS} seconds...");
+
+                    if attempt < MAX_RETRIES {
+                        std::thread::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECONDS));
+                        continue;
+                    }
+                }
+
+                // For non-403 errors or final attempt, return the error
+                if attempt == MAX_RETRIES {
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    // This should never be reached
+    Err("Max retries exceeded".into())
+}
+
+fn try_download_file(url: &str, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let response = ureq::get(url).call()?;
     let mut file = fs::File::create(path)?;
     std::io::copy(&mut response.into_reader(), &mut file)?;

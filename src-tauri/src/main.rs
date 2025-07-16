@@ -26,8 +26,9 @@ async fn main() {
     let subscriber = tracing_subscriber::registry()
         .with(
             filter::Targets::new()
-                .with_target("colonylib", Level::DEBUG) // INFO level for colonylib
-                .with_target("colony", Level::DEBUG) // INFO level for main.rs
+                .with_target("colonylib", Level::DEBUG) // DEBUG level for colonylib
+                .with_target("colony", Level::DEBUG) // DEBUG level for colony
+                .with_target("colony_app", Level::DEBUG) // DEBUG level for colony-app (includes dweb sidecar logs)
                 .with_default(Level::ERROR),
         ) // ERROR level for other modules
         .with(tracing_subscriber::fmt::layer());
