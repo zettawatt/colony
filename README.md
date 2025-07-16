@@ -82,8 +82,9 @@ The system leverages [RDF](https://www.w3.org/RDF/) and [SPARQL](https://en.wiki
 ### Prerequisites
 
 - **Rust** - Install from [rustup.rs](https://rustup.rs/)
-- **Node.js** - Install LTS version from [nodejs.org](https://nodejs.org/)
+- **Node.js** - Install Node 20.19.0 [nodejs.org](https://nodejs.org/download/release/v20.19.0/)
 - **Git** - For cloning the repository
+- **System Dependencies** See Tauri's reference docs about this [tauri.app](https://tauri.app/start/prerequisites/#system-dependencies)
 
 ### Setup Steps
 
@@ -98,20 +99,81 @@ The system leverages [RDF](https://www.w3.org/RDF/) and [SPARQL](https://en.wiki
    npm install
    ```
 
-3. **Run in development mode**
+3. **Platform-specific configuration**
+     Before running the application, we rely on a rocksdb to create the graph database. If you run into trouble, you may need to ensure that c++ dependencies are setup correctly. 
+
+   - #### 🍎 **macOS: Configure clang (C++)**
+      <details>
+         <summary>Setting up C++ ENV Variables</summary>
+         <br>
+
+         [target.aarch64-apple-darwin.env]
+         SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+         CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+
+         [target.x86_64-apple-darwin.env]
+         SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+         CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+      </details>
+
+   - #### 🪟 **Windows**
+      <details> 
+         <summary>Windows Libclang Setup</summary>
+         <br>
+
+         Step 1: Install LLVM
+
+         Download and install LLVM from the official GitHub releases page:
+
+         https://github.com/llvm/llvm-project/releases
+
+         During installation:
+         - Enable adding LLVM to your system PATH
+         - If you skip this, you'll need to manually add it later
+
+         Step 2: Set the `LIBCLANG_PATH` Environment Variable
+
+         After installation, locate `libclang.dll`, typically at:
+         C:\Program Files\LLVM\bin\libclang.dll
+         
+         ##### Temporary (PowerShell):
+         $env:LIBCLANG_PATH="C:\Program Files\LLVM\bin"
+
+      </details>
+
+   - #### 🐧 **Linux**
+      <details>
+         <summary>Installing Clang (Ubuntu)</summary>
+         <br>
+
+         Step 1: Update
+         sudo apt update
+
+         Step 2: Install
+         sudo apt install clang
+
+      </details>
+
+4. **Run in development mode**
    ```bash
    npm run tauri dev
    ```
 
-### Building for Production
+### Building From Source
 
+After you've setup the dev evironment, you can build from source by using the following command followed by your desired options:
+
+Windows:
 ```bash
-# Build the frontend
-npm run build
-
-# Build the Tauri application
 npm run tauri build
 ```
+
+To build the MacOS app, you can do so like this:
+```bash
+npm run tauri build -- --bundles app
+```
+
+For more information, see Tauri's build documentation here [Tauri:Building](https://tauri.app/distribute/#distributing)
 
 ### Recommended IDE Setup
 
@@ -139,3 +201,4 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) 
 
 Support Colony development by donating:
 - **ETH/ANT**: `0xc6e3a7a770656B8473DedCc3d4565b6D507afACE`
+
