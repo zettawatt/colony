@@ -31,13 +31,12 @@ Download the latest release for your platform from the [Releases page](https://g
 - **DEB Package**: `colony-app_x.x.x_amd64.deb` - For Debian/Ubuntu systems
 - **RPM Package**: `colony-app-x.x.x-1.x86_64.rpm` - For Red Hat/Fedora systems
 
-#### 🍎 macOS
-- **DMG**: `colony-app_x.x.x_aarch64.dmg` - Drag to Applications folder
-- ⚠️ **Security Notice**: The app is not signed with an Apple Developer certificate. You may need to right-click and select "Open" the first time, or go to System Preferences > Security & Privacy to allow the app to run.
-
 #### 🪟 Windows
 - **MSI Installer**: `colony-app_x.x.x_x64_en-US.msi` - Standard Windows installer
 - ⚠️ **Security Notice**: The app is not signed with a Microsoft certificate. Windows may show a security warning. Click "More info" and then "Run anyway" to proceed.
+
+#### 🍎 macOS - BROKEN
+- Due to the very stringent "security" measures taken by MacOS, we are unable to deliver binaries at this time. See below for how to build the Colony App binary from source.
 
 ### Network Options
 
@@ -69,7 +68,7 @@ Colony is built on a modular architecture that separates concerns between the GU
 
 Colony implements a decentralized metadata system using the concept of "pods" - collections of RDF metadata about files stored on Autonomi:
 
-1. **File Upload**: When you upload a file, Colony stores it on Autonomi and creates RDF metadata describing the file
+1. **File Upload**: When you upload a file, Colony stores it on Autonomi and you create RDF metadata describing the file
 2. **Pod Creation**: Metadata is organized into "pods" - publicly readable collections that can be shared with others
 3. **Discovery**: Users share pod addresses to give others access to their file metadata and discover new content
 4. **Search**: All metadata is stored locally in an RDF graph database, enabling powerful SPARQL-based searches
@@ -182,16 +181,41 @@ For more information, see Tauri's build documentation here [Tauri:Building](http
   - [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode)
   - [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
 
-## 📸 Screenshots
+## 📸 GIFs
 
-Main search interface:
+Initial configuration:
 <p align="center">
- <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/search.png" height="480" />
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/initialization.gif" height="480" />
+</p>
+
+Pod management:
+<p align="center">
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/pod_management.gif" height="480" />
+</p>
+
+Search interface:
+<p align="center">
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/search_screen.gif" height="480" />
+</p>
+
+Status page:
+<p align="center">
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/status_page.gif" height="480" />
+</p>
+
+Configuration Settings:
+<p align="center">
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/configuration.gif" height="480" />
+</p>
+
+Wallet management:
+<p align="center">
+ <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/wallet.gif" height="480" />
 </p>
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
