@@ -105,6 +105,19 @@
     console.log('activepod', activePod)
   })
 
+  $effect(()=> {
+    // Whenever podsSyncing changes, show/hide the syncing dialog
+    if ($podsSyncing) {
+      syncingInProgressModal?.showModal?.();
+      // Prevent closing via Escape key
+      syncingInProgressModal.addEventListener('cancel', (e) => {
+        e.preventDefault();
+      });
+    } else {
+      syncingInProgressModal?.close?.();
+    }
+  })
+
   function loadTemplate(type) {
     selectedType = type;
     const template = templates[type];
@@ -599,7 +612,7 @@
       selected: false
     }));
     console.log(uploadedFiles)
-  })
+  });
 </script>
 <main>
   <Drawer>
@@ -954,6 +967,15 @@
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
+    </div>
+  </dialog>
+  <dialog id="syncingInProgressModal" class="modal">
+    <div class="modal-box flex flex-col items-center">
+      <h3 class="text-lg font-bold mb-2">Syncing is in Progress</h3>
+      <div class="my-4">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+      <p class="mb-2 text-center">Pods are syncing. Please do not close or leave this page until syncing is complete.</p>
     </div>
   </dialog>
 </main>
