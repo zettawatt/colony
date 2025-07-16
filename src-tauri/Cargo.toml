@@ -54,10 +54,10 @@ ruint = "1.12.3"
 tracing-subscriber = "0.3.18"
 futures = "0.3"
 
-# [target.aarch64-apple-darwin.env]
-# SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-# CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
-# 
-# [target.x86_64-apple-darwin.env]
-# SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-# CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+[target.aarch64-apple-darwin.env]
+SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+
+[target.x86_64-apple-darwin.env]
+SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"

@@ -127,6 +127,13 @@ jobs:
           echo "CARGO_PROFILE_RELEASE_LTO=true" >> $GITHUB_ENV
         shell: bash
 
+      - name: Set SDKROOT and CPLUS_INCLUDE_PATH for macOS
+        if: matrix.platform == 'macos-latest'
+        run: |
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
+          echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
