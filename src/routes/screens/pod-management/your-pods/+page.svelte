@@ -304,7 +304,7 @@
 
   async function uploadAllPods() {
     try {
-      addToast("Uploading all pods to the network...", "info");
+      addToast("Uploading all pods to the network...", "info", 8000);
       allPodsUploading.set(true);
       const result = await invoke<string>('upload_all');
       addToast(result, "success");
@@ -376,7 +376,7 @@
   async function syncPods(depthValue: number) {
     try {
       podsSyncing.set(true);
-      addToast("Refreshing pods....", "info");
+      addToast("Syncing pods....", "info", 30000);
       const response = await invoke('refresh_ref', {
         request: {
           depth: String(depthValue),
@@ -384,7 +384,7 @@
       });
       console.log('Success:', response);
       podsSyncing.set(false);
-      addToast("Pods have been synced", "info");
+      addToast("Pods have been synced", "info", 30000);
       await loadTable();
     } catch (e) {
       console.error('Failed to sync:', e);
@@ -946,7 +946,7 @@
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Warning</h3>
       <div class="py-4" style="justify-content: center;">
-        <p>Syncing pods attempts to sync your local pods with pods on the Autonomi Network. This will overwrite your local pods. If you have made any changes to your local pods that you want saved, you must upload your pods first!</p>
+        <p>Syncing pods attempts to sync your local pods with any pods you have uploaded on the Autonomi Network. This may overwrite your local pods. If you have made any changes to your local pods that you want saved, you should upload your pods first!</p>
       </div>
       <div class="modal-action">
         <form method="dialog">
