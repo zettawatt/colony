@@ -28,6 +28,9 @@
   let genesisPodAddress = "aaa518a2cf8260f6bebc769c16b8147ea215adf569696497b7fc1f250823d89a49990187e83fc0f9ae1cf3d44afb7dce";
   let runSync = true;
 
+  // Modal reference
+  let syncingInProgressModal: HTMLDialogElement;
+
   $: {
     if (parentSeedWords.length == 12){
       isPhraseValid = validateSeedPhrase(parentSeedWords);
@@ -146,21 +149,33 @@
       const podManager = await invoke("initialize_pod_manager");
       // addToast("Connected to Autonomi Network!", "success");
       if (runSync) {
-        // Run sync to populate local cache
-        await invoke("refresh_ref", { request: { depth: "0" } });
-        // If there are no pods, create a default one
-        const pods = await invoke("list_my_pods");
-        if (pods.length === 0) {
-          const newPod = await invoke('add_pod', { request: {name: "default"} }) as PodInfo;
-          console.log('Pod created at address:', newPod.address);
-          // Create a pod reference to the genesis pod
-          const genesisPodRef = await invoke('add_pod_ref', {
-            request: {
-              pod_address: newPod.address,
-              pod_ref_address: genesisPodAddress
-            }
-          });
+        // Show syncing modal
+        syncingInProgressModal?.showModal?.();
+        // Prevent closing via Escape key
+        syncingInProgressModal.addEventListener('cancel', (e) => {
+          e.preventDefault();
+        });
+
+        try {
+          // Run sync to populate local cache
           await invoke("refresh_ref", { request: { depth: "0" } });
+          // If there are no pods, create a default one
+          const pods = await invoke("list_my_pods");
+          if (pods.length === 0) {
+            const newPod = await invoke('add_pod', { request: {name: "default"} }) as PodInfo;
+            console.log('Pod created at address:', newPod.address);
+            // Create a pod reference to the genesis pod
+            const genesisPodRef = await invoke('add_pod_ref', {
+              request: {
+                pod_address: newPod.address,
+                pod_ref_address: genesisPodAddress
+              }
+            });
+            await invoke("refresh_ref", { request: { depth: "0" } });
+          }
+        } finally {
+          // Hide syncing modal
+          syncingInProgressModal?.close?.();
         }
       }
       await startDweb(walletPrivateKey);
@@ -224,4 +239,15 @@
       </button>
     </div>
   </div>
+
+  <!-- Syncing Progress Modal -->
+  <dialog id="syncingInProgressModal" class="modal" bind:this={syncingInProgressModal}>
+    <div class="modal-box flex flex-col items-center">
+      <h3 class="text-lg font-bold mb-2">Syncing Data</h3>
+      <div class="my-4">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+      <p class="mb-2 text-center">Syncing your search cache with the network. Please do not close or leave this page until syncing is complete.</p>
+    </div>
+  </dialog>
 </main>
