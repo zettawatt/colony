@@ -25,6 +25,8 @@
   let showMatchingString = false;
   let walletPrivateKey = generateRandomPrivateKey();
   let initWalletName = "main";
+  let genesisPodAddress = "aaa518a2cf8260f6bebc769c16b8147ea215adf569696497b7fc1f250823d89a49990187e83fc0f9ae1cf3d44afb7dce";
+  let runSync = true;
 
   $: {
     if (parentSeedWords.length == 12){
@@ -143,6 +145,24 @@
       const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
       const podManager = await invoke("initialize_pod_manager");
       // addToast("Connected to Autonomi Network!", "success");
+      if (runSync) {
+        // Run sync to populate local cache
+        await invoke("refresh_ref", { request: { depth: "0" } });
+        // If there are no pods, create a default one
+        const pods = await invoke("list_my_pods");
+        if (pods.length === 0) {
+          const newPod = await invoke('add_pod', { request: {name: "default"} }) as PodInfo;
+          console.log('Pod created at address:', newPod.address);
+          // Create a pod reference to the genesis pod
+          const genesisPodRef = await invoke('add_pod_ref', {
+            request: {
+              pod_address: newPod.address,
+              pod_ref_address: genesisPodAddress
+            }
+          });
+          await invoke("refresh_ref", { request: { depth: "0" } });
+        }
+      }
       await startDweb(walletPrivateKey);
       reroute("/screens/search");
       return true;
@@ -166,10 +186,9 @@
 
     <div class="p-4 rounded shadow bg-base-200">
       {#if currentStep === 0}
-        <svelte:component this={steps[currentStep].component} {validatePassword} />
+        <StepWelcome {validatePassword} />
       {:else if currentStep === 1}
-        <svelte:component 
-          this={steps[currentStep].component} 
+        <StepSeedPhraseInit
           {generateNewSeedPhrase}
           {validateSeedPhrase}
           bind:words={parentSeedWords}
@@ -177,19 +196,17 @@
           bind:showValidString={showValidString}
         />
       {:else if currentStep === 2}
-        <svelte:component 
-          this={steps[currentStep].component} 
+        <StepSeedPhraseConfirm
           bind:words={confirmSeedWords}
           bind:showMatchingString={showMatchingString}
           bind:isSeedPhraseMatching={isSeedPhraseMatching}
         />
       {:else if currentStep === 3}
-        <svelte:component 
-          this={steps[currentStep].component} 
+        <StepWallet
           bind:walletPrivateKey={walletPrivateKey}
         />
-      {:else}
-        <svelte:component this={steps[currentStep].component} />
+      {:else if currentStep === 4}
+        <StepFinish bind:runSync={runSync} />
       {/if}
     </div>
 
