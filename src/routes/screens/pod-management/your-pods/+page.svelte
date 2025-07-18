@@ -100,6 +100,10 @@
   let error = $state(null);
   let parsed = $state(null);
 
+  // Modal references
+  let syncingInProgressModal: HTMLDialogElement;
+  let uploadingInProgressModal: HTMLDialogElement;
+
 
   $effect(()=> {
     console.log('activepod', activePod)
@@ -115,6 +119,19 @@
       });
     } else {
       syncingInProgressModal?.close?.();
+    }
+  })
+
+  $effect(()=> {
+    // Whenever allPodsUploading changes, show/hide the uploading dialog
+    if ($allPodsUploading) {
+      uploadingInProgressModal?.showModal?.();
+      // Prevent closing via Escape key
+      uploadingInProgressModal.addEventListener('cancel', (e) => {
+        e.preventDefault();
+      });
+    } else {
+      uploadingInProgressModal?.close?.();
     }
   })
 
@@ -969,13 +986,22 @@
       </div>
     </div>
   </dialog>
-  <dialog id="syncingInProgressModal" class="modal">
+  <dialog id="syncingInProgressModal" class="modal" bind:this={syncingInProgressModal}>
     <div class="modal-box flex flex-col items-center">
       <h3 class="text-lg font-bold mb-2">Syncing is in Progress</h3>
       <div class="my-4">
         <span class="loading loading-spinner loading-lg"></span>
       </div>
       <p class="mb-2 text-center">Pods are syncing. Please do not close or leave this page until syncing is complete.</p>
+    </div>
+  </dialog>
+  <dialog id="uploadingInProgressModal" class="modal" bind:this={uploadingInProgressModal}>
+    <div class="modal-box flex flex-col items-center">
+      <h3 class="text-lg font-bold mb-2">Uploading All Pods</h3>
+      <div class="my-4">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+      <p class="mb-2 text-center">All pods are being uploaded. Please do not close or leave this page until uploading is complete.</p>
     </div>
   </dialog>
 </main>
