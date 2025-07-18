@@ -23,7 +23,7 @@
   let confirmSeedWords = [];
   let isSeedPhraseMatching = false;
   let showMatchingString = false;
-  let walletPrivateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  let walletPrivateKey = generateRandomPrivateKey();
   let initWalletName = "main";
 
   $: {
@@ -90,6 +90,17 @@
     parentSeedWords = mn.split(" ");
     console.log(parentSeedWords)
     return parentSeedWords;
+  }
+
+  function generateRandomPrivateKey(): string {
+    // Generate 32 random bytes for Ethereum private key
+    const randomBytes = new Uint8Array(32);
+    crypto.getRandomValues(randomBytes);
+
+    // Convert to hexadecimal string
+    return Array.from(randomBytes)
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   async function finishSteps() {
