@@ -23,6 +23,11 @@
   let showLogin = false;
   let isSearching = false;
   let fileMetadataModal: HTMLDialogElement;
+  let searchMetrics = {
+    itemCount: 0,
+    searchTime: 0,
+    hasSearched: false
+  };
   let statusInitialSort = [
     {column:"startedDate", dir:"desc"}
   ]
@@ -62,15 +67,14 @@
     }
   ];
 
-  // set cellClick function for info column
+  // set cellClick function for download column (column 0)
   searchColumns[0].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
-    fileMetadataModal.showModal()
-  }
 
-  // set cellClick function for download column
-  searchColumns[1].cellClick = function(e, cell) {
-    activeRow = cell.getRow().getData();
+    // Don't do anything if it's a pod or has no type (no icon shown)
+    if (activeRow.type === 'ant://colonylib/v1/pod' || !activeRow.type || activeRow.type === '') {
+      return;
+    }
 
     if (activeRow.type === 'ant://dweb/v1/WebSite') {
       openDweb(activeRow.address)
@@ -93,19 +97,43 @@
     }
   }
 
-  // set cellClick function for name column (show modal)
+  // set cellClick function for name column (show modal) - column 1
+  searchColumns[1].cellClick = function(e, cell) {
+    activeRow = cell.getRow().getData();
+    fileMetadataModal.showModal()
+  }
+
+  // set cellClick function for description column (show modal) - column 2
   searchColumns[2].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
     fileMetadataModal.showModal()
   }
 
-  // set cellClick function for size column (show modal)
+  // set cellClick function for type column (show modal) - column 3
   searchColumns[3].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
     fileMetadataModal.showModal()
   }
 
-  // Note: Address column (searchColumns[4]) intentionally has no click handler
+  // set cellClick function for size column (show modal) - column 4
+  searchColumns[4].cellClick = function(e, cell) {
+    activeRow = cell.getRow().getData();
+    fileMetadataModal.showModal()
+  }
+
+  // set cellClick function for address column (copy to clipboard) - column 5
+  searchColumns[5].cellClick = function(e, cell) {
+    const rowData = cell.getRow().getData();
+    const fullAddress = rowData.address;
+
+    // Copy to clipboard and show toast
+    navigator.clipboard.writeText(fullAddress).then(() => {
+      addToast(`Address ${fullAddress} copied!`, 'success');
+    }).catch(err => {
+      console.error('Failed to copy address:', err);
+      addToast('Failed to copy address', 'error');
+    });
+  }
 
   // Helper functions for modal download button
   function shouldShowDownloadButton(row: any): boolean {
@@ -157,6 +185,8 @@
 
   async function simpleSearch() {
     isSearching = true;
+    const startTime = performance.now();
+
     try {
       if (searchInput === "") return;
       const request = {
@@ -172,16 +202,33 @@
       // console.log(response)
       const parsedResults = parseTextSparqlResults(response.results)
       // console.log(parsedResults)
+
+      const endTime = performance.now();
+      const searchTime = Math.round(endTime - startTime);
+
+      searchMetrics = {
+        itemCount: parsedResults.length,
+        searchTime: searchTime,
+        hasSearched: true
+      };
+
       isSearching = false;
       tableSearchResults = parsedResults;
     } catch (error) {
       console.error(error)
       isSearching = false;
+      searchMetrics = {
+        itemCount: 0,
+        searchTime: 0,
+        hasSearched: true
+      };
     }
   }
 
   async function browseSearch() {
     isSearching = true;
+    const startTime = performance.now();
+
     try {
       if (searchInput !== "") return;
       const request = {
@@ -196,11 +243,26 @@
       console.log(response)
       const parsedResults = parseBrowseSparqlResults(response.results)
       console.log(parsedResults)
+
+      const endTime = performance.now();
+      const searchTime = Math.round(endTime - startTime);
+
+      searchMetrics = {
+        itemCount: parsedResults.length,
+        searchTime: searchTime,
+        hasSearched: true
+      };
+
       isSearching = false;
       tableSearchResults = parsedResults;
     } catch (error) {
       console.error(error)
       isSearching = false;
+      searchMetrics = {
+        itemCount: 0,
+        searchTime: 0,
+        hasSearched: true
+      };
     }
   }
 
@@ -237,8 +299,8 @@
 {#if showLogin}
   <LoginModal/>
 {/if}
-<main class="search-container">
-  <div class="tabs tabs-box">
+<main class="search-container" style="height: calc(100vh - 60px);">
+  <div class="tabs tabs-box" style="height: 100%;">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Status"/>
     <div class="tab-content border-base-300 bg-base-100 p-10" style="height: 100%;">
       <TabulatorTable data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} />
@@ -272,6 +334,16 @@
           {/if}
         </button>
       </div>
+
+      <!-- Search Metrics -->
+      {#if searchMetrics.hasSearched}
+        <div class="text-center mb-3">
+          <p class="text-sm italic text-gray-600">
+            {searchMetrics.itemCount} items returned in {searchMetrics.searchTime}ms
+          </p>
+        </div>
+      {/if}
+
       <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
     </div>
   </div>

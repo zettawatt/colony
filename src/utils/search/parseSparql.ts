@@ -131,8 +131,8 @@ export function parseBrowseSparqlResults(results: any) {
       for (const [key, valueObj] of Object.entries(binding)) {
         if (valueObj && typeof valueObj === 'object' && 'value' in valueObj) {
           const value = (valueObj as any).value;
-          if (value && key !== 'subject' && key !== 'graph') {
-            // Store the field with its original key name
+          if (value && key !== 'subject' && key !== 'graph' && key !== 'size') {
+            // Store the field with its original key name (exclude size to preserve formatted version)
             aggregate[subjectValue][key] = value;
           }
         }
