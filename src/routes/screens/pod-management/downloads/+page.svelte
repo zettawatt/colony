@@ -71,12 +71,12 @@
 
 </script>
 
-<main>
+<main style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
   <Drawer>
-    <div slot="main">
+    <div slot="main" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
       <!-- Your primary page content, e.g., the "Your Pods" table and modals -->
       <!-- ... main content ... -->
-      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding-top:4vh;">
+      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; flex-shrink: 0;">
         <h2 class="h2">Downloads</h2>
         <div class="utility-bar" style="display: flex; align-items: center; gap: 1rem;">
           <div class="download-info">
@@ -87,47 +87,48 @@
           <button class="btn btn-secondary" onclick={() => downloadFile("be1f9709f4e1b8bc97f43d825d0b5aff37949775a8daf0eccad5a45ace07c4bf")}>Download File Test2</button> -->
         </div>
       </div>
-            <div class="row">
-        <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 100%;">
-          <div class="card-body items-center text-center p-4">
+      <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
+        <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+          <div class="card-body items-center text-center p-4" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column;">
             <!-- <h2 class="card-title h2">Your Pods</h2> -->
-            <table class="table table-zebra" id="downloadsTable">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Name</th>
-                  <th>From Address</th>
-                  <th>Size</th>
-                  <th>Downloaded Date</th>
-                  <th>Download Directory</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#if downloadedFiles.length > 0}
-                  {#each downloadedFiles as file, idx}
-                    <tr>
-                      <th>{idx + 1}</th>
-                      <td>{file.name}</td>
-                      <td>
-                        <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
-                          <button
-                            class="address-tooltip"
-                            data-address={file.autonomiAddress}
-                            onclick={handleCopyAddress}
-                            tabindex="0"
-                            style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                          >autonomi address</button>
-                        </div>
-                      </td>
-                      <td>{formatFileSize(file.fileSize)}</td>
-                      <td>{file.downloadedDate}</td>
-                      <td>{file.downloadPath}</td>
-                    </tr>
-                  {/each}
-                {:else}
+            <div style="flex: 1; min-height: 0; overflow-y: auto; width: 100%;">
+              <table class="table table-zebra" id="downloadsTable">
+                <thead>
                   <tr>
-                    <td colspan="12" style="text-align:center;">No downloads yet</td>
+                    <th></th>
+                    <th>Name</th>
+                    <th>From Address</th>
+                    <th>Size</th>
+                    <th>Downloaded Date</th>
+                    <th>Download Directory</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {#if downloadedFiles.length > 0}
+                    {#each downloadedFiles as file, idx}
+                      <tr>
+                        <th>{idx + 1}</th>
+                        <td>{file.name}</td>
+                        <td>
+                          <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
+                            <button
+                              class="address-tooltip"
+                              data-address={file.autonomiAddress}
+                              onclick={handleCopyAddress}
+                              tabindex="0"
+                              style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
+                            >autonomi address</button>
+                          </div>
+                        </td>
+                        <td>{formatFileSize(file.fileSize)}</td>
+                        <td>{file.downloadedDate}</td>
+                        <td>{file.downloadPath}</td>
+                      </tr>
+                    {/each}
+                  {:else}
+                    <tr>
+                      <td colspan="12" style="text-align:center;">No downloads yet</td>
+                    </tr>
                 {/if}
               </tbody>
             </table>

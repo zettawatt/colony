@@ -24,7 +24,9 @@
   .app-content-container {
     flex: 1;
     /* padding-top: 5vh; */
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   /* .container {
     margin: 0;

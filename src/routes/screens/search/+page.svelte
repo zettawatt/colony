@@ -7,8 +7,7 @@
   import { formatFileSize } from '../../../utils/fileFormaters';
   import { transferManager } from '../../../stores/transferManager';
   import { onMount } from 'svelte';
-  import { statusColumns } from '../../../utils/search/statusColumns';
-  import { statusTestData } from '../../../utils/search/statusTestData';
+
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
   import { downloadFile } from '../../../utils/file/download';
@@ -28,9 +27,31 @@
     searchTime: 0,
     hasSearched: false
   };
-  let statusInitialSort = [
-    {column:"startedDate", dir:"desc"}
-  ]
+
+  let windowWidth = 0;
+
+  // Calculate optimal description column width based on window size
+  function updateDescriptionColumnWidth() {
+    if (typeof window !== 'undefined') {
+      // Fixed column widths: download(40) + name(200) + type(80) + size(90) + address(130) = 540px
+      // Add padding and margins: ~80px for table padding, scrollbars, etc.
+      const fixedColumnsWidth = 540;
+      const tablePadding = 100; // Account for table padding, borders, scrollbars
+      const availableWidth = windowWidth - tablePadding;
+      const descriptionWidth = Math.max(200, availableWidth - fixedColumnsWidth);
+
+      // Update the description column width
+      if (searchColumns[2]) {
+        searchColumns[2].width = descriptionWidth;
+      }
+    }
+  }
+
+  // Update column width when window resizes
+  $: if (windowWidth) {
+    updateDescriptionColumnWidth();
+  }
+
   
   function shallowEqualArrays(a, b) {
     if (a === b) return true;
@@ -296,56 +317,52 @@
   })
 </script>
 
+<svelte:window bind:innerWidth={windowWidth} />
+
 {#if showLogin}
   <LoginModal/>
 {/if}
-<main class="search-container" style="height: calc(100vh - 60px);">
-  <div class="tabs tabs-box" style="height: 100%;">
-    <input type="radio" name="my_tabs_2" class="tab" aria-label="Status"/>
-    <div class="tab-content border-base-300 bg-base-100 p-10" style="height: 100%;">
-      <TabulatorTable data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} />
+<main class="search-container" style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px; overflow: hidden;">
+  <div class="search-header" style="flex-shrink: 0; margin-bottom: 20px;">
+    <div class="row mb-3">
+      <label class="input mr-2">
+        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <g
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            stroke-width="2.5"
+            fill="none"
+            stroke="currentColor"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </g>
+        </svg>
+        <input type="search" required placeholder="Press Browse to see what's on the network..." bind:value={searchInput} onkeydown={handleKeydown}/>
+      </label>
+      <button class="btn btn-sof btn-warning" onclick={()=>searchHandler()}>
+        {#if isSearching}
+          <span class="loading loading-spinner"></span>
+        {:else if searchInput === ""}
+          Browse
+        {:else}
+          Search
+        {/if}
+      </button>
     </div>
 
-    <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" checked={true}/>
-    <div class="tab-content border-base-300 bg-base-100 p-10 pt-3" style="height: 100%;">
-      <div class="row mb-3">
-        <label class="input mr-2">
-          <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <g
-              stroke-linejoin="round"
-              stroke-linecap="round"
-              stroke-width="2.5"
-              fill="none"
-              stroke="currentColor"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.3-4.3"></path>
-            </g>
-          </svg>
-          <input type="search" required placeholder="Press Browse to see what's on the network..." bind:value={searchInput} onkeydown={handleKeydown}/>
-        </label>
-        <button class="btn btn-sof btn-warning" onclick={()=>searchHandler()}>
-          {#if isSearching}
-            <span class="loading loading-spinner"></span>
-          {:else if searchInput === ""}
-            Browse
-          {:else}
-            Search
-          {/if}
-        </button>
+    <!-- Search Metrics -->
+    {#if searchMetrics.hasSearched}
+      <div class="text-center mb-3">
+        <p class="text-sm italic text-gray-600">
+          {searchMetrics.itemCount} items returned in {searchMetrics.searchTime}ms
+        </p>
       </div>
+    {/if}
+  </div>
 
-      <!-- Search Metrics -->
-      {#if searchMetrics.hasSearched}
-        <div class="text-center mb-3">
-          <p class="text-sm italic text-gray-600">
-            {searchMetrics.itemCount} items returned in {searchMetrics.searchTime}ms
-          </p>
-        </div>
-      {/if}
-
-      <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
-    </div>
+  <div class="search-table-container" style="flex: 1; min-height: 0;">
+    <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
   </div>
   <dialog id="fileMetadataModal" class="modal" bind:this={fileMetadataModal}>
     <div class="modal-box w-10/12 max-w-5xl max-h-[80vh]">
@@ -385,18 +402,9 @@
 
 <style>
 .search-container {
-  justify-content: center;
-  text-align: center;
-  overflow-y: auto;
-}
-
-.tabs {
-  /* display: flex; */
-  justify-content: center;
-  align-items: center;
-  /* gap: 1rem;
-  margin: 0 auto;
-  width: fit-content; */
+  justify-content: flex-start;
+  text-align: left;
+  overflow: hidden;
 }
 
 .input {

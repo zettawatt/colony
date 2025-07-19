@@ -111,12 +111,12 @@
 
 </script>
 
-<main>
+<main style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
   <Drawer>
-    <div slot="main">
+    <div slot="main" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
       <!-- Your primary page content, e.g., the "Your Pods" table and modals -->
       <!-- ... main content ... -->
-      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding-top:4vh;">
+      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; flex-shrink: 0;">
         <h2 class="h2">Uploads</h2>
         <div class="utility-bar" style="display: flex; align-items: center; gap: 1rem;">
           <div class="upload-info">
@@ -126,48 +126,50 @@
           <button class="btn btn-warning" onclick={uploadNewFile.showModal()}>Upload New File</button>
         </div>
       </div>
-            <div class="row">
-        <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 100%;">
-          <div class="card-body items-center text-center p-4">
+      <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
+        <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+          <div class="card-body items-center text-center p-4" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column;">
             <!-- <h2 class="card-title h2">Your Pods</h2> -->
-            <table class="table table-zebra" id="uploadsTable">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Name</th>
-                  <th>Upload Address</th>
-                  <th>Upload Date</th>
-                  <th>Size</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#if uploadedFiles.length > 0}
-                  {#each uploadedFiles as file, idx}
-                    <tr>
-                      <th>{idx + 1}</th>
-                      <td>{file.name}</td>
-                      <td>
-                        <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
-                          <button
-                            class="address-tooltip"
-                            data-address={file.autonomiAddress}
-                            onclick={handleCopyAddress}
-                            tabindex="0"
-                            style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                          >autonomi address</button>
-                        </div>
-                      </td>
-                      <td>{file.uploadedDate}</td>
-                      <td>{formatFileSize(file.fileSize)}</td>
-                    </tr>
-                  {/each}
-                {:else}
+            <div style="flex: 1; min-height: 0; overflow-y: auto; width: 100%;">
+              <table class="table table-zebra" id="uploadsTable">
+                <thead>
                   <tr>
-                    <td colspan="5" style="text-align:center;">No uploads yet</td>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Upload Address</th>
+                    <th>Upload Date</th>
+                    <th>Size</th>
                   </tr>
-                {/if}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {#if uploadedFiles.length > 0}
+                    {#each uploadedFiles as file, idx}
+                      <tr>
+                        <th>{idx + 1}</th>
+                        <td>{file.name}</td>
+                        <td>
+                          <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
+                            <button
+                              class="address-tooltip"
+                              data-address={file.autonomiAddress}
+                              onclick={handleCopyAddress}
+                              tabindex="0"
+                              style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
+                            >autonomi address</button>
+                          </div>
+                        </td>
+                        <td>{file.uploadedDate}</td>
+                        <td>{formatFileSize(file.fileSize)}</td>
+                      </tr>
+                    {/each}
+                  {:else}
+                    <tr>
+                      <td colspan="5" style="text-align:center;">No uploads yet</td>
+                    </tr>
+                  {/if}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

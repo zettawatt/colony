@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import ThemeSwitcher from './themeSwitcher.svelte';
 </script>
 
@@ -14,6 +13,7 @@
     <div class="flex-3 flex justify-center">
       <ul class="menu menu-horizontal px-1 flex justify-between w-full">
         <li><a href="/screens/search">Search</a></li>
+        <li><a href="/screens/status">Status</a></li>
         <li><a href="/screens/pod-management/your-pods">File Management</a></li>
         <!-- <li class="dropdown">
           <div tabindex="0" role="button" class="btn-ghost">File Management</div>

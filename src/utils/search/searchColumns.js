@@ -86,7 +86,7 @@ export const searchColumns = [
     title: "Description",
     field: "description",
     formatter: "plaintext",
-    widthGrow: 2, // Takes up remaining space
+    width: 400, // Will be dynamically calculated
     minWidth: 200,
   },
   {
@@ -100,8 +100,8 @@ export const searchColumns = [
     title: "Size",
     field: "size",
     formatter: sizeFormatter,
-    width: 70,
-    minWidth: 50,
+    width: 90,
+    minWidth: 90,
     hozAlign: "right"
   },
   {
