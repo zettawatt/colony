@@ -22,6 +22,7 @@
   let activeRow = {};
   let showLogin = false;
   let isSearching = false;
+  let fileMetadataModal: HTMLDialogElement;
   let statusInitialSort = [
     {column:"startedDate", dir:"desc"}
   ]
@@ -71,9 +72,9 @@
   searchColumns[1].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
 
-    if ('type' in activeRow && activeRow.type.includes("dweb")) {
+    if (activeRow.type === 'ant://dweb/v1/WebSite') {
       openDweb(activeRow.address)
-    } else if(activeRow.type.includes("directory")) {
+    } else if(activeRow.type && activeRow.type.includes("directory")) {
       const request = {
         name: activeRow.name,
         address: activeRow.address,
@@ -92,6 +93,67 @@
     }
   }
 
+  // set cellClick function for name column (show modal)
+  searchColumns[2].cellClick = function(e, cell) {
+    activeRow = cell.getRow().getData();
+    fileMetadataModal.showModal()
+  }
+
+  // set cellClick function for size column (show modal)
+  searchColumns[3].cellClick = function(e, cell) {
+    activeRow = cell.getRow().getData();
+    fileMetadataModal.showModal()
+  }
+
+  // Note: Address column (searchColumns[4]) intentionally has no click handler
+
+  // Helper functions for modal download button
+  function shouldShowDownloadButton(row: any): boolean {
+    if (!row || !row.type) return false;
+
+    // Only hide download button for pods or missing types
+    // Websites should show "Open Site" button, so they return true
+    if (row.type === 'ant://colonylib/v1/pod' || row.type === '') {
+      return false;
+    }
+
+    return true;
+  }
+
+  function getDownloadButtonText(row: any): string {
+    if (!row || !row.type) return 'Download';
+
+    if (row.type === 'ant://dweb/v1/WebSite') {
+      return 'Open Site';
+    }
+
+    return 'Download';
+  }
+
+  function handleModalDownload(row: any) {
+    if (!row) return;
+
+    if (row.type === 'ant://dweb/v1/WebSite') {
+      // Open website using dweb
+      openDweb(row.address);
+    } else if (row.type && row.type.includes('directory')) {
+      // Download directory
+      const request = {
+        name: row.name,
+        address: row.address,
+        bytes: row.bytes ?? 0
+      };
+      downloadFile(request, 'directory');
+    } else {
+      // Download file
+      const request = {
+        name: row.name,
+        address: row.address,
+        bytes: row.bytes ?? 0
+      };
+      downloadFile(request, 'file');
+    }
+  }
 
   async function simpleSearch() {
     isSearching = true;
@@ -102,7 +164,7 @@
           // Put your search parameters here, e.g.:
             "type": "text",
             "text": searchInput,
-            "limit": 200
+            "limit": 2000
         },
       };
       // const request = {query: "beg"}
@@ -126,7 +188,7 @@
         query: {
           // Put your search parameters here, e.g.:
             "type": "browse",
-            "limit": 200
+            "limit": 2000
         },
       };
       // const request = {query: "beg"}
@@ -179,7 +241,7 @@
   <div class="tabs tabs-box">
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Status"/>
     <div class="tab-content border-base-300 bg-base-100 p-10" style="height: 100%;">
-      <TabulatorTable data={transfers} columns={statusColumns} initialSort={statusInitialSort} />
+      <TabulatorTable data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} />
     </div>
 
     <input type="radio" name="my_tabs_2" class="tab" aria-label="Search" checked={true}/>
@@ -210,41 +272,42 @@
           {/if}
         </button>
       </div>
-      <TabulatorTable data={tableSearchResults} columns={searchColumns} />
+      <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
     </div>
   </div>
-  <dialog id="fileMetadataModal" class="modal">
-    <div class="modal-box w-10/12 max-w-5xl max-h-lg">
+  <dialog id="fileMetadataModal" class="modal" bind:this={fileMetadataModal}>
+    <div class="modal-box w-10/12 max-w-5xl max-h-[80vh]">
       <h3 class="text-lg font-bold">File Metadata: {activeRow?.name}</h3>
-      <div class="py-2" style="justify-content: center;">
+      <div class="py-2 max-h-[60vh] overflow-y-auto" style="justify-content: center;">
           <table class="table table-xs">
-            {#if activeRow}
-              {#each Object.entries(activeRow) as [key, value]}
-                <tr>
-                  <th>{key}</th>
-                  <td>{value}</td>
-                </tr>
-                <!-- {#if key === "size"}
-                  <tr>
-                    <th>{key}</th>
-                    <td>{value}</td>
-                  </tr>
-                {:else if key !== "id"}
-                  <tr>
-                    <th>{key}</th>
-                    <td>{value}</td>
-                  </tr>
-                {/if} -->
-              {/each}
-            {/if}
+            <tbody>
+              {#if activeRow}
+                {#each Object.entries(activeRow) as [key, value]}
+                  {#if value !== "" && value !== null && value !== undefined}
+                    <tr>
+                      <th class="w-1/4">{key}</th>
+                      <td class="w-3/4 break-words whitespace-pre-wrap">{value}</td>
+                    </tr>
+                  {/if}
+                {/each}
+              {/if}
+            </tbody>
         </table>
       </div>
       <div class="modal-action">
+        {#if shouldShowDownloadButton(activeRow)}
+          <button class="btn btn-primary" onclick={() => handleModalDownload(activeRow)}>
+            {getDownloadButtonText(activeRow)}
+          </button>
+        {/if}
         <form method="dialog">
           <button class="btn btn-soft btn-error">Close</button>
         </form>
       </div>
     </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
   </dialog>
 </main>
 

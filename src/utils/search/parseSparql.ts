@@ -41,22 +41,44 @@ export function parseTextSparqlResults(results: any) {
           type: "",
         };
       }
-      switch (predicateValue) {
-        case 'http://schema.org/name':
-          if (objectValue) aggregate[subjectValue].name = objectValue;
-          break;
-        case 'http://schema.org/description':
-          if (objectValue) aggregate[subjectValue].description = objectValue;
-          break;
-        case 'http://schema.org/contentSize':
-          if (objectValue && !isNaN(Number(objectValue))) {
-            aggregate[subjectValue].size = formatFileSize(Number(objectValue));
-            aggregate[subjectValue].bytes = Number(objectValue);
+      // Add all predicates as additional fields with suffix from predicate name
+      if (objectValue) {
+        let key = predicateValue;
+        if (key.startsWith('http://schema.org/')) {
+          key = key.replace('http://schema.org/', '');
+        } else if (key.startsWith('http://www.w3.org/1999/02/22-rdf-syntax-ns#')) {
+          key = key.replace('http://www.w3.org/1999/02/22-rdf-syntax-ns#', '');
+        } else {
+          // Extract the last part after the last '/' or '#'
+          const lastSlash = key.lastIndexOf('/');
+          const lastHash = key.lastIndexOf('#');
+          const lastIndex = Math.max(lastSlash, lastHash);
+          if (lastIndex !== -1) {
+            key = key.substring(lastIndex + 1);
           }
-          break;
-        case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type':
-          if (objectValue) aggregate[subjectValue].type = objectValue;
-          break;
+        }
+
+        // Store the raw predicate data
+        aggregate[subjectValue][key] = objectValue;
+
+        // Handle standard fields for table display
+        switch (predicateValue) {
+          case 'http://schema.org/name':
+            aggregate[subjectValue].name = objectValue;
+            break;
+          case 'http://schema.org/description':
+            aggregate[subjectValue].description = objectValue;
+            break;
+          case 'http://schema.org/contentSize':
+            if (!isNaN(Number(objectValue))) {
+              aggregate[subjectValue].size = formatFileSize(Number(objectValue));
+              aggregate[subjectValue].bytes = Number(objectValue);
+            }
+            break;
+          case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type':
+            aggregate[subjectValue].type = objectValue;
+            break;
+        }
       }
     }
     return Object.values(aggregate);
@@ -89,6 +111,7 @@ export function parseBrowseSparqlResults(results: any) {
       const binding = searchResults.bindings[i];
       const subjectValue = binding.subject?.value;
       const graphValue = binding.graph?.value;
+
       if (!subjectValue || !graphValue) continue;
       if (!(subjectValue in aggregate)) {
         aggregate[subjectValue] = {
@@ -97,11 +120,65 @@ export function parseBrowseSparqlResults(results: any) {
           address: subjectValue.startsWith("ant://") ? subjectValue.slice(6) : subjectValue,
           depth: binding.depth?.value ?? undefined,
           name: binding.name?.value ?? "",
-          description: "",
+          description: binding.description?.value ?? "",
           size: Number.isFinite(Number(binding.size?.value)) ? formatFileSize(Number(binding.size.value)) : "Unknown",
           bytes: Number.isFinite(Number(binding.size?.value)) ? Number(binding.size.value) : 0,
           type: binding.type?.value ?? "",
         };
+      }
+
+      // Add all available fields from the binding as additional metadata
+      for (const [key, valueObj] of Object.entries(binding)) {
+        if (valueObj && typeof valueObj === 'object' && 'value' in valueObj) {
+          const value = (valueObj as any).value;
+          if (value && key !== 'subject' && key !== 'graph') {
+            // Store the field with its original key name
+            aggregate[subjectValue][key] = value;
+          }
+        }
+      }
+
+      // Also check if this is a predicate/object structure (like text search)
+      const predicateValue = binding.predicate?.value;
+      const objectValue = binding.object?.value;
+
+      if (predicateValue && objectValue) {
+        let key = predicateValue;
+        if (key.startsWith('http://schema.org/')) {
+          key = key.replace('http://schema.org/', '');
+        } else if (key.startsWith('http://www.w3.org/1999/02/22-rdf-syntax-ns#')) {
+          key = key.replace('http://www.w3.org/1999/02/22-rdf-syntax-ns#', '');
+        } else {
+          // Extract the last part after the last '/' or '#'
+          const lastSlash = key.lastIndexOf('/');
+          const lastHash = key.lastIndexOf('#');
+          const lastIndex = Math.max(lastSlash, lastHash);
+          if (lastIndex !== -1) {
+            key = key.substring(lastIndex + 1);
+          }
+        }
+
+        // Store the raw predicate data
+        aggregate[subjectValue][key] = objectValue;
+
+        // Handle standard fields for table display
+        switch (predicateValue) {
+          case 'http://schema.org/name':
+            aggregate[subjectValue].name = objectValue;
+            break;
+          case 'http://schema.org/description':
+            aggregate[subjectValue].description = objectValue;
+            break;
+          case 'http://schema.org/contentSize':
+            if (!isNaN(Number(objectValue))) {
+              aggregate[subjectValue].size = formatFileSize(Number(objectValue));
+              aggregate[subjectValue].bytes = Number(objectValue);
+            }
+            break;
+          case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type':
+            aggregate[subjectValue].type = objectValue;
+            break;
+        }
       }
     }
     return Object.values(aggregate);
