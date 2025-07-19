@@ -58,12 +58,7 @@
     updateTotalDownloadedCounter()
   }
 
-  function resetDownloadState() {
-    selectedPath = "";
-    selectedFileName = "";
-    downloadCost = "";
-    wasDownloadCanceled = true;
-  }
+
 
   onMount(async () => {
     await loadTable()
@@ -74,8 +69,6 @@
 <main style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
   <Drawer>
     <div slot="main" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
-      <!-- Your primary page content, e.g., the "Your Pods" table and modals -->
-      <!-- ... main content ... -->
       <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 20px; flex-shrink: 0;">
         <h2 class="h2">Downloads</h2>
         <div class="utility-bar" style="display: flex; align-items: center; gap: 1rem;">
@@ -83,14 +76,11 @@
             <p style="margin: 0;" id="totalDownloadedCounter">0.0 B</p>
             <p style="margin: 0;">downloaded</p>
           </div>
-          <!-- <button class="btn btn-secondary" onclick={ () => downloadFile("51839d5f9fbf79d1b9c267508613f2c69299ad6ce93213756867c776d5f8c625")}>Download File Test</button>
-          <button class="btn btn-secondary" onclick={() => downloadFile("be1f9709f4e1b8bc97f43d825d0b5aff37949775a8daf0eccad5a45ace07c4bf")}>Download File Test2</button> -->
         </div>
       </div>
       <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
         <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
           <div class="card-body items-center text-center p-4" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column;">
-            <!-- <h2 class="card-title h2">Your Pods</h2> -->
             <div style="flex: 1; min-height: 0; overflow-y: auto; width: 100%;">
               <table class="table table-zebra" id="downloadsTable">
                 <thead>
@@ -129,9 +119,10 @@
                     <tr>
                       <td colspan="12" style="text-align:center;">No downloads yet</td>
                     </tr>
-                {/if}
-              </tbody>
-            </table>
+                  {/if}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
