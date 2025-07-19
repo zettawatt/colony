@@ -93,8 +93,8 @@ export const searchColumns = [
     title: "Type",
     field: "type",
     formatter: typeFormatter,
-    width: 80,
-    minWidth: 60,
+    width: 120,
+    minWidth: 80,
   },
   {
     title: "Size",

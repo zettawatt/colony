@@ -6,7 +6,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { formatFileSize } from '../../../utils/fileFormaters';
   import { transferManager } from '../../../stores/transferManager';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
 
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
@@ -29,13 +29,14 @@
   };
 
   let windowWidth = 0;
+  let tabulatorTable; // Reference to the TabulatorTable component
 
   // Calculate optimal description column width based on window size
   function updateDescriptionColumnWidth() {
     if (typeof window !== 'undefined') {
-      // Fixed column widths: download(40) + name(200) + type(80) + size(90) + address(130) = 540px
+      // Fixed column widths: download(40) + name(200) + type(120) + size(90) + address(130) = 580px
       // Add padding and margins: ~80px for table padding, scrollbars, etc.
-      const fixedColumnsWidth = 540;
+      const fixedColumnsWidth = 580;
       const tablePadding = 100; // Account for table padding, borders, scrollbars
       const availableWidth = windowWidth - tablePadding;
       const descriptionWidth = Math.max(200, availableWidth - fixedColumnsWidth);
@@ -50,6 +51,7 @@
   // Update column width when window resizes
   $: if (windowWidth) {
     updateDescriptionColumnWidth();
+    // The Tabulator component will handle the redraw automatically on window resize
   }
 
   
@@ -302,6 +304,8 @@
     }
   }
 
+  let handleTabulatorResize;
+
   onMount(async () => {
     try {
       await transferManager.init();
@@ -313,6 +317,19 @@
     if (pw === null) {
       console.error("password was null");
       showLogin = true;
+    }
+
+    // Listen for tabulator resize events to update column widths
+    handleTabulatorResize = () => {
+      updateDescriptionColumnWidth();
+    };
+
+    window.addEventListener('tabulator-resize-start', handleTabulatorResize);
+  })
+
+  onDestroy(() => {
+    if (handleTabulatorResize) {
+      window.removeEventListener('tabulator-resize-start', handleTabulatorResize);
     }
   })
 </script>
@@ -362,7 +379,7 @@
   </div>
 
   <div class="search-table-container" style="flex: 1; min-height: 0;">
-    <TabulatorTable data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
+    <TabulatorTable bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
   </div>
   <dialog id="fileMetadataModal" class="modal" bind:this={fileMetadataModal}>
     <div class="modal-box w-10/12 max-w-5xl max-h-[80vh]">

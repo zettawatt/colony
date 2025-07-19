@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { TabulatorFull as Tabulator } from 'tabulator-tables';
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { DateTime } from "luxon";
@@ -7,8 +7,13 @@
 
   export let columns, data, rowMenu, initialSort;
 
+  const dispatch = createEventDispatcher();
+
   let tableComponent;
   let tabulatorInstance;
+
+  // Export the tabulator instance so parent components can access it
+  export { tabulatorInstance };
   let unlisten;
   let currentTheme = $globalTheme;
   let tableReady = false;
@@ -18,6 +23,32 @@
     if (window) {
       tableHeight = Math.max(300, Math.min(window.innerHeight * 0.75, 1500));
     }
+  }
+
+  let resizeTimeout;
+
+  function handleWindowResize() {
+    // Debounce resize events to avoid excessive redraws
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      setTableHeight();
+
+      // Dispatch a custom event to notify parent components about resize
+      // This allows parent components to update column widths before table redraw
+      window.dispatchEvent(new CustomEvent('tabulator-resize-start'));
+
+      // Small delay to allow parent components to update columns
+      setTimeout(() => {
+        if (tabulatorInstance && tableReady) {
+          // Update columns first (this will trigger the reactive statement)
+          tabulatorInstance.setColumns(columns);
+          // Then redraw the table to handle layout changes
+          tabulatorInstance.redraw(true);
+          // Recalculate column widths
+          tabulatorInstance.recalcColumnWidths();
+        }
+      }, 10);
+    }, 100); // 100ms debounce
   }
 
   function switchTabulatorTheme(theme) {
@@ -32,7 +63,7 @@
 
   onMount(async () => {
     setTableHeight();
-    window.addEventListener('resize', setTableHeight);
+    window.addEventListener('resize', handleWindowResize);
 
     tabulatorInstance = new Tabulator(tableComponent, {
       columns,
@@ -60,11 +91,17 @@
   onDestroy(() => {
     if (unlisten) unlisten();
     if (tabulatorInstance) tabulatorInstance.destroy();
-    window.removeEventListener('resize', setTableHeight);
+    window.removeEventListener('resize', handleWindowResize);
+    clearTimeout(resizeTimeout);
   });
 
   $: if (tabulatorInstance && Array.isArray(data)) {
     tabulatorInstance.replaceData(data);
+  }
+
+  // Update columns when they change
+  $: if (tabulatorInstance && columns && tableReady) {
+    tabulatorInstance.setColumns(columns);
   }
 
   $: if (typeof $globalTheme === 'string') {
