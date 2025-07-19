@@ -102,6 +102,12 @@
   // Update columns when they change
   $: if (tabulatorInstance && columns && tableReady) {
     tabulatorInstance.setColumns(columns);
+    // Force recalculation of column widths after setting new columns
+    setTimeout(() => {
+      if (tabulatorInstance) {
+        tabulatorInstance.recalcColumnWidths();
+      }
+    }, 0);
   }
 
   $: if (typeof $globalTheme === 'string') {

@@ -45,13 +45,21 @@
       if (searchColumns[2]) {
         searchColumns[2].width = descriptionWidth;
       }
+
+      // Force table to update columns and recalculate layout if table is ready
+      if (tabulatorTable?.tabulatorInstance) {
+        // Update columns with new widths
+        tabulatorTable.tabulatorInstance.setColumns(searchColumns);
+        // Force redraw and recalculate column widths
+        tabulatorTable.tabulatorInstance.redraw(true);
+        tabulatorTable.tabulatorInstance.recalcColumnWidths();
+      }
     }
   }
 
   // Update column width when window resizes
   $: if (windowWidth) {
     updateDescriptionColumnWidth();
-    // The Tabulator component will handle the redraw automatically on window resize
   }
 
   
@@ -305,6 +313,8 @@
   }
 
   let handleTabulatorResize;
+  let handleWindowResize;
+  let resizeTimeout;
 
   onMount(async () => {
     try {
@@ -324,12 +334,27 @@
       updateDescriptionColumnWidth();
     };
 
+    // Listen for window resize events directly with debouncing
+    handleWindowResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        updateDescriptionColumnWidth();
+      }, 100); // 100ms debounce
+    };
+
     window.addEventListener('tabulator-resize-start', handleTabulatorResize);
+    window.addEventListener('resize', handleWindowResize);
   })
 
   onDestroy(() => {
     if (handleTabulatorResize) {
       window.removeEventListener('tabulator-resize-start', handleTabulatorResize);
+    }
+    if (handleWindowResize) {
+      window.removeEventListener('resize', handleWindowResize);
+    }
+    if (resizeTimeout) {
+      clearTimeout(resizeTimeout);
     }
   })
 </script>
