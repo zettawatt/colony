@@ -138,6 +138,11 @@
   function loadTemplate(type) {
     selectedType = type;
     const template = templates[type];
+
+    // automatically set name and contentSize in the template
+    template["schema:contentSize"] = editingPodItem.fileSize ?? "0";
+    template["schema:name"] = editingPodItem.name;
+
     jsonInputText = JSON.stringify(template, null, 2);
     isValid = false;
     error = null;
