@@ -1368,9 +1368,9 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "autonomi"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ea7fe69d8af95f0feeb7cb2f46d1ec65d8d2b96240bab2106e130c10f49696f"
+checksum = "d8c2f7a0abb3a2bf5e1d2ac0b4c27a5f9252c8ab419090fa8c8e1a7be30dad62"
 dependencies = [
  "ant-bootstrap",
  "ant-evm",
@@ -2188,9 +2188,9 @@ dependencies = [
 
 [[package]]
 name = "colonylib"
-version = "0.5.8"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cab3eac8af04a68ea1cfba8c33f390352ebb088fef9f40b52814888b41b31be2"
+checksum = "a4c56c9a564d2c379de08a3a7e8b77bd4fe5bdb5d83b96841603d637c12fee28"
 dependencies = [
  "autonomi",
  "bip39",
