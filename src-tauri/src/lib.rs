@@ -2054,6 +2054,10 @@ async fn download_data(
     request: DownloadFileRequest,
     app: AppHandle,
 ) -> Result<String, Error> {
+    // debug!(
+    //     "Download started for id: {}, address: {}, path: {}",
+    //     request.id, request.address, request.destination_path
+    // );
     // Extract all data we need and drop all locks before any await
     app.emit(
         "download-started",
@@ -2081,13 +2085,67 @@ async fn download_data(
     }; // All MutexGuards are dropped here
 
     // Data address of the dog picture
-    let data_address = DataAddress::from_hex(request.address.trim())?;
+    let data_address = match DataAddress::from_hex(request.address.trim()) {
+        Ok(addr) => addr,
+        Err(e) => {
+            error!("Failed to parse data address: {e}");
+            // --- Emit download-error event ---
+            let _ = app.emit(
+                "download-error",
+                serde_json::json!({
+                    "id": request.id,
+                    "address": request.address,
+                    "path": request.destination_path,
+                    "error": format!("Failed to parse data address: {e}"),
+                }),
+            );
+            // ----------------------------------
+            return Err(Error::from(e));
+        }
+    };
+    // debug!("DataAddress created: {:?}", data_address);
 
     // Get the bytes of the dog picture
-    let bytes = client.data_get_public(&data_address).await?;
+    let bytes = match client.data_get_public(&data_address).await {
+        Ok(b) => {
+            debug!("Successfully fetched public data: {} bytes", b.len());
+            b
+        }
+        Err(e) => {
+            // --- Emit a Tauri event for download error here ---
+            error!("Failed to fetch public data: {e}");
+            let _ = app.emit(
+                "download-error",
+                serde_json::json!({
+                    "id": request.id,
+                    "address": request.address,
+                    "path": request.destination_path,
+                    "error": format!("Failed to fetch public data: {e}"),
+                }),
+            );
+            // --------------------------------------------------
+            return Err(Error::from(e));
+        }
+    };
 
     // Write the bytes of the dog picture to a file
-    write(request.destination_path.clone(), bytes)?;
+    if let Err(e) = write(request.destination_path.clone(), &bytes) {
+        error!("Failed to write file: {e}");
+        // --- Emit download-error event ---
+        let _ = app.emit(
+            "download-error",
+            serde_json::json!({
+                "id": request.id,
+                "address": request.address,
+                "path": request.destination_path,
+                "error": format!("Failed to write file: {e}"),
+            }),
+        );
+        // ----------------------------------
+        return Err(Error::from(e));
+    } else {
+        debug!("File written successfully: {}", request.destination_path);
+    }
     // TODO: Implement proper file download once we understand the API
     app.emit(
         "download-complete",
