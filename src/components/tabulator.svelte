@@ -49,8 +49,6 @@
           tabulatorInstance.setColumns(columns);
           // Then redraw the table to handle layout changes
           tabulatorInstance.redraw(true);
-          // Recalculate column widths
-          tabulatorInstance.recalcColumnWidths();
         }
       }, 10);
     }, 100); // 100ms debounce
@@ -122,10 +120,10 @@
   // Update columns when they change
   $: if (tabulatorInstance && columns && tableReady) {
     tabulatorInstance.setColumns(columns);
-    // Force recalculation of column widths after setting new columns
+    // Force redraw after setting new columns
     setTimeout(() => {
       if (tabulatorInstance) {
-        tabulatorInstance.recalcColumnWidths();
+        tabulatorInstance.redraw(true);
       }
     }, 0);
   }

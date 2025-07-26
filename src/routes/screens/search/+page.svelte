@@ -52,9 +52,8 @@
       if (instance) {
         // Update columns with new widths
         instance.setColumns(searchColumns);
-        // Force redraw and recalculate column widths
+        // Force redraw to recalculate layout
         instance.redraw(true);
-        instance.recalcColumnWidths();
       }
     }
   }
