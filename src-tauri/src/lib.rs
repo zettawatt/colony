@@ -1672,11 +1672,20 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
         .ok_or("KeyStore not initialized")?
         .clone();
 
+    let client = state
+        .client
+        .lock()
+        .unwrap()
+        .as_ref()
+        .ok_or("Client not initialized")?
+        .clone();
+
     // Call the keystore list_wallets function to get the list of wallet names
     let wallet_keys = keystore.get_wallet_keys();
     let wallet_addresses = keystore.get_wallet_addresses();
 
     // Build an array of wallet objects
+    let evm_network = client.evm_network().clone();
     let wallets: Vec<Value> = wallet_keys
         .iter()
         .filter_map(|(name, key)| {
@@ -1687,16 +1696,49 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
                     return None;
                 }
             };
+
+            let (ant_balance, gas_balance) = get_wallet_balances(evm_network.clone(), key).await?;
+            
             Some(serde_json::json!({
                 "name": name,
                 "key": key,
-                "address": address
+                "address": address,
+                "ant_balance": ant_balance,
+                "gas_balance": gas_balance
             }))
         })
         .collect();
 
     info!("Wallets listed");
     Ok(serde_json::json!(wallets))
+}
+
+async fn get_wallet_balances(evm_network: autonomi::Network, key: &str) -> Result<(f64, f64), Error> {
+
+    // Create a wallet instance for this specific wallet
+    let target_wallet = Wallet::new_from_private_key(evm_network, key)
+        .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
+
+    // Get the balance using the wallet's balance method
+    let balance_raw = target_wallet
+        .balance_of_tokens()
+        .await
+        .map_err(|e| Error::Message(format!("Failed to get wallet token balance: {e}")))?;
+
+    let gas_balance_raw = target_wallet
+        .balance_of_gas_tokens()
+        .await
+        .map_err(|e| Error::Message(format!("Failed to get wallet gas balance: {e}")))?;
+
+    // Convert balances to human-readable format (ETH)
+    let balance: f64 = balance_raw.into();
+    let balance = balance / 1_000_000_000_000_000_000.0f64;
+
+    let gas_balance: f64 = gas_balance_raw.into();
+    let gas_balance = gas_balance / 1_000_000_000_000_000_000.0f64;
+
+    Ok((balance, gas_balance))
+
 }
 
 #[tauri::command]
