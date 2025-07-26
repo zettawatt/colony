@@ -8,6 +8,7 @@
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { onMount } from "svelte";
   import { v4 as uuidv4 } from 'uuid';
+  import { openPath } from '@tauri-apps/plugin-opener';
 
   // $: downloads = Object.values($downloadManager);
 
@@ -58,7 +59,17 @@
     updateTotalDownloadedCounter()
   }
 
-
+  async function openFile(file: FileObj) {
+    try {
+      // Construct the full file path
+      const fullPath = `${file.downloadPath}/${file.name}`;
+      await openPath(fullPath);
+      addToast(`Opened ${file.name}`, "info");
+    } catch (err) {
+      console.error("Failed to open file", err);
+      addToast(`Failed to open ${file.name}: ${String(err)}`, "error");
+    }
+  }
 
   onMount(async () => {
     await loadTable()
@@ -98,7 +109,16 @@
                     {#each downloadedFiles as file, idx}
                       <tr>
                         <th>{idx + 1}</th>
-                        <td>{file.name}</td>
+                        <td>
+                          <button
+                            class="file-name-button"
+                            onclick={() => openFile(file)}
+                            tabindex="0"
+                            title="Click to open file"
+                          >
+                            {file.name}
+                          </button>
+                        </td>
                         <td>
                           <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
                             <button
@@ -149,6 +169,25 @@
   .address-tooltip:hover, .address-tooltip:focus {
     color: #009799;
     text-decoration-style: solid;
+  }
+  .file-name-button {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    color: #009799;
+    text-decoration: underline dotted;
+    transition: all 0.15s;
+    text-align: left;
+    width: 100%;
+  }
+  .file-name-button:hover, .file-name-button:focus {
+    color: #007577;
+    text-decoration-style: solid;
+    background-color: rgba(0, 151, 153, 0.1);
+    border-radius: 4px;
+    padding: 2px 4px;
   }
   .row {
     display: flex;

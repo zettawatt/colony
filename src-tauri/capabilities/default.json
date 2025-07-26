@@ -13,6 +13,29 @@
     "store:default",
     "shell:default",
     "core:app:allow-set-app-theme",
-    "log:default"
+    "log:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$LOCALDATA/**"
+        },
+        {
+          "path": "/home/**"
+        },
+        {
+          "path": "/tmp/**"
+        }
+      ]
+    }
   ]
 }
