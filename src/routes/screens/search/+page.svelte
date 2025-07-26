@@ -1,10 +1,7 @@
 <script lang="ts">
   import TabulatorTable from '../../../components/tabulator.svelte';
-  import { torrentsColumns } from '../../../components/testCols';
-  import { torrentsData } from '../../../components/testData';
   import { searchColumns } from '../../../utils/search/searchColumns';
   import { invoke } from "@tauri-apps/api/core";
-  import { formatFileSize } from '../../../utils/fileFormaters';
   import { transferManager } from '../../../stores/transferManager';
   import { onMount, onDestroy } from 'svelte';
 
@@ -14,8 +11,9 @@
   import { parseBrowseSparqlResults, parseTextSparqlResults } from '../../../utils/search/parseSparql';
   import { openDweb } from '../../../utils/dweb/dwebCommands';
   import { addToast } from '../../../stores/toast';
+  import { searchState } from '../../../stores/searchState';
 
-
+  // Local variables that will be synced with the store
   let searchInput = "";
   let tableSearchResults = [];
   let activeRow = {};
@@ -27,6 +25,9 @@
     searchTime: 0,
     hasSearched: false
   };
+
+  // Store subscription to keep local state in sync
+  let storeUnsubscribe;
 
   let windowWidth = 0;
   let tabulatorTable; // Reference to the TabulatorTable component
@@ -47,12 +48,13 @@
       }
 
       // Force table to update columns and recalculate layout if table is ready
-      if (tabulatorTable?.tabulatorInstance) {
+      const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+      if (instance) {
         // Update columns with new widths
-        tabulatorTable.tabulatorInstance.setColumns(searchColumns);
+        instance.setColumns(searchColumns);
         // Force redraw and recalculate column widths
-        tabulatorTable.tabulatorInstance.redraw(true);
-        tabulatorTable.tabulatorInstance.recalcColumnWidths();
+        instance.redraw(true);
+        instance.recalcColumnWidths();
       }
     }
   }
@@ -93,6 +95,7 @@
       label:"View Metadata",
       action:function(e, row){
         activeRow = row.getData();
+        searchState.setActiveRow(activeRow);
         fileMetadataModal.showModal()
       }
     }
@@ -131,24 +134,28 @@
   // set cellClick function for name column (show modal) - column 1
   searchColumns[1].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
+    searchState.setActiveRow(activeRow);
     fileMetadataModal.showModal()
   }
 
   // set cellClick function for description column (show modal) - column 2
   searchColumns[2].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
+    searchState.setActiveRow(activeRow);
     fileMetadataModal.showModal()
   }
 
   // set cellClick function for type column (show modal) - column 3
   searchColumns[3].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
+    searchState.setActiveRow(activeRow);
     fileMetadataModal.showModal()
   }
 
   // set cellClick function for size column (show modal) - column 4
   searchColumns[4].cellClick = function(e, cell) {
     activeRow = cell.getRow().getData();
+    searchState.setActiveRow(activeRow);
     fileMetadataModal.showModal()
   }
 
@@ -245,6 +252,14 @@
 
       isSearching = false;
       tableSearchResults = parsedResults;
+
+      // Save state to store
+      searchState.updateState({
+        searchInput,
+        tableSearchResults: parsedResults,
+        searchMetrics,
+        scrollPosition: { x: 0, y: 0 } // Reset scroll position for new search
+      });
     } catch (error) {
       console.error(error)
       isSearching = false;
@@ -253,6 +268,14 @@
         searchTime: 0,
         hasSearched: true
       };
+
+      // Save error state to store
+      searchState.updateState({
+        searchInput,
+        tableSearchResults: [],
+        searchMetrics,
+        scrollPosition: { x: 0, y: 0 }
+      });
     }
   }
 
@@ -272,7 +295,7 @@
       // const request = {query: "beg"}
       const response = await invoke('search', { request });
       console.log(response)
-      const parsedResults = parseBrowseSparqlResults(response.results)
+      const parsedResults = parseBrowseSparqlResults((response as any).results)
       console.log(parsedResults)
 
       const endTime = performance.now();
@@ -286,6 +309,14 @@
 
       isSearching = false;
       tableSearchResults = parsedResults;
+
+      // Save state to store
+      searchState.updateState({
+        searchInput,
+        tableSearchResults: parsedResults,
+        searchMetrics,
+        scrollPosition: { x: 0, y: 0 } // Reset scroll position for new search
+      });
     } catch (error) {
       console.error(error)
       isSearching = false;
@@ -294,6 +325,14 @@
         searchTime: 0,
         hasSearched: true
       };
+
+      // Save error state to store
+      searchState.updateState({
+        searchInput,
+        tableSearchResults: [],
+        searchMetrics,
+        scrollPosition: { x: 0, y: 0 }
+      });
     }
   }
 
@@ -312,9 +351,16 @@
     }
   }
 
+  // Handle search input changes to save to store
+  function handleSearchInputChange() {
+    searchState.setSearchInput(searchInput);
+  }
+
   let handleTabulatorResize;
   let handleWindowResize;
   let resizeTimeout;
+  let scrollTimeout;
+  let handleTableScroll;
 
   onMount(async () => {
     try {
@@ -329,6 +375,38 @@
       showLogin = true;
     }
 
+    // Initialize search state store and restore previous state
+    searchState.init();
+
+    // Subscribe to store changes and restore state
+    storeUnsubscribe = searchState.subscribe((state) => {
+      console.log('📦 Store state updated:', {
+        searchInput: state.searchInput,
+        resultsCount: state.tableSearchResults.length,
+        hasSearched: state.searchMetrics.hasSearched,
+        scrollPos: state.scrollPosition
+      });
+
+      // Update local state carefully to avoid race conditions
+      if (searchInput !== state.searchInput) {
+        searchInput = state.searchInput;
+      }
+      if (searchMetrics !== state.searchMetrics) {
+        searchMetrics = state.searchMetrics;
+      }
+      if (activeRow !== state.activeRow) {
+        activeRow = state.activeRow;
+      }
+
+      // Only update table results if they're different and we have results
+      if (state.tableSearchResults.length > 0 && tableSearchResults !== state.tableSearchResults) {
+        console.log('🔄 Updating table results from store');
+        tableSearchResults = state.tableSearchResults;
+      }
+    });
+
+
+
     // Listen for tabulator resize events to update column widths
     handleTabulatorResize = () => {
       updateDescriptionColumnWidth();
@@ -342,11 +420,200 @@
       }, 100); // 100ms debounce
     };
 
+    // Define scroll event handler with better debouncing
+    handleTableScroll = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const tableHolder = getTableScrollContainer();
+        if (tableHolder) {
+          const scrollX = tableHolder.scrollLeft;
+          const scrollY = tableHolder.scrollTop;
+          console.log('Saving scroll position:', { x: scrollX, y: scrollY });
+          searchState.setScrollPosition(scrollX, scrollY);
+        }
+      }, 500); // Increased debounce time for better performance
+    };
+
     window.addEventListener('tabulator-resize-start', handleTabulatorResize);
     window.addEventListener('resize', handleWindowResize);
   })
 
+  // Track if scroll listener has been added
+  let scrollListenerAdded = false;
+  let scrollPositionRestored = false;
+
+  // Function to get the tabulator scroll container
+  function getTableScrollContainer() {
+    const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+    if (!instance) return null;
+    return instance.element?.querySelector('.tabulator-tableholder');
+  }
+
+  // Function to add scroll listener
+  function addScrollListener() {
+    const tableHolder = getTableScrollContainer();
+    if (tableHolder && !scrollListenerAdded) {
+      tableHolder.addEventListener('scroll', handleTableScroll);
+      scrollListenerAdded = true;
+      console.log('✅ Added scroll listener to tabulator');
+    }
+  }
+
+  // Function to restore scroll position with retry logic
+  function restoreScrollPosition() {
+    if (scrollPositionRestored) return; // Only restore once
+
+    const currentState = JSON.parse(sessionStorage.getItem('colony-search-state') || '{}');
+    const tableHolder = getTableScrollContainer();
+
+    if (currentState.scrollPosition && tableHolder) {
+      const { x, y } = currentState.scrollPosition;
+      if (x !== 0 || y !== 0) {
+        // Try to restore scroll position with a small delay to ensure table is fully rendered
+        setTimeout(() => {
+          const tableHolder = getTableScrollContainer(); // Get fresh reference
+          if (tableHolder) {
+            tableHolder.scrollLeft = x;
+            tableHolder.scrollTop = y;
+            scrollPositionRestored = true;
+            console.log('✅ Restored scroll position:', { x, y });
+
+            // Verify the scroll position was actually set
+            setTimeout(() => {
+              if (tableHolder.scrollLeft !== x || tableHolder.scrollTop !== y) {
+                console.warn('⚠️ Scroll position restoration may have failed. Expected:', { x, y }, 'Actual:', { x: tableHolder.scrollLeft, y: tableHolder.scrollTop });
+              }
+            }, 100);
+          }
+        }, 200);
+      }
+    }
+  }
+
+  // Function to setup table when it's ready
+  function setupTableWhenReady() {
+    const tableHolder = getTableScrollContainer();
+    if (tableHolder && tableSearchResults.length > 0) {
+      // Check if table actually has rendered rows
+      const tableRows = tableHolder.querySelectorAll('.tabulator-row');
+      console.log('🔧 Setting up table with', tableSearchResults.length, 'results,', tableRows.length, 'rendered rows');
+
+      if (tableRows.length > 0) {
+        addScrollListener();
+
+        // Restore scroll position after table is confirmed to have content
+        setTimeout(() => {
+          restoreScrollPosition();
+        }, 100);
+      } else {
+        console.log('⏳ Table not yet rendered, will retry...');
+      }
+    }
+  }
+
+  // Function to wait for tabulator to be ready and then setup
+  function waitForTabulatorAndSetup() {
+    const maxAttempts = 20; // 2 seconds max wait
+    let attempts = 0;
+
+    const checkTabulator = () => {
+      attempts++;
+      console.log(`🔍 Checking tabulator readiness, attempt ${attempts}`);
+
+      // Debug: Check what we have
+      const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+      console.log('🔍 Debug info:', {
+        tabulatorTable: !!tabulatorTable,
+        tabulatorInstance: !!instance,
+        tableSearchResults: tableSearchResults.length,
+        element: !!instance?.element
+      });
+
+      if (instance) {
+        const tableHolder = getTableScrollContainer();
+        console.log('🔍 Table holder found:', !!tableHolder);
+
+        if (tableHolder) {
+          const tableRows = tableHolder.querySelectorAll('.tabulator-row');
+          console.log('🔍 Table rows found:', tableRows.length);
+
+          if (tableHolder && tableSearchResults.length > 0 && tableRows.length > 0) {
+            console.log('✅ Tabulator is ready, setting up scroll tracking');
+            setupTableWhenReady();
+            return;
+          }
+        }
+      }
+
+      if (attempts < maxAttempts) {
+        setTimeout(checkTabulator, 100);
+      } else {
+        console.warn('⚠️ Tabulator setup timeout after', maxAttempts * 100, 'ms');
+        // Final debug info
+        const finalInstance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+        console.log('🔍 Final debug info:', {
+          tabulatorTable: !!tabulatorTable,
+          tabulatorInstance: !!finalInstance,
+          element: !!finalInstance?.element,
+          tableHolder: !!getTableScrollContainer(),
+          tableSearchResults: tableSearchResults.length
+        });
+      }
+    };
+
+    checkTabulator();
+  }
+
+  // Watch for table data changes with better timing
+  $: if (tableSearchResults.length > 0) {
+    console.log('📊 Table data changed, length:', tableSearchResults.length);
+    const componentInstance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+    console.log('📊 TabulatorTable component:', {
+      exists: !!tabulatorTable,
+      hasInstance: !!componentInstance
+    });
+
+    // Reset flags when new data is loaded
+    scrollPositionRestored = false;
+    scrollListenerAdded = false;
+
+    // Wait a bit for the reactive update to complete, then check tabulator
+    setTimeout(waitForTabulatorAndSetup, 500);
+  }
+
+  // Also watch for when the tabulator component itself becomes available
+  $: if (tabulatorTable) {
+    const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+    console.log('📊 TabulatorTable component bound:', {
+      hasInstance: !!instance,
+      hasElement: !!instance?.element
+    });
+  }
+
   onDestroy(() => {
+    console.log('🧹 Cleaning up search page');
+
+    // Clean up store subscription
+    if (storeUnsubscribe) {
+      storeUnsubscribe();
+    }
+
+    // Save current scroll position before leaving
+    const tableHolder = getTableScrollContainer();
+    if (tableHolder) {
+      const scrollX = tableHolder.scrollLeft;
+      const scrollY = tableHolder.scrollTop;
+      searchState.setScrollPosition(scrollX, scrollY);
+      console.log('💾 Saved scroll position on destroy:', { x: scrollX, y: scrollY });
+
+      // Remove scroll event listener
+      if (scrollListenerAdded) {
+        tableHolder.removeEventListener('scroll', handleTableScroll);
+        scrollListenerAdded = false;
+        console.log('🗑️ Removed scroll listener');
+      }
+    }
+
     if (handleTabulatorResize) {
       window.removeEventListener('tabulator-resize-start', handleTabulatorResize);
     }
@@ -355,6 +622,9 @@
     }
     if (resizeTimeout) {
       clearTimeout(resizeTimeout);
+    }
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
     }
   })
 </script>
@@ -380,7 +650,7 @@
             <path d="m21 21-4.3-4.3"></path>
           </g>
         </svg>
-        <input type="search" required placeholder="Press Browse to see what's on the network..." bind:value={searchInput} onkeydown={handleKeydown}/>
+        <input type="search" required placeholder="Press Browse to see what's on the network..." bind:value={searchInput} onkeydown={handleKeydown} oninput={handleSearchInputChange}/>
       </label>
       <button class="btn btn-sof btn-warning" onclick={()=>searchHandler()}>
         {#if isSearching}
