@@ -8,6 +8,7 @@
 
   let primaryWalletName = $state("");
   let storedWallets = $state([]);
+  let walletBalances = $state<Record<string, { ant_balance?: number; gas_balance?: number; loading: boolean }>>({});
   let activeWallet = $state<any>({
     name: "",
     key: "",
@@ -122,6 +123,28 @@
     }
   };
 
+  // Function to fetch balance for a single wallet
+  async function fetchWalletBalance(walletName: string, walletKey: string) {
+    try {
+      // Set loading state
+      walletBalances[walletName] = { loading: true };
+
+      // Fetch balance from Tauri command
+      const [ant_balance, gas_balance] = await invoke('get_wallet_balance', { walletKey });
+
+      // Update balance state
+      walletBalances[walletName] = {
+        ant_balance,
+        gas_balance,
+        loading: false
+      };
+    } catch (error) {
+      console.error(`Error fetching balance for wallet ${walletName}:`, error);
+      // Set error state
+      walletBalances[walletName] = { loading: false };
+    }
+  }
+
   async function loadTable() {
     try {
       primaryWalletName = await ps.getPrimaryWallet();
@@ -132,6 +155,14 @@
         if (b.name === primaryWalletName) return 1;
         return 0;
       });
+
+      // Initialize balance loading states and start concurrent fetching
+      walletBalances = {};
+      for (const wallet of storedWallets) {
+        // Start fetching balance concurrently (don't await)
+        fetchWalletBalance(wallet.name, wallet.key);
+      }
+
       // console.log("storedWallets", storedWallets);
     } catch (error) {
       console.error(error)
@@ -173,7 +204,8 @@
               <th></th>
               <th>Wallet Name</th>
               <th>Wallet Key</th>
-              <!-- <th>Balance</th> -->
+              <th>ETH Balance</th>
+              <th>ANT Balance</th>
               <th>Operations</th>
             </tr>
           </thead>
@@ -197,6 +229,24 @@
                           style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
                         >{wallet.address}</button>
                       </div>
+                    </td>
+                    <td>
+                      {#if walletBalances[wallet.name]?.loading !== false}
+                        <span class="loading loading-spinner loading-sm"></span>
+                      {:else if walletBalances[wallet.name]?.gas_balance !== undefined}
+                        {walletBalances[wallet.name].gas_balance.toFixed(6)} ETH
+                      {:else}
+                        --
+                      {/if}
+                    </td>
+                    <td>
+                      {#if walletBalances[wallet.name]?.loading !== false}
+                        <span class="loading loading-spinner loading-sm"></span>
+                      {:else if walletBalances[wallet.name]?.ant_balance !== undefined}
+                        {walletBalances[wallet.name].ant_balance.toFixed(6)} ANT
+                      {:else}
+                        --
+                      {/if}
                     </td>
                     <td>
                       <button 

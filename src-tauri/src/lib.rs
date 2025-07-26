@@ -1672,20 +1672,12 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
         .ok_or("KeyStore not initialized")?
         .clone();
 
-    let client = state
-        .client
-        .lock()
-        .unwrap()
-        .as_ref()
-        .ok_or("Client not initialized")?
-        .clone();
 
     // Call the keystore list_wallets function to get the list of wallet names
     let wallet_keys = keystore.get_wallet_keys();
     let wallet_addresses = keystore.get_wallet_addresses();
 
     // Build an array of wallet objects
-    let evm_network = client.evm_network().clone();
     let wallets: Vec<Value> = wallet_keys
         .iter()
         .filter_map(|(name, key)| {
@@ -1697,14 +1689,10 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
                 }
             };
 
-            let (ant_balance, gas_balance) = get_wallet_balances(evm_network.clone(), key).await?;
-            
             Some(serde_json::json!({
                 "name": name,
                 "key": key,
-                "address": address,
-                "ant_balance": ant_balance,
-                "gas_balance": gas_balance
+                "address": address
             }))
         })
         .collect();
@@ -1739,6 +1727,30 @@ async fn get_wallet_balances(evm_network: autonomi::Network, key: &str) -> Resul
 
     Ok((balance, gas_balance))
 
+}
+
+#[tauri::command]
+async fn get_wallet_balance(
+    state: State<'_, Mutex<AppState>>,
+    wallet_key: String,
+) -> Result<(f64, f64), Error> {
+    let evm_network = {
+        let state = state.lock().unwrap();
+        let client = state
+            .client
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("Client not initialized")?
+            .clone();
+        client.evm_network().clone()
+    }; // All MutexGuards are dropped here
+
+    // Call the async balance function
+    let (ant_balance, gas_balance) = get_wallet_balances(evm_network, &wallet_key).await?;
+
+    info!("Wallet balance retrieved: ANT={}, ETH={}", ant_balance, gas_balance);
+    Ok((ant_balance, gas_balance))
 }
 
 #[tauri::command]
@@ -2548,6 +2560,7 @@ pub fn run(network: &str) {
             remove_wallet,
             list_wallets,
             get_wallet,
+            get_wallet_balance,
             get_active_wallet,
             set_active_wallet,
             switch_wallet,
