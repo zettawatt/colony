@@ -1672,7 +1672,6 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
         .ok_or("KeyStore not initialized")?
         .clone();
 
-
     // Call the keystore list_wallets function to get the list of wallet names
     let wallet_keys = keystore.get_wallet_keys();
     let wallet_addresses = keystore.get_wallet_addresses();
@@ -1701,8 +1700,10 @@ async fn list_wallets(state: State<'_, Mutex<AppState>>) -> Result<Value, Error>
     Ok(serde_json::json!(wallets))
 }
 
-async fn get_wallet_balances(evm_network: autonomi::Network, key: &str) -> Result<(f64, f64), Error> {
-
+async fn get_wallet_balances(
+    evm_network: autonomi::Network,
+    key: &str,
+) -> Result<(f64, f64), Error> {
     // Create a wallet instance for this specific wallet
     let target_wallet = Wallet::new_from_private_key(evm_network, key)
         .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
@@ -1726,7 +1727,6 @@ async fn get_wallet_balances(evm_network: autonomi::Network, key: &str) -> Resul
     let gas_balance = gas_balance / 1_000_000_000_000_000_000.0f64;
 
     Ok((balance, gas_balance))
-
 }
 
 #[tauri::command]
@@ -1749,7 +1749,10 @@ async fn get_wallet_balance(
     // Call the async balance function
     let (ant_balance, gas_balance) = get_wallet_balances(evm_network, &wallet_key).await?;
 
-    info!("Wallet balance retrieved: ANT={}, ETH={}", ant_balance, gas_balance);
+    info!(
+        "Wallet balance retrieved: ANT={}, ETH={}",
+        ant_balance, gas_balance
+    );
     Ok((ant_balance, gas_balance))
 }
 
