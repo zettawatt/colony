@@ -38,8 +38,8 @@ export async function initStore() {
     await store.set('userConfig', {
       "downloadsDirectory": defaultDownloadDir,
       "theme": "auto", // undefined is default for automatic switching
-      "preferredLightTheme": "light",
-      "preferredDarkTheme": "dark"
+      "preferredLightTheme": "bumblebee",
+      "preferredDarkTheme": "halloween"
     });
     await store.set('primaryWallet', "");
     return store;
@@ -200,7 +200,7 @@ export async function getPreferredLightTheme(): Promise<string> {
   if ("preferredLightTheme" in config) {
     return config.preferredLightTheme;
   } else {
-    return "light";
+    return "bumblebee";
   }
 }
 
@@ -218,7 +218,7 @@ export async function getPreferredDarkTheme(): Promise<string> {
   if ("preferredDarkTheme" in config) {
     return config.preferredDarkTheme as string;
   } else {
-    return "dark";
+    return "halloween";
   }
 }
 

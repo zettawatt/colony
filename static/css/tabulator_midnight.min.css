@@ -362,3 +362,13 @@
 .tabulator .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
     background: #555555;
 }
+
+/* Dark mode specific styling for download icons */
+.tabulator img[src="/app-icons/arrow-bottom-icon.svg"] {
+    filter: invert(1) brightness(1);
+}
+
+/* Alternative approach using CSS mask for better control */
+.tabulator img[alt="download icon"] {
+    filter: invert(1) brightness(1);
+}
