@@ -469,19 +469,72 @@
   display: flex;
   justify-content: center;
 }
-/* ---- Added styles for bordered rows in fileMetadataModal ---- */
-#fileMetadataModal table tr {
-  border-bottom: 1px solid #d1d5db; /* Tailwind slate-300 */
-}
-
-#fileMetadataModal table th, 
-#fileMetadataModal table td {
-  border: 1px solid #d1d5db;
-  padding: 0.4em 0.6em;
-}
-
+/* ---- Modern styling for fileMetadataModal table ---- */
 #fileMetadataModal table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  background-color: hsl(var(--b1));
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px hsl(var(--bc) / 0.1);
+  border: 1px solid hsl(var(--bc) / 0.1);
+}
+
+#fileMetadataModal table tr {
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid hsl(var(--bc) / 0.1);
+}
+
+#fileMetadataModal table tr:last-child {
+  border-bottom: none;
+}
+
+#fileMetadataModal table tr:nth-child(even) {
+  background-color: hsl(var(--b2) / 0.5);
+}
+
+#fileMetadataModal table tr:hover {
+  background-color: hsl(var(--b3) / 0.7);
+}
+
+/* Key column (th) styling with enhanced shading and bold text */
+#fileMetadataModal table th {
+  background: linear-gradient(135deg, hsl(var(--b2) / 0.8) 0%, hsl(var(--b3) / 0.9) 100%);
+  border-right: 2px solid hsl(var(--bc) / 0.3);
+  padding: 14px 18px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  text-align: left;
+  vertical-align: middle;
+  color: hsl(var(--bc) / 0.9);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 105px;
+  max-width: 150px;
+  width: 25%;
+  box-shadow: inset -2px 0 4px hsl(var(--bc) / 0.1);
+}
+
+/* Value column (td) styling */
+#fileMetadataModal table td {
+  border-right: 1px solid hsl(var(--bc) / 0.1);
+  padding: 14px 18px;
+  vertical-align: top;
+  line-height: 1.5;
+  color: hsl(var(--bc) / 0.85);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  font-size: 15px;
+}
+
+#fileMetadataModal table th:last-child,
+#fileMetadataModal table td:last-child {
+  border-right: none;
 }
 </style>
