@@ -380,13 +380,6 @@
 
     // Subscribe to store changes and restore state
     storeUnsubscribe = searchState.subscribe((state) => {
-      console.log('📦 Store state updated:', {
-        searchInput: state.searchInput,
-        resultsCount: state.tableSearchResults.length,
-        hasSearched: state.searchMetrics.hasSearched,
-        scrollPos: state.scrollPosition
-      });
-
       // Update local state carefully to avoid race conditions
       if (searchInput !== state.searchInput) {
         searchInput = state.searchInput;
@@ -400,7 +393,6 @@
 
       // Only update table results if they're different and we have results
       if (state.tableSearchResults.length > 0 && tableSearchResults !== state.tableSearchResults) {
-        console.log('🔄 Updating table results from store');
         tableSearchResults = state.tableSearchResults;
       }
     });
@@ -428,7 +420,6 @@
         if (tableHolder) {
           const scrollX = tableHolder.scrollLeft;
           const scrollY = tableHolder.scrollTop;
-          console.log('Saving scroll position:', { x: scrollX, y: scrollY });
           searchState.setScrollPosition(scrollX, scrollY);
         }
       }, 500); // Increased debounce time for better performance
@@ -455,7 +446,6 @@
     if (tableHolder && !scrollListenerAdded) {
       tableHolder.addEventListener('scroll', handleTableScroll);
       scrollListenerAdded = true;
-      console.log('✅ Added scroll listener to tabulator');
     }
   }
 
@@ -518,27 +508,16 @@
 
     const checkTabulator = () => {
       attempts++;
-      console.log(`🔍 Checking tabulator readiness, attempt ${attempts}`);
 
-      // Debug: Check what we have
       const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
-      console.log('🔍 Debug info:', {
-        tabulatorTable: !!tabulatorTable,
-        tabulatorInstance: !!instance,
-        tableSearchResults: tableSearchResults.length,
-        element: !!instance?.element
-      });
 
       if (instance) {
         const tableHolder = getTableScrollContainer();
-        console.log('🔍 Table holder found:', !!tableHolder);
 
         if (tableHolder) {
           const tableRows = tableHolder.querySelectorAll('.tabulator-row');
-          console.log('🔍 Table rows found:', tableRows.length);
 
           if (tableHolder && tableSearchResults.length > 0 && tableRows.length > 0) {
-            console.log('✅ Tabulator is ready, setting up scroll tracking');
             setupTableWhenReady();
             return;
           }
@@ -547,17 +526,6 @@
 
       if (attempts < maxAttempts) {
         setTimeout(checkTabulator, 100);
-      } else {
-        console.warn('⚠️ Tabulator setup timeout after', maxAttempts * 100, 'ms');
-        // Final debug info
-        const finalInstance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
-        console.log('🔍 Final debug info:', {
-          tabulatorTable: !!tabulatorTable,
-          tabulatorInstance: !!finalInstance,
-          element: !!finalInstance?.element,
-          tableHolder: !!getTableScrollContainer(),
-          tableSearchResults: tableSearchResults.length
-        });
       }
     };
 
@@ -566,13 +534,6 @@
 
   // Watch for table data changes with better timing
   $: if (tableSearchResults.length > 0) {
-    console.log('📊 Table data changed, length:', tableSearchResults.length);
-    const componentInstance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
-    console.log('📊 TabulatorTable component:', {
-      exists: !!tabulatorTable,
-      hasInstance: !!componentInstance
-    });
-
     // Reset flags when new data is loaded
     scrollPositionRestored = false;
     scrollListenerAdded = false;
@@ -581,18 +542,7 @@
     setTimeout(waitForTabulatorAndSetup, 500);
   }
 
-  // Also watch for when the tabulator component itself becomes available
-  $: if (tabulatorTable) {
-    const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
-    console.log('📊 TabulatorTable component bound:', {
-      hasInstance: !!instance,
-      hasElement: !!instance?.element
-    });
-  }
-
   onDestroy(() => {
-    console.log('🧹 Cleaning up search page');
-
     // Clean up store subscription
     if (storeUnsubscribe) {
       storeUnsubscribe();
@@ -604,13 +554,11 @@
       const scrollX = tableHolder.scrollLeft;
       const scrollY = tableHolder.scrollTop;
       searchState.setScrollPosition(scrollX, scrollY);
-      console.log('💾 Saved scroll position on destroy:', { x: scrollX, y: scrollY });
 
       // Remove scroll event listener
       if (scrollListenerAdded) {
         tableHolder.removeEventListener('scroll', handleTableScroll);
         scrollListenerAdded = false;
-        console.log('🗑️ Removed scroll listener');
       }
     }
 

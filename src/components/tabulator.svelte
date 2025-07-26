@@ -67,11 +67,9 @@
   }
 
   onMount(async () => {
-    console.log('🏗️ TabulatorTable onMount starting');
     setTableHeight();
     window.addEventListener('resize', handleWindowResize);
 
-    console.log('🏗️ Creating Tabulator instance with data length:', data?.length || 0);
     try {
       tabulatorInstance = new Tabulator(tableComponent, {
         columns,
@@ -86,32 +84,26 @@
         },
         initialSort: initialSort,
         tableBuilt: function() {
-          console.log('🏗️ Tabulator tableBuilt event fired');
           tableReady = true;
-          console.log('🏗️ tableReady set to true, tabulatorInstance exists:', !!tabulatorInstance);
         }
       });
-      console.log('🏗️ Tabulator instance created successfully');
 
       // Force tableReady after a timeout if tableBuilt doesn't fire
       setTimeout(() => {
         if (!tableReady) {
-          console.log('🏗️ tableBuilt event did not fire, forcing tableReady = true');
           tableReady = true;
         }
 
         // Also try to replace data if we have it
         if (tabulatorInstance && Array.isArray(data) && data.length > 0) {
-          console.log('🏗️ Force replacing data with', data.length, 'items');
           tabulatorInstance.replaceData(data);
         }
       }, 1000);
     } catch (error) {
-      console.error('❌ Failed to create Tabulator instance:', error);
+      console.error('Failed to create Tabulator instance:', error);
     }
 
     unlisten = await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
-      console.log("theme changed", theme)
       switchTabulatorTheme(theme);
     });
   });
@@ -123,18 +115,8 @@
     clearTimeout(resizeTimeout);
   });
 
-  $: {
-    console.log('🔄 Reactive statement triggered:', {
-      tabulatorInstance: !!tabulatorInstance,
-      dataIsArray: Array.isArray(data),
-      dataLength: data?.length || 0,
-      tableReady: tableReady
-    });
-
-    if (tabulatorInstance && Array.isArray(data) && tableReady) {
-      console.log('🔄 Replacing tabulator data with', data.length, 'items');
-      tabulatorInstance.replaceData(data);
-    }
+  $: if (tabulatorInstance && Array.isArray(data) && tableReady) {
+    tabulatorInstance.replaceData(data);
   }
 
   // Update columns when they change
