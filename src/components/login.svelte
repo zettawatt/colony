@@ -6,6 +6,7 @@
     import { addToast } from '../stores/toast';
 
   let loginModal: HTMLDialogElement;
+  let passwordInput: HTMLInputElement;
   let password: string;
   let wasPasswordInvalid = false;
   let checkingAuth = false;
@@ -19,6 +20,13 @@
       loginModal.addEventListener('cancel', (e) => {
         e.preventDefault();
       });
+
+      // Auto-focus the password input after modal is shown
+      setTimeout(() => {
+        if (passwordInput) {
+          passwordInput.focus();
+        }
+      }, 100);
     }
   });
 
@@ -55,7 +63,7 @@
   <div class="modal-box">
     <h3 class="text-lg font-bold">Login</h3>
     <p class="pt-4">Your password is needed for write access to your pod storage.</p>
-    <input type="password" placeholder="Password" class="input w-full my-4 input-{wasPasswordInvalid ? "error": "bordered"}" bind:value={password}/>
+    <input type="password" placeholder="Password" class="input w-full my-4 input-{wasPasswordInvalid ? "error": "bordered"}" bind:value={password} bind:this={passwordInput}/>
     {#if wasPasswordInvalid}
       <p class="text-red-500">{invalidMessage}</p>
     {/if}
