@@ -6,8 +6,6 @@
   import { getPassword } from "../../../utils/password/session";
     import { addToast } from "../../../stores/toast";
 
-  const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-  const walletKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
   let primaryWalletName = $state("");
   let storedWallets = $state([]);
   let activeWallet = $state<any>({
@@ -22,20 +20,6 @@
     address: ""
   });
 
-
-  // async function addWallet() {
-  //   try {
-  //     const response = await invoke("add_wallet", {
-  //       request: {
-  //         name: "Second Wallet",
-  //         key: walletKey
-  //       }
-  //     })
-  //     console.log("res", response);
-  //   } catch (error) {
-  //     console.error(error)
-  //   }
-  // }
   // Add a wallet
   export async function addWallet(name, key) {
     try {
