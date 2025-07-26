@@ -21,6 +21,11 @@
     address: ""
   });
 
+  // Modal references
+  let editWalletModal: HTMLDialogElement;
+  let addWalletModal: HTMLDialogElement;
+  let deleteWalletModal: HTMLDialogElement;
+
   // Add a wallet
   export async function addWallet(name, key) {
     try {
@@ -47,6 +52,20 @@
       return response;
     } catch (error) {
       console.error('Error removing wallet:', error);
+    }
+  }
+
+  // Delete wallet handler for the modal
+  async function deleteWalletHandler() {
+    try {
+      const pw = await getPassword();
+      deleteWalletModal.close();
+      await removeWallet(activeWallet.name);
+      await loadTable();
+      addToast("Wallet deleted!", "success");
+    } catch (error) {
+      console.error(error);
+      addToast("Error removing wallet. Check logs...", "error");
     }
   }
 
@@ -258,9 +277,9 @@
                         }}>
                         <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
                       </button>
-                      <button 
+                      <button
                         class="btn btn-error btn-square"
-                        onclick={() => { activeWallet = wallet; deletePodModal.showModal(); }}>
+                        onclick={() => { activeWallet = wallet; deleteWalletModal.showModal(); }}>
                         <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
                       </button>
                     </td>
@@ -277,7 +296,7 @@
     </div>
   </div>
 
-  <dialog id="editWalletModal" class="modal">
+  <dialog id="editWalletModal" class="modal" bind:this={editWalletModal}>
     <div class="modal-box max-h-lg">
       <h3 class="text-lg font-bold">Editing Wallet: {activeWallet?.name}</h3>
       <div class="pt-3 pb-3 flex flex-col items-start">
@@ -313,7 +332,7 @@
       </div>
     </div>
   </dialog>
-  <dialog id="addWalletModal" class="modal">
+  <dialog id="addWalletModal" class="modal" bind:this={addWalletModal}>
     <div class="modal-box max-h-lg">
       <h3 class="text-lg font-bold">New Wallet</h3>
       <div class="pt-3 pb-3 flex flex-col items-start">
@@ -338,6 +357,21 @@
       <div class="modal-action">
         <form method="dialog">
           <button class="btn btn-primary" onclick={()=>{addNewWallet()}}>Save</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="deleteWalletModal" class="modal" bind:this={deleteWalletModal}>
+    <div class="modal-box w-8/12 max-w-xl">
+      <h3 class="text-lg font-bold">Wallet Deletion</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p class="pb-3">Are you sure you want to delete the wallet "{activeWallet?.name}"?</p>
+        <p class="text-sm text-gray-500">This action cannot be undone.</p>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-error" onclick={()=>{deleteWalletHandler()}}>Delete</button>
           <button class="btn btn-soft btn-error">Cancel</button>
         </form>
       </div>
