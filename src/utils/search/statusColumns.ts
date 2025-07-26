@@ -27,15 +27,15 @@ export const statusColumns = [
     }
   },
   {
-    title: "Size", 
+    title: "Size",
     field: "size",
-    width: 75,
+    width: 113,
     hozAlign: "right"
   },
   {
-    title: "Type", 
+    title: "Type",
     field: "type",
-    width: 75,
+    width: 113,
     hozAlign: "right"
   },
   {
