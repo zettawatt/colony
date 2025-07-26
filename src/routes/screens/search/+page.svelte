@@ -13,6 +13,32 @@
   import { addToast } from '../../../stores/toast';
   import { searchState } from '../../../stores/searchState';
 
+  // Helper function to format addresses like in the search table
+  function formatAddress(address: string): string {
+    if (!address || typeof address !== 'string' || address.length <= 13) return address || '';
+
+    const prefix = address.substring(0, 5);
+    const suffix = address.substring(address.length - 5);
+    return `${prefix}...${suffix}`;
+  }
+
+  // Helper function to check if a key represents an address
+  function isAddressField(key: string, value: string): boolean {
+    return (key === 'address' || key === 'pod') &&
+           typeof value === 'string' &&
+           value.length > 13;
+  }
+
+  // Handle address click for clipboard copy
+  function handleAddressClick(address: string) {
+    navigator.clipboard.writeText(address).then(() => {
+      addToast(`Address ${address} copied!`, 'success');
+    }).catch(err => {
+      console.error('Failed to copy address:', err);
+      addToast('Failed to copy address', 'error');
+    });
+  }
+
   // Local variables that will be synced with the store
   let searchInput = "";
   let tableSearchResults = [];
@@ -634,7 +660,20 @@
                   {#if value !== "" && value !== null && value !== undefined}
                     <tr>
                       <th class="w-1/4">{key}</th>
-                      <td class="w-3/4 break-words whitespace-pre-wrap">{value}</td>
+                      <td class="w-3/4 break-words whitespace-pre-wrap">
+                        {#if isAddressField(key, String(value))}
+                          <button
+                            class="cursor-pointer underline-dotted"
+                            style="font-style: italic; text-decoration: underline dotted;"
+                            onclick={() => handleAddressClick(String(value))}
+                            tabindex="0"
+                          >
+                            {formatAddress(String(value))}
+                          </button>
+                        {:else}
+                          {value}
+                        {/if}
+                      </td>
                     </tr>
                   {/if}
                 {/each}
