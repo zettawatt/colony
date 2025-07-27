@@ -93,6 +93,7 @@
   })
   let userConfigPod = $state();
   let podRefAddress = $state(""); // address of the pod reference user wants to add
+  let autonomiFileAddress = $state(""); // address of the autonomi file user wants to add
   let editingPodItem = $state();
   let editMetadataFields = $state({});
   let deletedPodItems = $state([]);
@@ -103,6 +104,7 @@
   // Modal references
   let syncingInProgressModal: HTMLDialogElement;
   let uploadingInProgressModal: HTMLDialogElement;
+  let addAutonomiFileModal: HTMLDialogElement;
 
 
   $effect(()=> {
@@ -226,7 +228,7 @@
         if (file.type === 'file' && file.modified === true){
           if (("metadata" in file) && Object.keys(file.metadata).length === 0){
             file.metadata = JSON.parse(JSON.stringify(templates["Simple"]));
-            if ("uploadedDate" in file) {
+            if ("uploadedDate" in file && !file.isAutonomiOnly) {
               file.metadata["schema:contentSize"] = file.fileSize ?? "0";
               file.metadata["schema:name"] = file.name;
             }
@@ -544,6 +546,27 @@
     })
   }
 
+  function addAutonomiFile() {
+    if (!autonomiFileAddress) return;
+    if (!uploadedFiles) uploadedFiles = [];
+
+    // Create a new file object for the Autonomi file
+    const newFileObj = new FileObj({
+      name: `Autonomi File (${autonomiFileAddress.slice(0, 8)}...)`,
+      path: "", // No local path for Autonomi files
+      extension: "", // Unknown extension
+      autonomiAddress: autonomiFileAddress,
+      fileSize: 0, // Unknown size
+      isAutonomiOnly: true, // Mark this as an Autonomi-only file so name/contentSize won't be overridden
+    });
+
+    // Add to uploaded files list so it appears in Available Files
+    uploadedFiles = [...uploadedFiles, newFileObj];
+
+    // Reset the address field
+    autonomiFileAddress = "";
+  }
+
 
   function saveMetaDataToItem() {
     try {
@@ -555,7 +578,7 @@
           throw Error("Metadata can't be empty!")
         }
 
-        if ("uploadedDate" in editingPodItem) {
+        if ("uploadedDate" in editingPodItem && !editingPodItem.isAutonomiOnly) {
           editingPodItem.metadata["schema:contentSize"] = editingPodItem.fileSize ?? "0";
           editingPodItem.metadata["schema:name"] = editingPodItem.name;
         }
@@ -846,7 +869,7 @@
           </ul>
           <div class="w-full ml-5">
             <button
-              class="btn btn-neutral btn-xs"
+              class="btn btn-primary"
               onclick={() => {
                 podRefAddress = "";
                 addPodRefModal.showModal()
@@ -899,8 +922,16 @@
               </li>
             {/each}
           </ul>
-          <div class="w-full invisible">
-            <button class="btn btn-xs btn-outline">invisible</button>
+          <div class="w-full ml-5">
+            <button
+              class="btn btn-primary"
+              onclick={() => {
+                autonomiFileAddress = "";
+                addAutonomiFileModal.showModal()
+              }}
+            >
+              Add Autonomi File
+            </button>
           </div>
         </div>
       </div>
@@ -975,6 +1006,24 @@
         <form method="dialog">
           <button class="btn btn-neutral" onclick={() => {addPodReference()}}>Add</button>
           <button class="btn btn-soft btn-error" onclick={()=>{podRefAddress=""}}>Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+  <dialog bind:this={addAutonomiFileModal} class="modal">
+    <div class="modal-box w-5/12 max-w-xl">
+      <h3 class="text-lg font-bold">Add Autonomi File</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p class="mb-4">Add a file already uploaded to Autonomi by pasting its address here:</p>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Autonomi Address</legend>
+          <input type="text" class="input w-full" placeholder="Enter Autonomi address" bind:value={autonomiFileAddress}/>
+        </fieldset>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-neutral" onclick={() => {addAutonomiFile()}}>Add</button>
+          <button class="btn btn-soft btn-error" onclick={()=>{autonomiFileAddress=""}}>Cancel</button>
         </form>
       </div>
     </div>

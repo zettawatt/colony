@@ -8,7 +8,8 @@ export type FileInfo = {
   previewCost?: string;
   actualCost?: string;
   fileSize?: number;
-  downloadPath?: string
+  downloadPath?: string;
+  isAutonomiOnly?: boolean;
 };
 
 export class FileObj {
@@ -23,6 +24,7 @@ export class FileObj {
   private _actualCost?: string;
   private _fileSize?: number;
   private _downloadPath?: string;
+  private _isAutonomiOnly?: boolean;
 
   constructor(file: FileInfo) {
     this._name = file.name;
@@ -36,6 +38,7 @@ export class FileObj {
     this._actualCost = file.actualCost ?? "";
     this._fileSize = file.fileSize ?? 0;
     this._downloadPath = file.downloadPath ?? "";
+    this._isAutonomiOnly = file.isAutonomiOnly ?? false;
   }
 
   get uuid(): string {
@@ -82,8 +85,16 @@ export class FileObj {
     return this._downloadPath;
   }
 
+  get isAutonomiOnly(): boolean {
+    return this._isAutonomiOnly ?? false;
+  }
+
   setAutonomiAddress(address: string): void {
     this._autonomiAddress = address;
+  }
+
+  setIsAutonomiOnly(isAutonomiOnly: boolean): void {
+    this._isAutonomiOnly = isAutonomiOnly;
   }
 
   setPreviewCost(cost: string): void {
@@ -114,7 +125,8 @@ export class FileObj {
       autonomiAddress: this._autonomiAddress,
       previewCost: this._previewCost,
       actualCost: this._actualCost,
-      fileSize: this._fileSize
+      fileSize: this._fileSize,
+      isAutonomiOnly: this._isAutonomiOnly
     };
   }
 }
