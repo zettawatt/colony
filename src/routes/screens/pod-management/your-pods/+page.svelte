@@ -101,10 +101,49 @@
   let error = $state(null);
   let parsed = $state(null);
 
+  // Advanced/Simple mode toggle
+  let advancedMode = $state(false);
+  let simpleTableData = $state<{predicate: string, value: string}[]>([]);
+  let originalTemplate = $state<any>(null);
+
   // Modal references
   let syncingInProgressModal: HTMLDialogElement;
   let uploadingInProgressModal: HTMLDialogElement;
   let addAutonomiFileModal: HTMLDialogElement;
+  let editFileMetadataModal: HTMLDialogElement;
+  let editPodModal: HTMLDialogElement;
+  let addPodRefModal: HTMLDialogElement;
+  let createNewPodModal: HTMLDialogElement;
+  let deletePodModal: HTMLDialogElement;
+  let syncPodsModal: HTMLDialogElement;
+
+  // Reactive updates to sync data between modes
+  let isUpdatingFromMode = false;
+
+  // Watch for changes in simple table data and update JSON-LD
+  $effect(() => {
+    if (!advancedMode && !isUpdatingFromMode && simpleTableData.length > 0) {
+      isUpdatingFromMode = true;
+      jsonInputText = simpleTableToJsonLd(simpleTableData);
+      isUpdatingFromMode = false;
+    }
+  });
+
+  // Watch for changes in JSON-LD and update simple table data
+  $effect(() => {
+    if (advancedMode && !isUpdatingFromMode && jsonInputText) {
+      try {
+        isUpdatingFromMode = true;
+        const newTableData = jsonLdToSimpleTable(jsonInputText);
+        if (newTableData.length > 0) {
+          simpleTableData = newTableData;
+        }
+        isUpdatingFromMode = false;
+      } catch (e) {
+        isUpdatingFromMode = false;
+      }
+    }
+  });
 
 
   $effect(()=> {
@@ -138,17 +177,28 @@
   })
 
   function loadTemplate(type) {
+    isUpdatingFromMode = true;
+
     selectedType = type;
-    const template = templates[type];
+    const template = { ...templates[type] }; // Create a copy to avoid modifying the original
+
+    // Store the original template for comparison later
+    originalTemplate = { ...templates[type] };
 
     // automatically set name and contentSize in the template
     template["schema:contentSize"] = editingPodItem.fileSize ?? "0";
     template["schema:name"] = editingPodItem.name;
 
     jsonInputText = JSON.stringify(template, null, 2);
+
+    // Update simple table data
+    simpleTableData = jsonLdToSimpleTable(jsonInputText);
+
     isValid = false;
     error = null;
     parsed = null;
+
+    isUpdatingFromMode = false;
   }
 
   function validateJsonLd() {
@@ -165,6 +215,119 @@
       error = e.message;
       parsed = null;
     }
+  }
+
+  // Convert JSON-LD to simple table format
+  function jsonLdToSimpleTable(jsonLdText) {
+    try {
+      const obj = JSON.parse(jsonLdText);
+      const tableData = [];
+
+      for (const [key, value] of Object.entries(obj)) {
+        if (key === "@context") {
+          // Handle @context as comma-separated list
+          if (typeof value === 'object') {
+            const contextValues = Object.entries(value).map(([k, v]) => `${k}=${v}`);
+            tableData.push({
+              predicate: key,
+              value: contextValues.join(', ')
+            });
+          } else {
+            tableData.push({
+              predicate: key,
+              value: String(value)
+            });
+          }
+        } else {
+          tableData.push({
+            predicate: key,
+            value: typeof value === 'object' ? JSON.stringify(value) : String(value)
+          });
+        }
+      }
+
+      return tableData;
+    } catch (e) {
+      console.error("Error converting JSON-LD to simple table:", e);
+      return [];
+    }
+  }
+
+  // Convert simple table format back to JSON-LD
+  function simpleTableToJsonLd(tableData) {
+    const obj = {};
+
+    for (const row of tableData) {
+      if (row.predicate && row.predicate.trim()) {
+        if (row.predicate === "@context") {
+          // Handle @context conversion from comma-separated list
+          if (row.value.includes('=')) {
+            const contextObj = {};
+            const pairs = row.value.split(',').map(s => s.trim());
+            for (const pair of pairs) {
+              const equalIndex = pair.indexOf('=');
+              if (equalIndex > 0) {
+                const key = pair.substring(0, equalIndex).trim();
+                const value = pair.substring(equalIndex + 1).trim();
+                if (key && value) {
+                  contextObj[key] = value;
+                }
+              }
+            }
+            obj["@context"] = contextObj;
+          } else {
+            obj["@context"] = row.value;
+          }
+        } else {
+          try {
+            // Try to parse as JSON first (for objects/arrays)
+            obj[row.predicate] = JSON.parse(row.value);
+          } catch {
+            // If not valid JSON, treat as string
+            obj[row.predicate] = row.value;
+          }
+        }
+      }
+    }
+
+    return JSON.stringify(obj, null, 2);
+  }
+
+  // Toggle between advanced and simple mode
+  function toggleAdvancedMode() {
+    isUpdatingFromMode = true;
+
+    if (advancedMode) {
+      // Switching from advanced to simple mode
+      // First validate the JSON-LD
+      validateJsonLd();
+      if (!isValid) {
+        // Don't switch if JSON-LD is invalid
+        advancedMode = true; // Keep it in advanced mode
+        isUpdatingFromMode = false;
+        return;
+      }
+
+      // Convert JSON-LD to simple table
+      simpleTableData = jsonLdToSimpleTable(jsonInputText);
+    } else {
+      // Switching from simple to advanced mode
+      // Convert simple table back to JSON-LD
+      jsonInputText = simpleTableToJsonLd(simpleTableData);
+      validateJsonLd();
+    }
+
+    isUpdatingFromMode = false;
+  }
+
+  // Add a new row to the simple table
+  function addSimpleTableRow() {
+    simpleTableData = [...simpleTableData, { predicate: "", value: "" }];
+  }
+
+  // Remove a row from the simple table
+  function removeSimpleTableRow(index) {
+    simpleTableData = simpleTableData.filter((_, i) => i !== index);
   }
 
   async function addPodRef(podAddress, podRefAddress) {
@@ -571,7 +734,25 @@
   function saveMetaDataToItem() {
     try {
       if (editingPodItem) {
-        editingPodItem.metadata = JSON.parse(jsonInputText);
+        // Convert simple table to JSON-LD if in simple mode
+        if (!advancedMode) {
+          jsonInputText = simpleTableToJsonLd(simpleTableData);
+        }
+
+        let metadata = JSON.parse(jsonInputText);
+
+        // Remove unchanged template values (except for protected fields)
+        if (originalTemplate) {
+          const protectedFields = ["schema:name", "schema:contentSize", "@type", "schema:encodingFormat"];
+
+          for (const [key, value] of Object.entries(originalTemplate)) {
+            if (!protectedFields.includes(key) && metadata[key] === value) {
+              delete metadata[key];
+            }
+          }
+        }
+
+        editingPodItem.metadata = metadata;
         editingPodItem.modified = true;
 
         if (Object.keys(editingPodItem.metadata).length === 0){
@@ -585,7 +766,7 @@
         addToast('Metadata saved!', 'success');
       }
       console.log(editingPodItem)
-      editFileMetadataModal.close();  
+      editFileMetadataModal.close();
     } catch (error) {
       console.error(error);
       addToast("Could not save your metadata, ensure that it's valid JSON first.", "error");
@@ -594,26 +775,29 @@
 
   function openEditMetadata(item) {
     try {
+      isUpdatingFromMode = true;
+
+      // Reset mode to simple by default
+      advancedMode = false;
+      originalTemplate = null;
+
       if (Object.keys(item.metadata).length === 0) {
         loadTemplate("Book")
       } else {
         jsonInputText = JSON.stringify(item.metadata, null, 2);
+        // Initialize simple table data
+        simpleTableData = jsonLdToSimpleTable(jsonInputText);
       }
+
+      isUpdatingFromMode = false;
     } catch (error) {
       console.error(error);
       addToast("Couldn't parse metadata for some reason. See logs...", "error")
       jsonInputText = JSON.stringify({}, null, 2);
+      simpleTableData = [];
+      isUpdatingFromMode = false;
     }
     editingPodItem = item;
-    // activeFileType = item.metadata.type;
-    // Shallow copy to avoid direct binding unless you want live updating
-    // editMetadataFields = {...(item.metadata || {})};
-    // If there are new fields, ensure they're in the object
-    // for (const field of displayFields) {
-    //   if (!(field in editMetadataFields)) {
-    //     editMetadataFields[field] = "";
-    //   }
-    // }
     editFileMetadataModal.showModal();
   }
 
@@ -743,7 +927,7 @@
       <li><a href="/screens/pod-management/downloads">Downloads</a></li>
     </ul>
   </Drawer>
-  <dialog id="createNewPodModal" class="modal">
+  <dialog id="createNewPodModal" class="modal" bind:this={createNewPodModal}>
     <div class="modal-box">
       <h3 class="text-lg font-bold">Create New Pod</h3>
       <div class="py-4">
@@ -793,7 +977,7 @@
       </div>
     </div>
   </dialog>
-  <dialog id="deletePodModal" class="modal">
+  <dialog id="deletePodModal" class="modal" bind:this={deletePodModal}>
     <div class="modal-box w-8/12 max-w-xl">
       <h3 class="text-lg font-bold">Pod Deletion</h3>
       <div class="py-4" style="justify-content: center;">
@@ -807,7 +991,7 @@
       </div>
     </div>
   </dialog>
-  <dialog id="editPodModal" class="modal">
+  <dialog id="editPodModal" class="modal" bind:this={editPodModal}>
     <div class="modal-box w-10/12 max-w-5xl max-h-lg">
       <h3 class="text-lg font-bold">Editing Pod: {activePod?.name}</h3>
       <div class="py-2 flex items-center justify-center gap-x-1">
@@ -943,8 +1127,8 @@
       </div>
     </div>
   </dialog>
-  <dialog id="editFileMetadataModal" class="modal">
-    <div class="modal-box w-5/12 max-w-xl">
+  <dialog id="editFileMetadataModal" class="modal" bind:this={editFileMetadataModal}>
+    <div class="modal-box w-7/12 max-w-4xl">
       <h3 class="text-lg font-bold">Editing Metadata</h3>
       <div class="py-4" style="justify-content: center;">
         {#if editingPodItem?.type === "pod-ref"}
@@ -953,35 +1137,111 @@
             <input type="text" class="input w-full" placeholder="some address" bind:value={podRefAddress}/>
           </fieldset>
         {:else}
-          <label class="block mb-2 font-semibold">Choose a type:</label>
-          <select class="mb-4 p-2 select" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
-            {#each Object.keys(templates) as type}
-              <option value={type}>{type}</option>
-            {/each}
-          </select>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+              <label class="font-semibold">Choose a type:</label>
+              <select class="p-2 select" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
+                {#each Object.keys(templates) as type}
+                  <option value={type}>{type}</option>
+                {/each}
+              </select>
+            </div>
 
-          <fieldset class="fieldset">
-            <legend class="fieldset-legend">File Metadata (JSON-LD)</legend>
-            <textarea 
-              class="textarea code-input" 
-              style="min-height: 300px; width:100%" 
-              placeholder="" 
-              bind:value={jsonInputText}
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-            >
-            </textarea>
-          </fieldset>
-          <button class="mt-4 btn btn-primary" onclick={validateJsonLd}>
-            Validate
-          </button>
+            <div class="flex items-center gap-2">
+              <span class="text-sm">Advanced</span>
+              <input
+                type="checkbox"
+                class="toggle toggle-primary"
+                bind:checked={advancedMode}
+                onchange={() => toggleAdvancedMode()}
+              />
+            </div>
+          </div>
 
-          {#if isValid}
-            <p class="mt-4 text-green-600 font-medium">✅ Valid JSON-LD!</p>
-          {:else if error}
-            <p class="mt-4 text-red-600">❌ {error}</p>
-            <p class="mt-4 text-red-600">❌ Check for invalid commas and that key value pairs are double quoted.</p>
+          {#if advancedMode}
+            <!-- Advanced Mode: JSON-LD Editor -->
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend">File Metadata (JSON-LD)</legend>
+              <textarea
+                class="textarea code-input"
+                style="min-height: 300px; width:100%"
+                placeholder=""
+                bind:value={jsonInputText}
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+              >
+              </textarea>
+            </fieldset>
+            <button class="mt-4 btn btn-primary" onclick={validateJsonLd}>
+              Validate
+            </button>
+
+            {#if isValid}
+              <p class="mt-4 text-green-600 font-medium">✅ Valid JSON-LD!</p>
+            {:else if error}
+              <p class="mt-4 text-red-600">❌ {error}</p>
+              <p class="mt-4 text-red-600">❌ Check for invalid commas and that key value pairs are double quoted.</p>
+            {/if}
+          {:else}
+            <!-- Simple Mode: Table Editor -->
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend">File Metadata (Simple Mode)</legend>
+              <!-- Fixed Header -->
+              <div class="w-full">
+                <table class="table w-full">
+                  <thead>
+                    <tr class="bg-base-200">
+                      <th style="width: 200px; min-width: 200px;">Predicate</th>
+                      <th style="width: calc(100% - 250px);">Value</th>
+                      <th style="width: 50px; min-width: 50px;" class="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              <!-- Scrollable Body -->
+              <div class="overflow-auto border border-base-300" style="max-height: 300px;">
+                <table class="table table-zebra w-full">
+                  <tbody>
+                    {#each simpleTableData as row, index}
+                      <tr>
+                        <td style="width: 200px; min-width: 200px;">
+                          <input
+                            type="text"
+                            class="input input-sm"
+                            style="width: 190px;"
+                            bind:value={row.predicate}
+                            placeholder="e.g., schema:title"
+                          />
+                        </td>
+                        <td style="width: calc(100% - 250px);">
+                          <input
+                            type="text"
+                            class="input input-sm w-full"
+                            bind:value={row.value}
+                            placeholder="Enter value"
+                          />
+                        </td>
+                        <td style="width: 50px; min-width: 50px;" class="text-center">
+                          <button
+                            class="btn btn-sm btn-error btn-square"
+                            onclick={() => removeSimpleTableRow(index)}
+                            title="Remove row"
+                          >
+                            <img src="/app-icons/trash-icon.svg" alt="trash icon" width="12" height="12" />
+                          </button>
+                        </td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex gap-2 mt-4">
+                <button class="btn btn-primary" onclick={addSimpleTableRow}>
+                  Add Row
+                </button>
+              </div>
+            </fieldset>
           {/if}
         {/if}
       </div>
@@ -993,7 +1253,7 @@
       </div>
     </div>
   </dialog>
-  <dialog id="addPodRefModal" class="modal">
+  <dialog id="addPodRefModal" class="modal" bind:this={addPodRefModal}>
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Add Pod Reference</h3>
       <div class="py-4" style="justify-content: center;">
@@ -1028,7 +1288,7 @@
       </div>
     </div>
   </dialog>
-  <dialog id="syncPodsModal" class="modal">
+  <dialog id="syncPodsModal" class="modal" bind:this={syncPodsModal}>
     <div class="modal-box w-5/12 max-w-xl">
       <h3 class="text-lg font-bold">Warning</h3>
       <div class="py-4" style="justify-content: center;">
