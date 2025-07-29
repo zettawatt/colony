@@ -20,6 +20,24 @@
     return tabulatorInstance;
   }
 
+  // Method to update specific rows without full redraw
+  export function updateRowData(rowId, newData) {
+    if (tabulatorInstance && tableReady) {
+      try {
+        // Use updateData method which preserves scroll position by design
+        // Create the update object with the row ID and new data
+        const updateObject = { ...newData };
+        updateObject.id = rowId; // Ensure the ID is set for the update
+
+        tabulatorInstance.updateData([updateObject]);
+        return true;
+      } catch (error) {
+        console.debug('Failed to update row:', error);
+      }
+    }
+    return false;
+  }
+
   // Functions to save and restore scroll position
   export function saveScrollPosition() {
     if (tabulatorInstance) {
@@ -171,8 +189,11 @@
           DateTime: DateTime,
         },
         initialSort: initialSort,
-        // Disable virtual DOM to prevent lockups - use basic rendering
-        renderVertical: "basic",
+        // Set index field for row identification (important for row updates)
+        index: "id",
+        // Enable virtual DOM for scroll position preservation during updates
+        // Note: Virtual DOM is required for updateData to maintain scroll position
+        renderVertical: "virtual",
         // Disable features that can cause scroll jank
         movableRows: false,
         // Enable persistence for instant restoration
@@ -233,8 +254,36 @@
     clearTimeout(scrollSaveTimeout);
   });
 
+  // Track previous data to avoid unnecessary updates
+  let previousData = [];
+  let lastDataUpdateTime = 0;
+
   $: if (tabulatorInstance && Array.isArray(data) && tableReady) {
-    tabulatorInstance.replaceData(data);
+    const now = Date.now();
+
+    // Throttle data updates to prevent excessive redraws during rapid timer updates
+    if (now - lastDataUpdateTime >= 100) {
+      // Check if data has actually changed structurally
+      const dataChanged = data.length !== previousData.length ||
+                         data.some((item, index) => {
+                           const prevItem = previousData[index];
+                           if (!prevItem) return true;
+
+                           // Compare all fields except elapsed (which changes frequently)
+                           const currentWithoutElapsed = { ...item };
+                           const prevWithoutElapsed = { ...prevItem };
+                           delete currentWithoutElapsed.elapsed;
+                           delete prevWithoutElapsed.elapsed;
+
+                           return JSON.stringify(currentWithoutElapsed) !== JSON.stringify(prevWithoutElapsed);
+                         });
+
+      if (dataChanged) {
+        tabulatorInstance.replaceData(data);
+        previousData = [...data];
+        lastDataUpdateTime = now;
+      }
+    }
   }
 
   // Update columns when they change
