@@ -5,7 +5,7 @@
   import { DateTime } from "luxon";
   import { globalTheme } from '../stores/globals';
 
-  export let columns, data, rowMenu, initialSort;
+  export let columns, data, rowMenu, initialSort, persistenceID = "colony-search-table", disableColumnPersistence = false;
 
   const dispatch = createEventDispatcher();
 
@@ -176,11 +176,11 @@
           sort: true,
           filter: true,
           headerFilter: true,
-          columns: true,
+          columns: !disableColumnPersistence, // Allow disabling column persistence
           page: false // We'll handle scroll position separately
         },
         persistenceMode: "local", // Use localStorage for better performance
-        persistenceID: "colony-search-table", // Unique ID for this table
+        persistenceID: persistenceID, // Unique ID for this table
         tableBuilt: function() {
           tableReady = true;
           // Restore scroll position after table is built and persistence is applied

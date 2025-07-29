@@ -44,6 +44,10 @@
       console.error("password was null");
       showLogin = true;
     }
+
+    // Clear any existing column persistence data for status table to prevent column switching
+    localStorage.removeItem('tabulator-colony-status-table-columns');
+    localStorage.removeItem('tabulator-colony-search-table-columns'); // Also clear search table data that might interfere
   })
 </script>
 
@@ -56,7 +60,7 @@
   </div>
   
   <div class="status-table-container" style="flex: 1; min-height: 0;">
-    <TabulatorTable data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} />
+    <TabulatorTable data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} persistenceID="colony-status-table" disableColumnPersistence={true} />
   </div>
 </main>
 
