@@ -31,24 +31,12 @@ export type TransferInfo = {
   progress: number;                 // 0-100 percent
   complete: boolean;                // Whether transfer finished
   error?: string;                   // Error message (if failed)
-  elapsed?: string;                 // Elapsed time as "HH:MM:SS"
   status: TransferStatus;           // Current status
   startedDate: string;              // ISO date string when transfer started
 };
 
-// Internal transfer info (adds timer/secondsElapsed, not persisted)
-type InternalTransferInfo = TransferInfo & {
-  timer?: ReturnType<typeof setInterval>; // Interval timer to update time
-  secondsElapsed?: number;                // Seconds since started
-};
-
-// Utility: format seconds as "HH:MM:SS"
-function formatElapsed(seconds: number): string {
-  const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
-  const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-  const secs = (seconds % 60).toString().padStart(2, '0');
-  return `${hrs}:${mins}:${secs}`;
-}
+// Internal transfer info (same as TransferInfo since we no longer need timers)
+type InternalTransferInfo = TransferInfo;
 
 // Utility: extract file name from path
 function fileNameFromPath(filePath: string): string {
@@ -62,37 +50,17 @@ const { subscribe, update, set } = writable<Record<string, InternalTransferInfo>
 let initialized = false;
 let unsubStore: (() => void) | null = null;
 
-// Start a timer that increments elapsed time for a transfer task
-function startElapsedTimer(id: string) {
-  // Fires every second; updates store with +1 elapsed second & updates elapsed string
-  return setInterval(() => {
-    update(transfers => {
-      const t = transfers[id];
-      // Don't increment if missing or already complete
-      if (!t || t.status == "Complete") return transfers;
-      const secondsElapsed = (t.secondsElapsed ?? 0) + 1;
-      return {
-        ...transfers,
-        [id]: {
-          ...t,
-          secondsElapsed,
-          elapsed: formatElapsed(secondsElapsed),
-        },
-      };
-    });
-  }, 1000);
-}
+
 
 // Set up Tauri event listeners to respond to transfer progress from backend
 function connectListeners() {
   // Download events
 
-  // On download start: add to store, begin timer, status is "Downloading"
+  // On download start: add to store, status is "Downloading"
   listen('download-started', event => {
     const {id, address, path, size } = event.payload as { id: string; address: string; path: string; size?: number };
     const name = fileNameFromPath(path);
     update(transfers => {
-      const timer = startElapsedTimer(id);
       return {
         ...transfers,
         [id]: {
@@ -103,9 +71,6 @@ function connectListeners() {
           size: formatFileSize(size) || undefined,
           progress: 0,
           complete: false,
-          secondsElapsed: 0,
-          elapsed: '00:00:00',
-          timer,
           status: "Downloading",
           startedDate: new Date().toISOString()
         },
@@ -113,39 +78,35 @@ function connectListeners() {
     });
   });
 
-  // On download complete: set as finished, stop timer, mark status
+  // On download complete: set as finished, mark status
   listen('download-complete', event => {
     console.log("download-complete");
     const { id } = event.payload as { id: string };
     update(transfers => {
       const t = transfers[id];
-      if (t?.timer) clearInterval(t.timer);
       return {
         ...transfers,
         [id]: {
           ...t,
           progress: 100,
           complete: true,
-          timer: undefined,
           status: "Complete"
         },
       };
     });
   });
 
-  // On download error: stop timer, mark status, add error message
+  // On download error: mark status, add error message
   listen('download-error', event => {
     const { id, message } = event.payload as { id: string; message: string };
     update(transfers => {
       const t = transfers[id];
-      if (t?.timer) clearInterval(t.timer);
       return {
         ...transfers,
         [id]: {
           ...t,
           error: message,
           complete: false,
-          timer: undefined,
           status: "Errored"
         },
       };
@@ -154,13 +115,12 @@ function connectListeners() {
 
   // Upload events follow same pattern:
 
-  // On upload start: initialize new entry, start timer
+  // On upload start: initialize new entry
   listen('upload-started', event => {
     console.log("upload-started");
     const { id, path, size } = event.payload as { id: string; path: string; size?: number };
     const name = fileNameFromPath(path);
     update(transfers => {
-      const timer = startElapsedTimer(id);
       return {
         ...transfers,
         [id]: {
@@ -171,9 +131,6 @@ function connectListeners() {
           size: formatFileSize(size) || undefined,
           progress: 0,
           complete: false,
-          secondsElapsed: 0,
-          elapsed: '00:00:00',
-          timer,
           status: "Uploading",
           startedDate: new Date().toISOString()
         },
@@ -181,40 +138,36 @@ function connectListeners() {
     });
   });
 
-  // On upload complete: mark as finished, stop timer
+  // On upload complete: mark as finished
   listen('upload-complete', event => {
     console.log("upload-complete");
     const { id } = event.payload as { id: string };
     update(transfers => {
       const t = transfers[id];
-      if (t?.timer) clearInterval(t.timer);
       return {
         ...transfers,
         [id]: {
           ...t,
           progress: 100,
           complete: true,
-          timer: undefined,
           status: "Complete"
         },
       };
     });
   });
 
-  // On upload error: record error, stop timer
+  // On upload error: record error
   listen('upload-error', event => {
     console.log("upload-error");
     const { id, message } = event.payload as { id: string; message: string };
     update(transfers => {
       const t = transfers[id];
-      if (t?.timer) clearInterval(t.timer);
       return {
         ...transfers,
         [id]: {
           ...t,
           error: message,
           complete: false,
-          timer: undefined,
           status: "Errored"
         },
       };
@@ -229,25 +182,13 @@ async function init() {
 
   // Load persisted transfer info from storage (if available)
   const saved = (await store.get<Record<string, TransferInfo>>('transferManager')) ?? {};
-  // Note: timers are not restored for completed transfers; errored states TODO (see comment)
+  // Restore transfers, marking any in-progress transfers as errored since they can't continue
   const restored: Record<string, InternalTransferInfo> = Object.fromEntries(
     Object.entries(saved).map(([id, t]) => [
       id,
       {
         ...t,
         name: t.name ?? fileNameFromPath(t.path),
-        timer: t.status !== "Complete" ? undefined : startElapsedTimer(id),
-        // Parse elapsed string back to seconds, if available
-        secondsElapsed: t.elapsed
-          ? (t.elapsed.split(':').reduce((acc, v, idx) =>
-            idx === 0
-              ? acc + +v * 3600
-              : idx === 1
-              ? acc + +v * 60
-              : acc + +v
-            , 0)
-          )
-          : t.status === "Complete" ? undefined : 0,
         startedDate: t.startedDate ?? new Date().toISOString(),
         status: t.status === "Uploading" || t.status === "Downloading" ? "Errored" : t.status
       },
@@ -265,11 +206,10 @@ async function init() {
           name: t.name,
           type: t.type,
           path: t.path,
-          size: t.size, // Save as size, not estimated_size
+          size: t.size,
           progress: t.progress,
           complete: t.complete,
           error: t.error,
-          elapsed: t.elapsed,
           status: t.status,
           startedDate: t.startedDate
         },
