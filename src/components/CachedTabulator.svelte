@@ -1,0 +1,325 @@
+<script>
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { TabulatorFull as Tabulator } from 'tabulator-tables';
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { DateTime } from "luxon";
+  import { globalTheme } from '../stores/globals';
+
+  export let columns, data, rowMenu, initialSort, cacheKey = 'default';
+
+  const dispatch = createEventDispatcher();
+
+  let tableComponent;
+  let tabulatorInstance = null;
+  let unlisten;
+  let tableReady = false;
+  let tableHeight = 300;
+  let resizeTimeout;
+  let scrollSaveTimeout;
+  let isRestoringFromCache = false;
+
+  // Export the tabulator instance so parent components can access it
+  export { tabulatorInstance };
+
+  export function getTabulatorInstance() {
+    return tabulatorInstance;
+  }
+
+  function setTableHeight() {
+    if (window) {
+      tableHeight = Math.max(300, Math.min(window.innerHeight * 0.75, 1500));
+    }
+  }
+
+  function handleWindowResize() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      setTableHeight();
+      window.dispatchEvent(new CustomEvent('tabulator-resize-start'));
+      
+      setTimeout(() => {
+        if (tabulatorInstance && tableReady) {
+          tabulatorInstance.setColumns(columns);
+          tabulatorInstance.redraw(true);
+        }
+      }, 10);
+    }, 100);
+  }
+
+  function switchTabulatorTheme(theme) {
+    const link = document.getElementById('tabulator-theme');
+    if (link) {
+      link.href = theme === 'dark'
+        ? '/css/tabulator_midnight.min.css'
+        : '/css/tabulator.min.css';
+      if (tabulatorInstance) tabulatorInstance.redraw(true);
+    }
+  }
+
+  function saveToCache() {
+    if (tabulatorInstance && tableReady && cacheKey) {
+      try {
+        const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
+        const scrollPosition = scrollContainer ? {
+          x: scrollContainer.scrollLeft,
+          y: scrollContainer.scrollTop
+        } : { x: 0, y: 0 };
+
+        const state = {
+          data: tabulatorInstance.getData ? tabulatorInstance.getData() : (data || []),
+          columns: columns || [],
+          columnLayout: tabulatorInstance.getColumnLayout ? tabulatorInstance.getColumnLayout() : null,
+          filters: tabulatorInstance.getFilters ? tabulatorInstance.getFilters() : [],
+          sorters: tabulatorInstance.getSorters ? tabulatorInstance.getSorters() : [],
+          scrollPosition,
+          tableHeight,
+          timestamp: Date.now()
+        };
+
+        localStorage.setItem(`colony-tabulator-cache-${cacheKey}`, JSON.stringify(state));
+        console.log(`💾 Saved tabulator state for key: ${cacheKey}`);
+      } catch (error) {
+        console.warn('Failed to save tabulator state:', error);
+      }
+    }
+  }
+
+  function setupScrollListener() {
+    if (tabulatorInstance) {
+      const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
+      if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', () => {
+          clearTimeout(scrollSaveTimeout);
+          scrollSaveTimeout = setTimeout(() => {
+            saveToCache();
+          }, 250);
+        });
+      }
+    }
+  }
+
+  function restoreFromCache() {
+    if (!cacheKey || !tableComponent) return false;
+
+    try {
+      const savedState = localStorage.getItem(`colony-tabulator-cache-${cacheKey}`);
+      if (!savedState) {
+        return false;
+      }
+
+      const cached = JSON.parse(savedState);
+
+      // Check if cache is recent (within 5 minutes)
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      if (!cached.timestamp || cached.timestamp < fiveMinutesAgo) {
+        console.log('⏰ Cache expired, creating new instance');
+        localStorage.removeItem(`colony-tabulator-cache-${cacheKey}`);
+        return false;
+      }
+
+      console.log('🚀 Restoring tabulator from cached state instantly');
+      isRestoringFromCache = true;
+
+      // Create new instance with cached data for instant display
+      tabulatorInstance = new Tabulator(tableComponent, {
+        columns: cached.columns,
+        height: cached.tableHeight || tableHeight,
+        minHeight: 300,
+        data: cached.data, // Use cached data for instant display
+        rowContextMenu: rowMenu,
+        reactiveData: false,
+        layout: 'fitDataStretch',
+        initialSort: initialSort,
+        persistence: {
+          sort: true,
+          filter: true,
+          headerFilter: true,
+          columns: true,
+          page: false
+        },
+        persistenceMode: "local",
+        persistenceID: `colony-${cacheKey}-table`,
+        tableBuilt: function() {
+          tableReady = true;
+
+          // Restore additional state after table is built
+          setTimeout(() => {
+            try {
+              // Restore column layout if available
+              if (cached.columnLayout && tabulatorInstance.setColumnLayout) {
+                tabulatorInstance.setColumnLayout(cached.columnLayout);
+              }
+
+              // Restore filters
+              if (cached.filters && cached.filters.length > 0 && tabulatorInstance.setFilter) {
+                cached.filters.forEach(filter => {
+                  tabulatorInstance.setFilter(filter.field, filter.type, filter.value);
+                });
+              }
+
+              // Restore sorters
+              if (cached.sorters && cached.sorters.length > 0 && tabulatorInstance.setSort) {
+                tabulatorInstance.setSort(cached.sorters);
+              }
+
+              // Add scroll listener to save position changes
+              setupScrollListener();
+
+              console.log('✅ Tabulator restored from cache');
+
+              // Check if current data is different from cached data and update if needed
+              if (data && Array.isArray(data) && JSON.stringify(data) !== JSON.stringify(cached.data)) {
+                console.log('🔄 Updating cached tabulator with new data');
+                tabulatorInstance.clearData();
+                setTimeout(() => {
+                  if (tabulatorInstance && data.length > 0) {
+                    tabulatorInstance.setData(data);
+                  }
+                }, 10);
+              }
+
+              // Mark restoration as complete so reactive statements can work
+              isRestoringFromCache = false;
+
+              // Restore scroll position after a longer delay to ensure table is fully rendered
+              setTimeout(() => {
+                const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
+                if (scrollContainer && cached.scrollPosition) {
+                  scrollContainer.scrollLeft = cached.scrollPosition.x;
+                  scrollContainer.scrollTop = cached.scrollPosition.y;
+                  console.log('📍 Restored scroll position:', cached.scrollPosition);
+                }
+              }, 200);
+            } catch (error) {
+              console.warn('Error during state restoration:', error);
+            }
+          }, 100);
+        }
+      });
+
+
+
+      return true;
+    } catch (error) {
+      console.error('Failed to restore from cache:', error);
+      isRestoringFromCache = false;
+      return false;
+    }
+  }
+
+
+
+  function createNewTabulator() {
+    console.log('🔧 Creating new tabulator instance');
+    
+    try {
+      tabulatorInstance = new Tabulator(tableComponent, {
+        columns,
+        height: tableHeight,
+        minHeight: 300,
+        data,
+        rowContextMenu: rowMenu,
+        reactiveData: false,
+        layout: 'fitDataStretch',
+        dependencies: {
+          DateTime: DateTime,
+        },
+        initialSort: initialSort,
+        persistence: {
+          sort: true,
+          filter: true,
+          headerFilter: true,
+          columns: true,
+          page: false
+        },
+        persistenceMode: "local",
+        persistenceID: `colony-${cacheKey}-table`,
+        tableBuilt: function() {
+          tableReady = true;
+          setupScrollListener();
+
+          // Cache the instance after it's built
+          setTimeout(() => {
+            saveToCache();
+          }, 100);
+        }
+      });
+
+      setTimeout(() => {
+        if (!tableReady) {
+          tableReady = true;
+        }
+        if (tabulatorInstance && Array.isArray(data) && data.length > 0) {
+          tabulatorInstance.replaceData(data);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to create Tabulator instance:', error);
+    }
+  }
+
+  onMount(async () => {
+    setTableHeight();
+    window.addEventListener('resize', handleWindowResize);
+
+    // Try to restore from cache first
+    if (!restoreFromCache()) {
+      // If no cache available, create new instance
+      createNewTabulator();
+    }
+
+    unlisten = await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
+      switchTabulatorTheme(theme);
+    });
+  });
+
+  onDestroy(() => {
+    // Always save state before destroying
+    saveToCache();
+
+    if (unlisten) unlisten();
+
+    // Always destroy the tabulator instance since we're using state-based caching
+    if (tabulatorInstance) {
+      tabulatorInstance.destroy();
+    }
+
+    window.removeEventListener('resize', handleWindowResize);
+    clearTimeout(resizeTimeout);
+    clearTimeout(scrollSaveTimeout);
+  });
+
+  // Reactive statements for data and column updates
+  $: if (tabulatorInstance && Array.isArray(data) && tableReady && !isRestoringFromCache) {
+    console.log('🔄 Reactive update: replacing data with', data.length, 'items');
+    // Force clear any cached data first to ensure fresh update
+    tabulatorInstance.clearData();
+    // Add a small delay to ensure the clear operation completes
+    setTimeout(() => {
+      if (tabulatorInstance && data.length > 0) {
+        tabulatorInstance.setData(data);
+        // Save updated state
+        setTimeout(() => saveToCache(), 100);
+      }
+    }, 10);
+  }
+
+  $: if (tabulatorInstance && columns && tableReady) {
+    tabulatorInstance.setColumns(columns);
+    setTimeout(() => {
+      if (tabulatorInstance) {
+        tabulatorInstance.redraw(true);
+      }
+    }, 0);
+  }
+
+  $: if (typeof $globalTheme === 'string') {
+    switchTabulatorTheme($globalTheme);
+  }
+
+  $: if (tabulatorInstance && tableReady && tableHeight) {
+    tabulatorInstance.setHeight(tableHeight);
+  }
+</script>
+
+<div bind:this={tableComponent}></div>

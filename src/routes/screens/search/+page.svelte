@@ -1,5 +1,5 @@
 <script lang="ts">
-  import TabulatorTable from '../../../components/tabulator.svelte';
+  import CachedTabulator from '../../../components/CachedTabulator.svelte';
   import { searchColumns } from '../../../utils/search/searchColumns';
   import { invoke } from "@tauri-apps/api/core";
   import { transferManager } from '../../../stores/transferManager';
@@ -276,6 +276,10 @@
       };
 
       isSearching = false;
+
+      // Clear the tabulator cache to force fresh data display
+      localStorage.removeItem('colony-tabulator-cache-search');
+
       tableSearchResults = parsedResults;
 
       // Save state to store
@@ -285,14 +289,34 @@
         searchMetrics,
         scrollPosition: { x: 0, y: 0 } // Reset scroll position for new search
       });
+
+      // Force tabulator to update with new data
+      if (tabulatorTable?.getTabulatorInstance) {
+        const instance = tabulatorTable.getTabulatorInstance();
+        if (instance) {
+          console.log('🔄 Forcing tabulator update with new search results');
+          instance.clearData();
+          setTimeout(() => {
+            if (instance && parsedResults.length > 0) {
+              instance.setData(parsedResults);
+            }
+          }, 10);
+        }
+      }
     } catch (error) {
       console.error(error)
       isSearching = false;
+
+      // Clear the tabulator cache on error too
+      localStorage.removeItem('colony-tabulator-cache-search');
+
       searchMetrics = {
         itemCount: 0,
         searchTime: 0,
         hasSearched: true
       };
+
+      tableSearchResults = [];
 
       // Save error state to store
       searchState.updateState({
@@ -301,6 +325,14 @@
         searchMetrics,
         scrollPosition: { x: 0, y: 0 }
       });
+
+      // Clear tabulator data on error
+      if (tabulatorTable?.getTabulatorInstance) {
+        const instance = tabulatorTable.getTabulatorInstance();
+        if (instance) {
+          instance.clearData();
+        }
+      }
     }
   }
 
@@ -333,6 +365,10 @@
       };
 
       isSearching = false;
+
+      // Clear the tabulator cache to force fresh data display
+      localStorage.removeItem('colony-tabulator-cache-search');
+
       tableSearchResults = parsedResults;
 
       // Save state to store
@@ -342,14 +378,34 @@
         searchMetrics,
         scrollPosition: { x: 0, y: 0 } // Reset scroll position for new search
       });
+
+      // Force tabulator to update with new data
+      if (tabulatorTable?.getTabulatorInstance) {
+        const instance = tabulatorTable.getTabulatorInstance();
+        if (instance) {
+          console.log('🔄 Forcing tabulator update with new browse results');
+          instance.clearData();
+          setTimeout(() => {
+            if (instance && parsedResults.length > 0) {
+              instance.setData(parsedResults);
+            }
+          }, 10);
+        }
+      }
     } catch (error) {
       console.error(error)
       isSearching = false;
+
+      // Clear the tabulator cache on error too
+      localStorage.removeItem('colony-tabulator-cache-search');
+
       searchMetrics = {
         itemCount: 0,
         searchTime: 0,
         hasSearched: true
       };
+
+      tableSearchResults = [];
 
       // Save error state to store
       searchState.updateState({
@@ -358,6 +414,14 @@
         searchMetrics,
         scrollPosition: { x: 0, y: 0 }
       });
+
+      // Clear tabulator data on error
+      if (tabulatorTable?.getTabulatorInstance) {
+        const instance = tabulatorTable.getTabulatorInstance();
+        if (instance) {
+          instance.clearData();
+        }
+      }
     }
   }
 
@@ -384,8 +448,6 @@
   let handleTabulatorResize;
   let handleWindowResize;
   let resizeTimeout;
-  let scrollTimeout;
-  let handleTableScroll;
 
   onMount(async () => {
     try {
@@ -403,6 +465,10 @@
     // Initialize search state store and restore previous state
     searchState.init();
 
+    // Check if we have cached tabulator state for instant restoration
+    const hasCachedState = localStorage.getItem('colony-tabulator-cache-search') !== null;
+    console.log('🔄 Has cached tabulator state:', hasCachedState);
+
     // Subscribe to store changes and restore state
     storeUnsubscribe = searchState.subscribe((state) => {
       // Update local state carefully to avoid race conditions
@@ -419,6 +485,22 @@
       // Only update table results if they're different and we have results
       if (state.tableSearchResults.length > 0 && tableSearchResults !== state.tableSearchResults) {
         tableSearchResults = state.tableSearchResults;
+
+        // Force tabulator to update when state changes
+        setTimeout(() => {
+          if (tabulatorTable?.getTabulatorInstance) {
+            const instance = tabulatorTable.getTabulatorInstance();
+            if (instance) {
+              console.log('🔄 Updating tabulator from state change');
+              instance.clearData();
+              setTimeout(() => {
+                if (instance && state.tableSearchResults.length > 0) {
+                  instance.setData(state.tableSearchResults);
+                }
+              }, 10);
+            }
+          }
+        }, 50);
       }
     });
 
@@ -437,26 +519,13 @@
       }, 100); // 100ms debounce
     };
 
-    // Define scroll event handler with better debouncing
-    handleTableScroll = () => {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        const tableHolder = getTableScrollContainer();
-        if (tableHolder) {
-          const scrollX = tableHolder.scrollLeft;
-          const scrollY = tableHolder.scrollTop;
-          searchState.setScrollPosition(scrollX, scrollY);
-        }
-      }, 500); // Increased debounce time for better performance
-    };
+
 
     window.addEventListener('tabulator-resize-start', handleTabulatorResize);
     window.addEventListener('resize', handleWindowResize);
   })
 
-  // Track if scroll listener has been added
-  let scrollListenerAdded = false;
-  let scrollPositionRestored = false;
+
 
   // Function to get the tabulator scroll container
   function getTableScrollContainer() {
@@ -465,45 +534,7 @@
     return instance.element?.querySelector('.tabulator-tableholder');
   }
 
-  // Function to add scroll listener
-  function addScrollListener() {
-    const tableHolder = getTableScrollContainer();
-    if (tableHolder && !scrollListenerAdded) {
-      tableHolder.addEventListener('scroll', handleTableScroll);
-      scrollListenerAdded = true;
-    }
-  }
 
-  // Function to restore scroll position with retry logic
-  function restoreScrollPosition() {
-    if (scrollPositionRestored) return; // Only restore once
-
-    const currentState = JSON.parse(sessionStorage.getItem('colony-search-state') || '{}');
-    const tableHolder = getTableScrollContainer();
-
-    if (currentState.scrollPosition && tableHolder) {
-      const { x, y } = currentState.scrollPosition;
-      if (x !== 0 || y !== 0) {
-        // Try to restore scroll position with a small delay to ensure table is fully rendered
-        setTimeout(() => {
-          const tableHolder = getTableScrollContainer(); // Get fresh reference
-          if (tableHolder) {
-            tableHolder.scrollLeft = x;
-            tableHolder.scrollTop = y;
-            scrollPositionRestored = true;
-            console.log('✅ Restored scroll position:', { x, y });
-
-            // Verify the scroll position was actually set
-            setTimeout(() => {
-              if (tableHolder.scrollLeft !== x || tableHolder.scrollTop !== y) {
-                console.warn('⚠️ Scroll position restoration may have failed. Expected:', { x, y }, 'Actual:', { x: tableHolder.scrollLeft, y: tableHolder.scrollTop });
-              }
-            }, 100);
-          }
-        }, 200);
-      }
-    }
-  }
 
   // Function to setup table when it's ready
   function setupTableWhenReady() {
@@ -514,12 +545,9 @@
       console.log('🔧 Setting up table with', tableSearchResults.length, 'results,', tableRows.length, 'rendered rows');
 
       if (tableRows.length > 0) {
-        addScrollListener();
-
-        // Restore scroll position after table is confirmed to have content
-        setTimeout(() => {
-          restoreScrollPosition();
-        }, 100);
+        // Scroll position is now handled automatically by CachedTabulator's built-in persistence
+        // No manual setup needed
+        console.log('✅ Table setup complete');
       } else {
         console.log('⏳ Table not yet rendered, will retry...');
       }
@@ -557,13 +585,7 @@
     checkTabulator();
   }
 
-  // Watch for table data changes with better timing
   $: if (tableSearchResults.length > 0) {
-    // Reset flags when new data is loaded
-    scrollPositionRestored = false;
-    scrollListenerAdded = false;
-
-    // Wait a bit for the reactive update to complete, then check tabulator
     setTimeout(waitForTabulatorAndSetup, 500);
   }
 
@@ -573,19 +595,7 @@
       storeUnsubscribe();
     }
 
-    // Save current scroll position before leaving
-    const tableHolder = getTableScrollContainer();
-    if (tableHolder) {
-      const scrollX = tableHolder.scrollLeft;
-      const scrollY = tableHolder.scrollTop;
-      searchState.setScrollPosition(scrollX, scrollY);
 
-      // Remove scroll event listener
-      if (scrollListenerAdded) {
-        tableHolder.removeEventListener('scroll', handleTableScroll);
-        scrollListenerAdded = false;
-      }
-    }
 
     if (handleTabulatorResize) {
       window.removeEventListener('tabulator-resize-start', handleTabulatorResize);
@@ -595,9 +605,6 @@
     }
     if (resizeTimeout) {
       clearTimeout(resizeTimeout);
-    }
-    if (scrollTimeout) {
-      clearTimeout(scrollTimeout);
     }
   })
 </script>
@@ -647,7 +654,7 @@
   </div>
 
   <div class="search-table-container" style="flex: 1; min-height: 0;">
-    <TabulatorTable bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} />
+    <CachedTabulator bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} cacheKey="search" />
   </div>
   <dialog id="fileMetadataModal" class="modal" bind:this={fileMetadataModal}>
     <div class="modal-box w-10/12 max-w-5xl max-h-[80vh]">

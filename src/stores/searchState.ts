@@ -15,6 +15,9 @@ export type SearchStateData = {
     x: number;
     y: number;
   };
+  // Enhanced state for instant restoration
+  tabulatorConfig?: any;
+  lastUpdateTime?: number;
 };
 
 // Default search state
@@ -30,7 +33,9 @@ const defaultSearchState: SearchStateData = {
   scrollPosition: {
     x: 0,
     y: 0
-  }
+  },
+  tabulatorConfig: undefined,
+  lastUpdateTime: 0
 };
 
 // Create the writable store
@@ -147,5 +152,34 @@ export const searchState = {
   reset: () => {
     set(defaultSearchState);
     saveToSession(defaultSearchState);
+  },
+
+  // Save tabulator configuration for instant restoration
+  saveTabulatorConfig: (config: any) => {
+    update(state => {
+      const newState = {
+        ...state,
+        tabulatorConfig: config,
+        lastUpdateTime: Date.now()
+      };
+      saveToSession(newState);
+      return newState;
+    });
+  },
+
+  // Get tabulator configuration
+  getTabulatorConfig: () => {
+    const currentState = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+    return currentState.tabulatorConfig;
+  },
+
+  // Check if we have recent tabulator config (within last 5 minutes)
+  hasRecentTabulatorConfig: () => {
+    const currentState = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+    if (!currentState.tabulatorConfig || !currentState.lastUpdateTime) {
+      return false;
+    }
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    return currentState.lastUpdateTime > fiveMinutesAgo;
   }
 };
