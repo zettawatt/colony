@@ -88,12 +88,14 @@
     if (tabulatorInstance) {
       const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
       if (scrollContainer) {
+        // Simple scroll listener without aggressive optimizations
         scrollContainer.addEventListener('scroll', () => {
+          // Simple debounced cache saving
           clearTimeout(scrollSaveTimeout);
           scrollSaveTimeout = setTimeout(() => {
             saveToCache();
           }, 250);
-        });
+        }, { passive: true });
       }
     }
   }
@@ -130,6 +132,10 @@
         reactiveData: false,
         layout: 'fitDataStretch',
         initialSort: initialSort,
+        // Disable virtual DOM to prevent lockups - use basic rendering
+        renderVertical: "basic",
+        // Disable features that can cause scroll jank
+        movableRows: false,
         persistence: {
           sort: true,
           filter: true,
@@ -170,26 +176,29 @@
               // Check if current data is different from cached data and update if needed
               if (data && Array.isArray(data) && JSON.stringify(data) !== JSON.stringify(cached.data)) {
                 console.log('🔄 Updating cached tabulator with new data');
-                tabulatorInstance.clearData();
-                setTimeout(() => {
-                  if (tabulatorInstance && data.length > 0) {
-                    tabulatorInstance.setData(data);
-                  }
-                }, 10);
+                // Use replaceData instead of clearData + setData to prevent lockups
+                try {
+                  tabulatorInstance.replaceData(data);
+                } catch (error) {
+                  console.warn('Error replacing data:', error);
+                }
               }
 
               // Mark restoration as complete so reactive statements can work
               isRestoringFromCache = false;
 
-              // Restore scroll position after a longer delay to ensure table is fully rendered
+              // Restore scroll position smoothly after table is fully rendered
               setTimeout(() => {
                 const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
                 if (scrollContainer && cached.scrollPosition) {
-                  scrollContainer.scrollLeft = cached.scrollPosition.x;
-                  scrollContainer.scrollTop = cached.scrollPosition.y;
-                  console.log('📍 Restored scroll position:', cached.scrollPosition);
+                  // Use requestAnimationFrame for smooth restoration
+                  requestAnimationFrame(() => {
+                    scrollContainer.scrollLeft = cached.scrollPosition.x;
+                    scrollContainer.scrollTop = cached.scrollPosition.y;
+                    console.log('📍 Restored scroll position:', cached.scrollPosition);
+                  });
                 }
-              }, 200);
+              }, 100); // Reduced delay for faster restoration
             } catch (error) {
               console.warn('Error during state restoration:', error);
             }
@@ -211,7 +220,7 @@
 
   function createNewTabulator() {
     console.log('🔧 Creating new tabulator instance');
-    
+
     try {
       tabulatorInstance = new Tabulator(tableComponent, {
         columns,
@@ -225,6 +234,10 @@
           DateTime: DateTime,
         },
         initialSort: initialSort,
+        // Disable virtual DOM to prevent lockups - use basic rendering
+        renderVertical: "basic",
+        // Disable features that can cause scroll jank
+        movableRows: false,
         persistence: {
           sort: true,
           filter: true,
@@ -237,6 +250,22 @@
         tableBuilt: function() {
           tableReady = true;
           setupScrollListener();
+
+          // Add error recovery for virtual DOM issues
+          if (tabulatorInstance.element) {
+            const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
+            if (scrollContainer) {
+              // Add error recovery listener
+              scrollContainer.addEventListener('error', () => {
+                console.warn('Scroll error detected, attempting recovery...');
+                setTimeout(() => {
+                  if (tabulatorInstance && tabulatorInstance.redraw) {
+                    tabulatorInstance.redraw(true);
+                  }
+                }, 100);
+              });
+            }
+          }
 
           // Cache the instance after it's built
           setTimeout(() => {
@@ -292,16 +321,21 @@
   // Reactive statements for data and column updates
   $: if (tabulatorInstance && Array.isArray(data) && tableReady && !isRestoringFromCache) {
     console.log('🔄 Reactive update: replacing data with', data.length, 'items');
-    // Force clear any cached data first to ensure fresh update
-    tabulatorInstance.clearData();
-    // Add a small delay to ensure the clear operation completes
-    setTimeout(() => {
-      if (tabulatorInstance && data.length > 0) {
-        tabulatorInstance.setData(data);
-        // Save updated state
-        setTimeout(() => saveToCache(), 100);
+
+    // Safety check to prevent excessive updates
+    const currentDataLength = tabulatorInstance.getData ? tabulatorInstance.getData().length : 0;
+    if (currentDataLength !== data.length) {
+      // Use replaceData instead of clearData + setData to prevent lockups
+      try {
+        tabulatorInstance.replaceData(data);
+        // Save updated state with delay
+        setTimeout(() => saveToCache(), 200);
+      } catch (error) {
+        console.warn('Error updating tabulator data:', error);
       }
-    }, 10);
+    } else {
+      console.log('⏭️ Skipping update - same data length');
+    }
   }
 
   $: if (tabulatorInstance && columns && tableReady) {
@@ -322,4 +356,26 @@
   }
 </script>
 
-<div bind:this={tableComponent}></div>
+<div bind:this={tableComponent} class="smooth-scroll-table"></div>
+
+<style>
+  /* Basic scrollbar styling only */
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar) {
+    width: 12px;
+  }
+
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar-track) {
+    background: transparent;
+  }
+
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar-thumb) {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar-thumb:hover) {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+</style>

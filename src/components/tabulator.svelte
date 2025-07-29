@@ -171,6 +171,10 @@
           DateTime: DateTime,
         },
         initialSort: initialSort,
+        // Disable virtual DOM to prevent lockups - use basic rendering
+        renderVertical: "basic",
+        // Disable features that can cause scroll jank
+        movableRows: false,
         // Enable persistence for instant restoration
         persistence: {
           sort: true,
@@ -253,4 +257,26 @@
   }
 </script>
 
-<div bind:this={tableComponent}></div>
+<div bind:this={tableComponent} class="smooth-scroll-table"></div>
+
+<style>
+  /* Basic scrollbar styling only */
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar) {
+    width: 12px;
+  }
+
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar-track) {
+    background: transparent;
+  }
+
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar-thumb) {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  :global(.smooth-scroll-table .tabulator-tableholder::-webkit-scrollbar-thumb:hover) {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+</style>
