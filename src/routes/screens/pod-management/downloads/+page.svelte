@@ -7,6 +7,7 @@
   import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { onMount } from "svelte";
+  import AddressDisplay from "../../../../components/AddressDisplay.svelte";
   import { v4 as uuidv4 } from 'uuid';
   import { openPath } from '@tauri-apps/plugin-opener';
 
@@ -120,15 +121,7 @@
                           </button>
                         </td>
                         <td>
-                          <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
-                            <button
-                              class="address-tooltip"
-                              data-address={file.autonomiAddress}
-                              onclick={handleCopyAddress}
-                              tabindex="0"
-                              style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                            >autonomi address</button>
-                          </div>
+                          <AddressDisplay address={file.autonomiAddress} />
                         </td>
                         <td>{formatFileSize(file.fileSize)}</td>
                         <td>{file.downloadedDate}</td>

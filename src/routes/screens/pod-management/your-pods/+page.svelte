@@ -7,6 +7,7 @@
   import ps from "../../../../stores/persistantStorage";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
+  import AddressDisplay from "../../../../components/AddressDisplay.svelte";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
   import { v4 as uuidv4 } from 'uuid';
   import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
@@ -876,15 +877,7 @@
                         <th>{idx + 1}</th>
                         <td>{pod.name}</td>
                         <td>
-                          <div class="tooltip tooltip-warning" data-tip={pod.address}>
-                            <button
-                              class="address-tooltip"
-                              data-address={pod.address}
-                              onclick={handleCopyAddress}
-                              tabindex="0"
-                              style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                            >pod address</button>
-                          </div>
+                          <AddressDisplay address={pod.address} />
                         </td>
                         <td>{makeDateReadable(pod.creation)}</td>
                         <td>{makeDateReadable(pod.modified)}</td>

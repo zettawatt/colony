@@ -64,7 +64,7 @@ var addressFormatter = function(cell, formatterParams) {
     // Show first 5 chars + ... + last 5 chars
     const prefix = address.substring(0, 5);
     const suffix = address.substring(address.length - 5);
-    return `<span style="font-style: italic;">${prefix}...${suffix}</span>`;
+    return `<span style="font-style: italic; cursor: pointer; text-decoration: underline dotted;">${prefix}...${suffix}</span>`;
 };
 
 export const searchColumns = [

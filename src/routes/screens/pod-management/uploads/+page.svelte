@@ -8,6 +8,7 @@
   import { onMount } from "svelte";
   import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
+  import AddressDisplay from "../../../../components/AddressDisplay.svelte";
 
   let fileObjs: FileObj[] = [];
   let stagedFileObj: FileObj | null = null;
@@ -148,15 +149,7 @@
                         <th>{idx + 1}</th>
                         <td>{file.name}</td>
                         <td>
-                          <div class="tooltip tooltip-warning" data-tip={file.autonomiAddress}>
-                            <button
-                              class="address-tooltip"
-                              data-address={file.autonomiAddress}
-                              onclick={handleCopyAddress}
-                              tabindex="0"
-                              style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                            >autonomi address</button>
-                          </div>
+                          <AddressDisplay address={file.autonomiAddress} />
                         </td>
                         <td>{file.uploadedDate}</td>
                         <td>{formatFileSize(file.fileSize)}</td>

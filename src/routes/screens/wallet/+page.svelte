@@ -5,6 +5,7 @@
   import { handleCopyAddress } from "../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../utils/password/session";
     import { addToast } from "../../../stores/toast";
+  import AddressDisplay from "../../../components/AddressDisplay.svelte";
 
   let primaryWalletName = $state("");
   let storedWallets = $state([]);
@@ -239,15 +240,7 @@
                           <span title="Primary Wallet" style="margin-left:4px; color: #ffc940; font-size: 1.1rem;">💰</span>
                         {/if}
                       </td>                    <td>
-                      <div class="" data-tip={wallet.address}>
-                        <button
-                          class="address-tooltip"
-                          data-address={wallet.address}
-                          onclick={handleCopyAddress}
-                          tabindex="0"
-                          style="cursor: pointer; font-style: italic; text-decoration: underline dotted;"
-                        >{wallet.address}</button>
-                      </div>
+                      <AddressDisplay address={wallet.address} />
                     </td>
                     <td>
                       {#if walletBalances[wallet.name]?.loading !== false}
