@@ -32,7 +32,19 @@
         return data.status === "Complete";
       });
 
-      // Delete the completed rows
+      // Get the IDs of completed transfers to remove from store
+      const completedIds = completedRows.map((row: any) => row.getData().id);
+
+      // Remove from the transfer manager store (this will also update persistent storage)
+      transferManager.update((transfers: any) => {
+        const updatedTransfers = { ...transfers };
+        completedIds.forEach((id: string) => {
+          delete updatedTransfers[id];
+        });
+        return updatedTransfers;
+      });
+
+      // Delete the completed rows from tabulator
       completedRows.forEach((row: any) => row.delete());
 
       addToast(`Cleared ${completedRows.length} completed transfers`, "success");
@@ -49,7 +61,19 @@
         return data.status === "Errored" || data.status === "Cancelled";
       });
 
-      // Delete the error rows
+      // Get the IDs of error transfers to remove from store
+      const errorIds = errorRows.map((row: any) => row.getData().id);
+
+      // Remove from the transfer manager store (this will also update persistent storage)
+      transferManager.update((transfers: any) => {
+        const updatedTransfers = { ...transfers };
+        errorIds.forEach((id: string) => {
+          delete updatedTransfers[id];
+        });
+        return updatedTransfers;
+      });
+
+      // Delete the error rows from tabulator
       errorRows.forEach((row: any) => row.delete());
 
       addToast(`Cleared ${errorRows.length} error transfers`, "success");

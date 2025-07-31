@@ -233,6 +233,7 @@ function cleanup() {
 // The store as exported to Svelte UI
 export const transferManager = {
   subscribe,   // Svelte store subscription
+  update,      // Allow external updates to the store
   init,        // Call this on app/component mount
   cleanup,     // Call this on unmount
 };
