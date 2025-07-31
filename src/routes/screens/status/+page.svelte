@@ -14,11 +14,46 @@
   ]
 
   let transfers = [];
+  let statusTable; // Reference to the TabulatorTable component
 
   // Reactive statement to handle transfer updates
   $: {
     const values = Object.values($transferManager);
     transfers = values;
+  }
+
+  // Function to clear completed transfers
+  function clearCompleted() {
+    const instance = statusTable?.getTabulatorInstance();
+    if (instance) {
+      // Get all rows with "Complete" status
+      const completedRows = instance.getRows().filter(row => {
+        const data = row.getData();
+        return data.status === "Complete";
+      });
+
+      // Delete the completed rows
+      completedRows.forEach(row => row.delete());
+
+      addToast(`Cleared ${completedRows.length} completed transfers`, "success");
+    }
+  }
+
+  // Function to clear error transfers
+  function clearErrors() {
+    const instance = statusTable?.getTabulatorInstance();
+    if (instance) {
+      // Get all rows with "Errored" or "Cancelled" status
+      const errorRows = instance.getRows().filter(row => {
+        const data = row.getData();
+        return data.status === "Errored" || data.status === "Cancelled";
+      });
+
+      // Delete the error rows
+      errorRows.forEach(row => row.delete());
+
+      addToast(`Cleared ${errorRows.length} error transfers`, "success");
+    }
   }
 
   onMount(async () => {
@@ -45,11 +80,21 @@
 {/if}
 <main class="status-container" style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px;">
   <div class="status-header" style="flex-shrink: 0; margin-bottom: 20px;">
-    <h2 class="text-2xl font-bold">Transfer Status</h2>
+    <div class="row mb-3">
+      <h2 class="text-2xl font-bold">Transfer Status</h2>
+      <div class="button-group">
+        <button class="btn btn-sof btn-warning mr-2" onclick={clearCompleted}>
+          Clear Completed
+        </button>
+        <button class="btn btn-sof btn-warning" onclick={clearErrors}>
+          Clear Errors
+        </button>
+      </div>
+    </div>
   </div>
   
   <div class="status-table-container" style="flex: 1; min-height: 0;">
-    <TabulatorTable data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} persistenceID="colony-status-table" disableColumnPersistence={true} />
+    <TabulatorTable bind:this={statusTable} data={transfers} columns={statusColumns} rowMenu={[]} initialSort={statusInitialSort} persistenceID="colony-status-table" disableColumnPersistence={true} />
   </div>
 </main>
 
@@ -58,5 +103,16 @@
   justify-content: flex-start;
   text-align: left;
   overflow: hidden;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>
