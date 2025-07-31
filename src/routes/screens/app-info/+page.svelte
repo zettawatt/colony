@@ -186,9 +186,9 @@
       <button
         class="crypto-icon {selectedCrypto === 'autonomi' ? 'active' : ''}"
         onclick={(e) => { e.stopPropagation(); selectCrypto('autonomi'); }}
-        aria-label="Donate ANT">
-        <img src="/autonomi.svg" alt="ANT" width="32" height="32" />
-        <span>ANT</span>
+        aria-label="Donate AUTONOMI">
+        <img src="/autonomi.svg" alt="AUTONOMI" width="32" height="32" />
+        <span>AUTONOMI</span>
       </button>
     </div>
 

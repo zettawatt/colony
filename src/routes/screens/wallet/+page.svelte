@@ -218,7 +218,7 @@
               <th>Wallet Name</th>
               <th>Wallet Key</th>
               <th>ETH Balance</th>
-              <th>ANT Balance</th>
+              <th>AUTONOMI Balance</th>
               <th>Operations</th>
             </tr>
           </thead>
@@ -248,7 +248,7 @@
                       {#if walletBalances[wallet.name]?.loading !== false}
                         <span class="loading loading-spinner loading-sm"></span>
                       {:else if walletBalances[wallet.name]?.ant_balance !== undefined}
-                        {walletBalances[wallet.name]?.ant_balance?.toFixed(6)} ANT
+                        {walletBalances[wallet.name]?.ant_balance?.toFixed(6)} AUTONOMI
                       {:else}
                         --
                       {/if}
