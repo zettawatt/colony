@@ -11,7 +11,7 @@ export const colors: Record<TransferStatus, string> = {
 };
 
 // Status icon formatter function
-var statusIconFormatter = function(cell, formatterParams) {
+var statusIconFormatter = function(cell: any, formatterParams: any): string {
   const rowData = cell.getRow().getData();
   const status = rowData.status;
 
@@ -34,13 +34,15 @@ var statusIconFormatter = function(cell, formatterParams) {
 
 export const statusColumns = [
   {
+    title: "",
+    field: "status",
     formatter: statusIconFormatter,
     width: 40,
     maxWidth: 40,
     hozAlign: "center",
     vertAlign: "center",
     headerSort: false,
-    tooltip: function(cell) {
+    tooltip: function(cell: any): string {
       const rowData = cell.getRow().getData();
       return rowData.status;
     }

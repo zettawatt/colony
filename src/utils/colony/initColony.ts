@@ -9,9 +9,12 @@ export async function initColony(password: string) {
     await invoke("open_keystore", { password: password });
     await setPassword(password);
     const primaryWallet = await getPrimaryWallet();
-    const walletKey = primaryWallet?.privateKey
-    const client = await invoke("initialize_autonomi_client", { walletKey });
-    const podManager = await invoke("initialize_pod_manager");
+    const walletKey = primaryWallet?.privateKey;
+    if (!walletKey) {
+      throw new Error("No primary wallet key found");
+    }
+    await invoke("initialize_autonomi_client", { walletKey });
+    await invoke("initialize_pod_manager");
     await startDweb(walletKey)
     addToast("Connected to Autonomi Network!", "success");
   } catch (error) {

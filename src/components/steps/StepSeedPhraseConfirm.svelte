@@ -1,13 +1,15 @@
 <script lang="ts">
   import SeedPhrase from "../seedPhrase.svelte";
 
-  let seedPhraseRef: SeedPhrase;
+
 
   // let showValidString = false;
   // let wasPhraseValid = false;
 
   // let { generateNewSeedPhrase, validateSeedPhrase, words } = $props();
-  export let words, showMatchingString, isSeedPhraseMatching;
+  export let words: string[];
+  export let showMatchingString: boolean;
+  export let isSeedPhraseMatching: boolean;
 
 </script>
 

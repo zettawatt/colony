@@ -22,8 +22,20 @@ const typeToFieldName: Record<string, string> = {
   "CreativeWork": "other"
 }
 
-export function parseSubjectData(subjectData: any, podAddress: string, subjectAddress: string) {
-  const parsedSubject = {
+interface ParsedSubject {
+  autonomiAddress: string;
+  podAddress: string;
+  modified: boolean;
+  selected: boolean;
+  uuid: string;
+  type: string;
+  name?: string;
+  fileSize?: string;
+  metadata: Record<string, any>;
+}
+
+export function parseSubjectData(subjectData: any, podAddress: string, subjectAddress: string): ParsedSubject {
+  const parsedSubject: ParsedSubject = {
     autonomiAddress: subjectAddress,
     podAddress: podAddress,
     modified: false,

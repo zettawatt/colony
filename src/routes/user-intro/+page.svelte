@@ -3,9 +3,7 @@
   import StepSeedPhraseInit from '../../components/steps/StepSeedPhraseInit.svelte';
   import StepSeedPhraseConfirm from '../../components/steps/StepSeedPhraseConfirm.svelte';
   import StepWallet from '../../components/steps/StepWallet.svelte';
-  import StepPreferences from '../../components/steps/StepPreferences.svelte';
   import StepFinish from '../../components/steps/StepFinish.svelte';
-  import { onMount } from 'svelte';
   import * as bip39 from '@scure/bip39';
   import { wordlist } from '@scure/bip39/wordlists/english';
   import { getPassword, setPassword } from '../../utils/password/session';
@@ -19,8 +17,8 @@
   let isPasswordValid = false;
   let isPhraseValid = false;
   let showValidString = false;
-  let parentSeedWords = [];
-  let confirmSeedWords = [];
+  let parentSeedWords: string[] = [];
+  let confirmSeedWords: string[] = [];
   let isSeedPhraseMatching = false;
   let showMatchingString = false;
   let walletPrivateKey = generateRandomPrivateKey();
@@ -76,7 +74,7 @@
     { title: "Finish", component: StepFinish, valid: false }
   ];
 
-  function validatePassword(newPassword, confirmPassword) {
+  function validatePassword(newPassword: string, confirmPassword: string) {
     if (newPassword && confirmPassword && newPassword === confirmPassword) {
       password = confirmPassword;
       isPasswordValid = true;
@@ -133,20 +131,20 @@
       if (!pw) {
         console.error("password was null");
       }
-      const keystore = await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
-      const addWallet = await invoke("add_wallet", {
+      await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
+      await invoke("add_wallet", {
         request: {
           name: initWalletName,
           key: walletPrivateKey
         }
       })
-      console.log("addWallet", addWallet)
+      console.log("Wallet added successfully")
       await invoke("write_keystore_to_file", {password: pw})
       await ps.setUserCompletedIntro(true);
       await ps.setPrimaryWallet(initWalletName)
       await invoke('set_active_wallet', { name: initWalletName });
-      const client = await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
-      const podManager = await invoke("initialize_pod_manager");
+      await invoke("initialize_autonomi_client", { walletKey: walletPrivateKey });
+      await invoke("initialize_pod_manager");
       // addToast("Connected to Autonomi Network!", "success");
       if (runSync) {
         // Show syncing modal
@@ -160,12 +158,12 @@
           // Run sync to populate local cache
           await invoke("refresh_ref", { request: { depth: "0" } });
           // If there are no pods, create a default one
-          const pods = await invoke("list_my_pods");
+          const pods = await invoke("list_my_pods") as PodInfo[];
           if (pods.length === 0) {
             const newPod = await invoke('add_pod', { request: {name: "default"} }) as PodInfo;
             console.log('Pod created at address:', newPod.address);
             // Create a pod reference to the genesis pod
-            const genesisPodRef = await invoke('add_pod_ref', {
+            await invoke('add_pod_ref', {
               request: {
                 pod_address: newPod.address,
                 pod_ref_address: genesisPodAddress

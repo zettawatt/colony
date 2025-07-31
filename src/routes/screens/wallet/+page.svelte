@@ -2,13 +2,13 @@
   import { invoke } from "@tauri-apps/api/core";
   import ps from "../../../stores/persistantStorage";
   import { onMount } from "svelte";
-  import { handleCopyAddress } from "../../../utils/copyAutonomiAddress";
+
   import { getPassword } from "../../../utils/password/session";
     import { addToast } from "../../../stores/toast";
   import AddressDisplay from "../../../components/AddressDisplay.svelte";
 
   let primaryWalletName = $state("");
-  let storedWallets = $state([]);
+  let storedWallets = $state<WalletInfo[]>([]);
   let walletBalances = $state<Record<string, { ant_balance?: number; gas_balance?: number; loading: boolean }>>({});
   let activeWallet = $state<any>({
     name: "",
@@ -28,7 +28,7 @@
   let deleteWalletModal: HTMLDialogElement;
 
   // Add a wallet
-  export async function addWallet(name, key) {
+  export async function addWallet(name: string, key: string): Promise<void> {
     try {
       let pw = await getPassword();
       // request shape should match AddWalletRequest
@@ -37,20 +37,18 @@
       });
       await invoke("write_keystore_to_file", {password: pw})
       console.log(response); // "Wallet added"
-      return response;
     } catch (error) {
       console.error('Error adding wallet:', error);
     }
   }
 
   // Remove a wallet by name
-  export async function removeWallet(name) {
+  export async function removeWallet(name: string): Promise<void> {
     try {
       let pw = await getPassword();
       const response = await invoke('remove_wallet', { name });
       await invoke("write_keystore_to_file", {password: pw})
       console.log(response); // "Wallet removed"
-      return response;
     } catch (error) {
       console.error('Error removing wallet:', error);
     }
@@ -59,7 +57,7 @@
   // Delete wallet handler for the modal
   async function deleteWalletHandler() {
     try {
-      const pw = await getPassword();
+      await getPassword();
       deleteWalletModal.close();
       await removeWallet(activeWallet.name);
       await loadTable();
@@ -125,18 +123,12 @@
     await loadTable();
   }
 
-  const getActiveWallet = async () => {
-    try {
-      const [name, address] = await invoke('get_active_wallet');
-      console.log('Active wallet:', name, address);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
 
-  const setActiveWallet = async (name) => {
+
+  const setActiveWallet = async (name: string): Promise<void> => {
     try {
-      const [walletName, address] = await invoke('set_active_wallet', { name });
+      const result = await invoke('set_active_wallet', { name }) as [string, string];
+      const [walletName, address] = result;
       console.log('Set active wallet:', walletName, address);
     } catch (error) {
       console.error('Error:', error);
@@ -150,7 +142,8 @@
       walletBalances[walletName] = { loading: true };
 
       // Fetch balance from Tauri command
-      const [ant_balance, gas_balance] = await invoke('get_wallet_balance', { walletKey });
+      const result = await invoke('get_wallet_balance', { walletKey }) as [number, number];
+      const [ant_balance, gas_balance] = result;
 
       // Update balance state
       walletBalances[walletName] = {
@@ -168,9 +161,9 @@
   async function loadTable() {
     try {
       primaryWalletName = await ps.getPrimaryWallet();
-      let wallets = await listWallets();
+      let wallets = await listWallets() as WalletInfo[];
       // Sort so primary wallet is first
-      storedWallets = wallets.sort((a, b) => {
+      storedWallets = wallets.sort((a: WalletInfo, b: WalletInfo) => {
         if (a.name === primaryWalletName) return -1;
         if (b.name === primaryWalletName) return 1;
         return 0;
@@ -246,7 +239,7 @@
                       {#if walletBalances[wallet.name]?.loading !== false}
                         <span class="loading loading-spinner loading-sm"></span>
                       {:else if walletBalances[wallet.name]?.gas_balance !== undefined}
-                        {walletBalances[wallet.name].gas_balance.toFixed(6)} ETH
+                        {walletBalances[wallet.name]?.gas_balance?.toFixed(6)} ETH
                       {:else}
                         --
                       {/if}
@@ -255,7 +248,7 @@
                       {#if walletBalances[wallet.name]?.loading !== false}
                         <span class="loading loading-spinner loading-sm"></span>
                       {:else if walletBalances[wallet.name]?.ant_balance !== undefined}
-                        {walletBalances[wallet.name].ant_balance.toFixed(6)} ANT
+                        {walletBalances[wallet.name]?.ant_balance?.toFixed(6)} ANT
                       {:else}
                         --
                       {/if}
@@ -293,17 +286,18 @@
     <div class="modal-box max-h-lg">
       <h3 class="text-lg font-bold">Editing Wallet: {activeWallet?.name}</h3>
       <div class="pt-3 pb-3 flex flex-col items-start">
-        <label class="label">New Name: </label>
-        <input type="input" class="input" placeholder="New Wallet Name" bind:value={activeWallet.name}/>
+        <label class="label" for="edit-wallet-name">New Name: </label>
+        <input id="edit-wallet-name" type="input" class="input" placeholder="New Wallet Name" bind:value={activeWallet.name}/>
         <!-- <p class="text-xs text-gray-400 mt-1">
           Empty values will result in no changes for the name.
         </p> -->
       </div>
       <div class="row pb-3 flex flex-col items-start">
-        <label class="label">Private Key:</label>
+        <label class="label" for="edit-wallet-key">Private Key:</label>
         <input
-          type="input" 
-          class="input" 
+          id="edit-wallet-key"
+          type="input"
+          class="input"
           placeholder="New Private Key"
           bind:value={activeWallet.key}
         />
@@ -329,15 +323,16 @@
     <div class="modal-box max-h-lg">
       <h3 class="text-lg font-bold">New Wallet</h3>
       <div class="pt-3 pb-3 flex flex-col items-start">
-        <label class="label">New Name: </label>
-        <input type="input" class="input" placeholder="New Wallet Name" bind:value={activeWallet.name}/>
+        <label class="label" for="new-wallet-name">New Name: </label>
+        <input id="new-wallet-name" type="input" class="input" placeholder="New Wallet Name" bind:value={activeWallet.name}/>
       </div>
       <div class="row pb-3 flex flex-col items-start">
-        <label class="label">Private Key:</label>
+        <label class="label" for="new-wallet-key">Private Key:</label>
         <input
-          type="input" 
-          class="input" 
-          placeholder="New Private Key" 
+          id="new-wallet-key"
+          type="input"
+          class="input"
+          placeholder="New Private Key"
           bind:value={activeWallet.key}
         />
       </div>
@@ -387,20 +382,7 @@
   width: 100%;
   box-sizing: border-box; */
 }
-.tooltip[data-tip]::before,
-.tooltip.tooltip-open[data-tip]::before {
-  max-width: 50rem !important;
-  min-width: 16rem;
-  white-space: pre-wrap !important;
-  font-family: monospace !important;
-}
-.address-tooltip {
-  transition: color 0.15s;
-}
-.address-tooltip:hover, .address-tooltip:focus {
-  color: #009799;
-  text-decoration-style: solid;
-}
+
 .row {
   display: flex;
   justify-content: center;

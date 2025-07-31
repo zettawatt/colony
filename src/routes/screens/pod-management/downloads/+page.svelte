@@ -121,7 +121,7 @@
                           </button>
                         </td>
                         <td>
-                          <AddressDisplay address={file.autonomiAddress} />
+                          <AddressDisplay address={file.autonomiAddress || ''} />
                         </td>
                         <td>{formatFileSize(file.fileSize)}</td>
                         <td>{file.downloadedDate}</td>
@@ -143,26 +143,13 @@
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
       <li><a href="/screens/pod-management/your-pods">Your Pods</a></li>
       <li><a href="/screens/pod-management/uploads">Uploads</a></li>
-      <li><a href="#" class="menu-active">Downloads</a></li>
+      <li><a href="/screens/pod-management/downloads" class="menu-active">Downloads</a></li>
     </ul>
   </Drawer>
 </main>
 
 <style>
-  .tooltip[data-tip]::before,
-  .tooltip.tooltip-open[data-tip]::before {
-    max-width: 50rem !important;
-    min-width: 16rem;
-    white-space: pre-wrap !important;
-    font-family: monospace !important;
-  }
-  .address-tooltip {
-    transition: color 0.15s;
-  }
-  .address-tooltip:hover, .address-tooltip:focus {
-    color: #009799;
-    text-decoration-style: solid;
-  }
+
   .file-name-button {
     background: none;
     border: none;

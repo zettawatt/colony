@@ -136,9 +136,9 @@ export async function getDownloadedFilesArray(): Promise<FileObj[]> {
   });
 }
 
-export async function getPodCache() {
+export async function getPodCache(): Promise<any[]> {
   const store = await getStore();
-  return await store.get('podCache');
+  return (await store.get('podCache')) || [];
 }
 
 export async function addPodObj(pod: any) {

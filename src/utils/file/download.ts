@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { addToast } from "../../stores/toast";
-import { FileObj, type FileInfo } from "../../classes/FileObj";
+import { FileObj } from "../../classes/FileObj";
 import ps from "../../stores/persistantStorage";
 import { v4 as uuidv4 } from 'uuid';
 

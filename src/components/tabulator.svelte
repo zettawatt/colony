@@ -1,27 +1,30 @@
-<script>
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { TabulatorFull as Tabulator } from 'tabulator-tables';
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { DateTime } from "luxon";
   import { globalTheme } from '../stores/globals';
 
-  export let columns, data, rowMenu, initialSort, persistenceID = "colony-search-table", disableColumnPersistence = false;
+  export let columns: TabulatorColumn[];
+  export let data: any[];
+  export let rowMenu: any[];
+  export let initialSort: any[];
+  export let persistenceID: string = "colony-search-table";
+  export let disableColumnPersistence: boolean = false;
 
-  const dispatch = createEventDispatcher();
-
-  let tableComponent;
-  let tabulatorInstance = null;
+  let tableComponent: HTMLElement;
+  let tabulatorInstance: any = null;
 
   // Export the tabulator instance so parent components can access it
   export { tabulatorInstance };
 
   // Also create a getter function to access the instance
-  export function getTabulatorInstance() {
+  export function getTabulatorInstance(): any {
     return tabulatorInstance;
   }
 
   // Method to update specific rows without full redraw
-  export function updateRowData(rowId, newData) {
+  export function updateRowData(rowId: any, newData: any): boolean {
     if (tabulatorInstance && tableReady) {
       try {
         // Use updateData method which preserves scroll position by design
@@ -39,9 +42,9 @@
   }
 
   // Functions to save and restore scroll position
-  export function saveScrollPosition() {
+  export function saveScrollPosition(): { x: number; y: number } | null {
     if (tabulatorInstance) {
-      const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder');
+      const scrollContainer = tabulatorInstance.element.querySelector('.tabulator-tableholder') as HTMLElement;
       if (scrollContainer) {
         const scrollData = {
           x: scrollContainer.scrollLeft,
@@ -54,7 +57,7 @@
     return null;
   }
 
-  export function restoreScrollPosition() {
+  export function restoreScrollPosition(): void {
     if (tabulatorInstance) {
       const savedScroll = localStorage.getItem('colony-search-table-scroll');
       if (savedScroll) {
@@ -126,10 +129,9 @@
     }
     return null;
   }
-  let unlisten;
-  let currentTheme = $globalTheme;
-  let tableReady = false;
-  let tableHeight = 300;
+  let unlisten: (() => void) | undefined;
+  let tableReady: boolean = false;
+  let tableHeight: number = 300;
 
   function setTableHeight() {
     if (window) {
@@ -137,8 +139,8 @@
     }
   }
 
-  let resizeTimeout;
-  let scrollSaveTimeout;
+  let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+  let scrollSaveTimeout: ReturnType<typeof setTimeout> | undefined;
 
   function handleWindowResize() {
     // Debounce resize events to avoid excessive redraws
@@ -162,8 +164,8 @@
     }, 100); // 100ms debounce
   }
 
-  function switchTabulatorTheme(theme) {
-    const link = document.getElementById('tabulator-theme');
+  function switchTabulatorTheme(theme: Theme): void {
+    const link = document.getElementById('tabulator-theme') as HTMLLinkElement;
     if (link) {
       link.href = theme === 'dark'
         ? '/css/tabulator_midnight.min.css'
@@ -178,13 +180,14 @@
 
     try {
       tabulatorInstance = new Tabulator(tableComponent, {
-        columns,
+        columns: columns as any,
         height: tableHeight,
         minHeight: 300,
         data,
         rowContextMenu: rowMenu,
         reactiveData: false,
         layout: 'fitDataStretch',
+        // @ts-ignore - dependencies is a valid Tabulator option
         dependencies: {
           DateTime: DateTime,
         },
@@ -255,8 +258,8 @@
   });
 
   // Track previous data to avoid unnecessary updates
-  let previousData = [];
-  let lastDataUpdateTime = 0;
+  let previousData: any[] = [];
+  let lastDataUpdateTime: number = 0;
 
   $: if (tabulatorInstance && Array.isArray(data) && tableReady) {
     const now = Date.now();
@@ -298,7 +301,7 @@
   }
 
   $: if (typeof $globalTheme === 'string') {
-    switchTabulatorTheme($globalTheme);
+    switchTabulatorTheme($globalTheme as Theme);
   }
 
   $: if (tabulatorInstance && tableReady && tableHeight) {

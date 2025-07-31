@@ -1,13 +1,17 @@
 <script lang="ts">
   import SeedPhrase from "../seedPhrase.svelte";
 
-  let seedPhraseRef: SeedPhrase;
+
 
   // let showValidString = false;
   // let wasPhraseValid = false;
 
   // let { generateNewSeedPhrase, validateSeedPhrase, words } = $props();
-  export let generateNewSeedPhrase, validateSeedPhrase, words, showValidString, isPhraseValid;
+  export let generateNewSeedPhrase: () => string[];
+  export const validateSeedPhrase: (words: string[]) => boolean = () => false;
+  export let words: string[];
+  export let showValidString: boolean;
+  export let isPhraseValid: boolean;
 
 </script>
 
@@ -47,30 +51,7 @@
 </div>
 
 <style>
-  .label {
-    /* display: inline-block; */
-    width: 140px; /* Fixed width for both labels */
-    text-align: right;
-    margin-right: 10px;
-  }
 
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-.intro-container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  text-align: center;
-  overflow-y: auto;
-  width: 100%;
-}
 
 /* Remove the responsive breakpoints that cause the shift */
 /* Keep the same max-width as the larger breakpoint */
@@ -80,35 +61,16 @@
   }
 } */
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
 
 .row {
   display: flex;
   justify-content: center;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
 
-a:hover {
-  color: #535bf2;
-}
 
-h1 {
-  text-align: center;
-}
+
 
 button {
   border-radius: 8px;
@@ -135,13 +97,8 @@ button:active {
   background-color: #e8e8e8;
 }
 
-input,
 button {
   outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
 }
 
 </style>

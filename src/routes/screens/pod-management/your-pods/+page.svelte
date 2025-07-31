@@ -3,9 +3,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import { addToast }  from '../../../../stores/toast';
   import { onMount } from "svelte";
-  import { FileObj, type FileInfo } from "../../../../classes/FileObj";
+  import { FileObj } from "../../../../classes/FileObj";
   import ps from "../../../../stores/persistantStorage";
-  import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import { getPassword } from "../../../../utils/password/session";
   import AddressDisplay from "../../../../components/AddressDisplay.svelte";
   import { podsSyncing, allPodsUploading } from "../../../../stores/globals";
@@ -13,48 +12,7 @@
   import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
   import { templates } from "../../../../utils/pod-management/jsonLDTemplates";
 
-  let podListTemp = $state([
-    {
-      uuid: "1",
-      name: "907f7857974fef55dcba7f73529790925e91738d5df54f021cd18b92f533e68946c1a416e144b00d869e68c080bda3ac",
-      selected: false
-    },
-    {
-      uuid: "2",
-      name: "Fallout-4-Vault-Dweller's-Survival-Guuuide-Prima-Official-Game-Guuuide.pdf",
-      selected: false
-    },
-    {
-      uuid: "3",
-      name: "music.mp3",
-      selected: false
-    },
-    {
-      uuid: "4",
-      name: "report.pdf",
-      selected: false
-    },
-    {
-      uuid: "5",
-      name: "another_document.docx",
-      selected: false
-    },
-    {
-      uuid: "6",
-      name: "holuuiday-photo.png",
-      selected: false
-    },
-    {
-      uuid: "7",
-      name: "presentation.pptx",
-      selected: false
-    },
-    {
-      uuid: "8",
-      name: "important_data.bak",
-      selected: false
-    }
-  ])
+
 
   type PodInfo = {
     address: string
@@ -69,43 +27,28 @@
   };
 
   let selectedType = $state("Book");
-  let jsonInputText = $state(JSON.stringify(templates[selectedType], null, 2));
+  let jsonInputText = $derived(JSON.stringify((templates as any)[selectedType], null, 2));
   let isLoading = $state(false);
   let newPodName = $state("");
   let createdPods = $state<any[]>([]) as PodMetaData[];
   let activePod = $state<any>({ fileObjs: [] }); // Holds the pod for the currently active modal
   let uploadedFiles = $state<any[]>([]);
   let selectedFileName = $state(""); // <-- Track the filename selected for adding
-  let activeFileType = $state("other");
-  let availableTypes = $state(['audio', 'video', 'image', 'book', 'other']);
-  let displayFields = $derived.by(() => {
-      switch (activeFileType) {
-        case 'audio':
-          return ['Title', 'Artist', 'Album', 'Release Date', 'Comment'];
-        case 'video':
-          return ['Title', 'Director', 'Release Date', 'Duration', 'Comment'];
-        case 'image':
-          return ['Title', 'Description', 'Date Taken', 'Comment'];
-        case 'book':
-          return ['Title', 'Author', 'Publisher', 'Publication Date', 'Comment'];
-        default:
-          return ['Title', 'Description', 'Comment'];
-      }
-  })
-  let userConfigPod = $state();
+  let userConfigPod = $state<any>();
   let podRefAddress = $state(""); // address of the pod reference user wants to add
   let autonomiFileAddress = $state(""); // address of the autonomi file user wants to add
-  let editingPodItem = $state();
-  let editMetadataFields = $state({});
-  let deletedPodItems = $state([]);
+  let editingPodItem = $state<any>();
+  let deletedPodItems = $state<any[]>([]);
   let isValid = $state(false);
-  let error = $state(null);
-  let parsed = $state(null);
+  let error = $state<string | null>(null);
+  let parsed = $state<any>(null);
 
   // Advanced/Simple mode toggle
   let advancedMode = $state(false);
   let simpleTableData = $state<{predicate: string, value: string}[]>([]);
   let originalTemplate = $state<any>(null);
+  let editMetadataFields = $state<Record<string, any>>({});
+  let activeFileType = $state<string>("other");
 
   // Modal references
   let syncingInProgressModal: HTMLDialogElement;
@@ -177,14 +120,14 @@
     }
   })
 
-  function loadTemplate(type) {
+  function loadTemplate(type: string): void {
     isUpdatingFromMode = true;
 
     selectedType = type;
-    const template = { ...templates[type] }; // Create a copy to avoid modifying the original
+    const template = { ...(templates as any)[type] }; // Create a copy to avoid modifying the original
 
     // Store the original template for comparison later
-    originalTemplate = { ...templates[type] };
+    originalTemplate = { ...(templates as any)[type] };
 
     // automatically set name and contentSize in the template
     template["schema:contentSize"] = editingPodItem.fileSize ?? "0";
@@ -213,21 +156,21 @@
       error = null;
     } catch (e) {
       isValid = false;
-      error = e.message;
+      error = (e as Error).message;
       parsed = null;
     }
   }
 
   // Convert JSON-LD to simple table format
-  function jsonLdToSimpleTable(jsonLdText) {
+  function jsonLdToSimpleTable(jsonLdText: string): any[] {
     try {
       const obj = JSON.parse(jsonLdText);
-      const tableData = [];
+      const tableData: any[] = [];
 
       for (const [key, value] of Object.entries(obj)) {
         if (key === "@context") {
           // Handle @context as comma-separated list
-          if (typeof value === 'object') {
+          if (typeof value === 'object' && value !== null) {
             const contextValues = Object.entries(value).map(([k, v]) => `${k}=${v}`);
             tableData.push({
               predicate: key,
@@ -255,16 +198,16 @@
   }
 
   // Convert simple table format back to JSON-LD
-  function simpleTableToJsonLd(tableData) {
-    const obj = {};
+  function simpleTableToJsonLd(tableData: any[]): string {
+    const obj: any = {};
 
     for (const row of tableData) {
       if (row.predicate && row.predicate.trim()) {
         if (row.predicate === "@context") {
           // Handle @context conversion from comma-separated list
           if (row.value.includes('=')) {
-            const contextObj = {};
-            const pairs = row.value.split(',').map(s => s.trim());
+            const contextObj: any = {};
+            const pairs = row.value.split(',').map((s: string) => s.trim());
             for (const pair of pairs) {
               const equalIndex = pair.indexOf('=');
               if (equalIndex > 0) {
@@ -327,11 +270,11 @@
   }
 
   // Remove a row from the simple table
-  function removeSimpleTableRow(index) {
+  function removeSimpleTableRow(index: number): void {
     simpleTableData = simpleTableData.filter((_, i) => i !== index);
   }
 
-  async function addPodRef(podAddress, podRefAddress) {
+  async function addPodRef(podAddress: string, podRefAddress: string): Promise<any> {
     try {
       const response = await invoke('add_pod_ref', {
         request: {
@@ -348,7 +291,7 @@
     }
   }
 
-  async function removePodRef(podAddress, podRefAddress) {
+  async function removePodRef(podAddress: string, podRefAddress: string): Promise<any> {
     try {
       const response = await invoke('remove_pod_ref', {
         request: {
@@ -365,7 +308,7 @@
     }
   }
 
-  async function putSubjectData(podAddress, subjectAddress, data) {
+  async function putSubjectData(podAddress: string, subjectAddress: string, data: any): Promise<any> {
     try {
       let jsonData = JSON.stringify(data);
       const result = await invoke('put_subject_data', {
@@ -417,10 +360,10 @@
           //   // data: JSON.stringify({})
           //   data: JSON.stringify(metadataJson)
           // }});
-          const result = await putSubjectData(activePod.address, file.autonomiAddress, file.metadata)
+          await putSubjectData(activePod.address, file.autonomiAddress, file.metadata)
           addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
-          const result = await addPodRef(activePod.address, file.autonomiAddress)
+          await addPodRef(activePod.address, file.autonomiAddress)
           // console.log(result);
         }
       }
@@ -428,10 +371,10 @@
       // remove any deleted items
       for (const file of deletedPodItems) {
         if (file.type === 'file'){
-          const result = await putSubjectData(activePod.address, file.autonomiAddress, {})
+          await putSubjectData(activePod.address, file.autonomiAddress, {})
           // addToast(`Successfilly added ${file.name} to pod!`, "success")
         } else if (file.type === 'pod-ref'){
-          const result = await removePodRef(activePod.address, file.autonomiAddress)
+          await removePodRef(activePod.address, file.autonomiAddress)
           // do something else to add pod reference
         }
       }
@@ -453,7 +396,7 @@
 
 
   function generateFileMetaJson(file: any) {
-    const fileMetaJson = {
+    const fileMetaJson: Record<string, any> = {
       "@context": { "schema": "http://schema.org/" },
       "@type": "",
       "@id": `ant://${file.autonomiAddress}`,
@@ -529,15 +472,15 @@
       addToast(`Successfully uploaded pod ${activePod.name}`, "success");
     } catch (err) {
       console.error('Failed to upload pod:', err);
-      addToast(err, "error");
+      addToast(String(err), "error");
     }
   }
 
   async function fetchPods() {
     try {
-      const results = await invoke('list_my_pods');
-      const regularPods = results.filter(pod => pod.name !== "User Configuration");
-      userConfigPod = results.find(pod => pod.name === "User Configuration");
+      const results = await invoke('list_my_pods') as any[];
+      const regularPods = results.filter((pod: any) => pod.name !== "User Configuration");
+      userConfigPod = results.find((pod: any) => pod.name === "User Configuration");
       // result will likely be { addresses: [ ..pod addresses.. ] }
       console.log('Pods:', results);
       console.log('user config pod', userConfigPod)
@@ -547,10 +490,10 @@
     }
   }
 
-  async function fetchPodSubjects(address) {
+  async function fetchPodSubjects(address: string) {
     try {
       // The name must exactly match your Rust function (snake_case)
-      const result = await invoke('list_pod_subjects', { address });
+      const result = await invoke('list_pod_subjects', { address }) as any;
       // result will be your AddressList Rust struct as a JS object
       console.log(result.addresses);
       return result.addresses;
@@ -561,10 +504,10 @@
     }
   }
 
-  async function fetchSubjectData(subjectAddress) {
+  async function fetchSubjectData(subjectAddress: string) {
     try {
       // Call the Tauri command "get_subject_data"
-      const result = await invoke('get_subject_data', { request: { subject_address: subjectAddress } });
+      const result = await invoke('get_subject_data', { request: { subject_address: subjectAddress } }) as any;
       const parsedResult = JSON.parse(result.data);
       // result will be your SubjectDataResult struct as a JS object, ex: { data: ... }
       return parsedResult;
@@ -628,8 +571,8 @@
     if (!selectedFileName) return;
     if (!activePod.fileObjs) activePod.fileObjs = [];
     // Find FileObj in uploadedFiles by name
-    const fileToAdd = uploadedFiles.find(f => f.name === selectedFileName);
-    if (fileToAdd && !activePod?.fileObjs.some(f => f.name === fileToAdd.name)) {
+    const fileToAdd = uploadedFiles.find((f: any) => f.name === selectedFileName);
+    if (fileToAdd && !activePod?.fileObjs.some((f: any) => f.name === fileToAdd.name)) {
       // Add only if not already present
       activePod.fileObjs = [...activePod.fileObjs, fileToAdd];
     }
@@ -652,7 +595,7 @@
 
   async function loadTable() {
     // createdPods = await ps.getPodCache() as [];
-    createdPods = await fetchPods();
+    createdPods = (await fetchPods()) || [];
     console.log("createdPods", createdPods)
   }
 
@@ -667,23 +610,23 @@
   function toggleSelection(list: any[], id: string) {
     console.log('here maxx');
     
-    return list.map(item =>
+    return list.map((item: any) =>
       item.uuid === id ? {...item, selected: !item.selected} : item
     );
   }
 
   function transferItems(from: any[], to: any[]) {
-    const selectedItems = from.filter(item => item.selected);
+    const selectedItems = from.filter((item: any) => item.selected);
 
     // Filter out items whose uuid is already present in 'to'
-    const toUuids = new Set(to.map(item => item.uuid));
-    const newItems = selectedItems.filter(item => !toUuids.has(item.uuid));
+    const toUuids = new Set(to.map((item: any) => item.uuid));
+    const newItems = selectedItems.filter((item: any) => !toUuids.has(item.uuid));
 
     return {
-      newFrom: from.map(item => ({ ...item, selected: false })),
+      newFrom: from.map((item: any) => ({ ...item, selected: false })),
       newTo: [
         ...to,
-        ...newItems.map(item => ({
+        ...newItems.map((item: any) => ({
           ...item,
           selected: false,
           metadata: {},
@@ -695,9 +638,9 @@
   }
 
   function removeItems(from: any[]){
-    const selectedItems = from.filter(item => item.selected);
+    const selectedItems = from.filter((item: any) => item.selected);
     deletedPodItems = deletedPodItems.concat(selectedItems);
-    return from.filter(item => !item.selected)
+    return from.filter((item: any) => !item.selected)
   }
 
   function addPodReference() {
@@ -774,7 +717,7 @@
     }
   }
 
-  function openEditMetadata(item) {
+  function openEditMetadata(item: any) {
     try {
       isUpdatingFromMode = true;
 
@@ -852,7 +795,7 @@
         <div class="utility-bar" style="display: flex;">
           <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>Sync Pods</button>
           <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
-          <button class="btn btn-warning" onclick={createNewPodModal.showModal()}>Create New Pod</button>
+          <button class="btn btn-warning" onclick={() => createNewPodModal.showModal()}>Create New Pod</button>
         </div>
       </div>
       <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
@@ -915,7 +858,7 @@
       </div>
     </div>
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
-      <li><a href="#" class="menu-active">Your Pods</a></li>
+      <li><a href="/screens/pod-management/your-pods" class="menu-active">Your Pods</a></li>
       <li><a href="/screens/pod-management/uploads">Uploads</a></li>
       <li><a href="/screens/pod-management/downloads">Downloads</a></li>
     </ul>
@@ -1006,11 +949,11 @@
                   <span class="truncate">{item.autonomiAddress}</span>
                   <button
                     class="edit-button btn btn-sm"
-                    onclick={() => {
+                    onclick={(e) => {
                       editingPodItem = item;
                       podRefAddress = item.autonomiAddress;
                       console.log("editingPodItem", editingPodItem)
-                      event.stopPropagation();
+                      e.stopPropagation();
                       editFileMetadataModal.showModal();
                     }}
                   >
@@ -1029,8 +972,8 @@
                   <span class="truncate">{item.name}</span>
                   <button
                     class="edit-button btn btn-sm"
-                    onclick={() => {
-                      event.stopPropagation();
+                    onclick={(e) => {
+                      e.stopPropagation();
                       openEditMetadata(item);
                       // editingPodItem = item;
                       // console.log("editingPodItem", editingPodItem)
@@ -1060,7 +1003,7 @@
         <div class="mx-4 flex flex-col gap-2 items-center">
           <button 
             class="btn btn-error btn-sm w-full" 
-            disabled={!activePod.fileObjs?.some(f => f.selected)}
+            disabled={!activePod.fileObjs?.some((f: any) => f.selected)}
             onclick={()=>{
               const result = removeItems(activePod?.fileObjs);
               activePod.fileObjs = result;
@@ -1132,8 +1075,8 @@
         {:else}
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-4">
-              <label class="font-semibold">Choose a type:</label>
-              <select class="p-2 select" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
+              <label class="font-semibold" for="template-type-select">Choose a type:</label>
+              <select id="template-type-select" class="p-2 select" bind:value={selectedType} onchange={() => loadTemplate(selectedType)}>
                 {#each Object.keys(templates) as type}
                   <option value={type}>{type}</option>
                 {/each}
@@ -1160,8 +1103,7 @@
                 style="min-height: 300px; width:100%"
                 placeholder=""
                 bind:value={jsonInputText}
-                autocorrect="off"
-                autocapitalize="off"
+
                 spellcheck="false"
               >
               </textarea>
@@ -1316,21 +1258,7 @@
 </main>
 
 <style>
-  .tooltip[data-tip]::before,
-  .tooltip.tooltip-open[data-tip]::before {
-    max-width: 75rem !important;
-    min-width: 16rem;
-    white-space: pre-wrap !important;
-    font-family: monospace !important;
-    z-index: 100;
-  }
-  .address-tooltip {
-    transition: color 0.15s;
-  }
-  .address-tooltip:hover, .address-tooltip:focus {
-    color: #009799;
-    text-decoration-style: solid;
-  }
+
 .utility-bar {
   display: flex;
   align-items: center;

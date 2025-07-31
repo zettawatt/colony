@@ -20,15 +20,15 @@
     <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label">New Password: </label>
-    <input bind:value={newPassword} type="password" class="input" placeholder="Password" />
+    <label class="label" for="new-password-welcome">New Password: </label>
+    <input id="new-password-welcome" bind:value={newPassword} type="password" class="input" placeholder="Password" />
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label">Confirm Password:</label>
-    <input bind:value={confirmPassword} 
-      type="password" 
-      class="input {confirmClass}" 
-      placeholder="Password" 
+    <label class="label" for="confirm-password-welcome">Confirm Password:</label>
+    <input id="confirm-password-welcome" bind:value={confirmPassword}
+      type="password"
+      class="input {confirmClass}"
+      placeholder="Password"
       oninput={()=>{validatePassword(newPassword, confirmPassword)}}
     />
   </div>

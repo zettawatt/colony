@@ -90,31 +90,32 @@
           <!-- Left: Existing content -->
           <div class="left-section" style="flex: 1;">
             <div class="row pt-3">
-              <label>Download Path:</label>
-              <input 
-                type="text" 
-                value={downloadPath} 
-                class="input" 
+              <label for="download-path">Download Path:</label>
+              <input
+                id="download-path"
+                type="text"
+                value={downloadPath}
+                class="input"
                 style="min-width: 100%;"
                 onclick={()=>{selectPath()}}
                 readonly
               />
             </div>
             <div class="row pt-3">
-              <label>Colony Application Data Path:</label>
-              <input bind:value={appDataPath} type="text" class="input appData w-full" disabled placeholder="/home/usr/downloads" />
+              <label for="app-data-path">Colony Application Data Path:</label>
+              <input id="app-data-path" bind:value={appDataPath} type="text" class="input appData w-full" disabled placeholder="/home/usr/downloads" />
             </div>
             <div class="row pt-3">
-              <label>Preferred Light Theme</label>
-              <select class="select" bind:value={preferredLightTheme} onchange={() => previewTheme(preferredLightTheme)}>
+              <label for="light-theme">Preferred Light Theme</label>
+              <select id="light-theme" class="select" bind:value={preferredLightTheme} onchange={() => previewTheme(preferredLightTheme)}>
                 {#each lightDaisyThemes as theme}
                   <option value={theme}>{theme}</option>
                 {/each}
               </select>
             </div>
             <div class="row pt-3">
-              <label>Preferred Dark Theme</label>
-              <select class="select" bind:value={preferredDarkTheme} onchange={() => previewTheme(preferredDarkTheme)}>
+              <label for="dark-theme">Preferred Dark Theme</label>
+              <select id="dark-theme" class="select" bind:value={preferredDarkTheme} onchange={() => previewTheme(preferredDarkTheme)}>
                 {#each darkDaisyThemes as theme}
                   <option value={theme}>{theme}</option>
                 {/each}
@@ -131,16 +132,16 @@
           <!-- Right: Change Password -->
           <div class="right-section" style="flex: 1;">
             <div class="row pt-3">
-              <label class="label">Current Password: </label>
-              <input bind:value={currentPassword} type="password" class="input w-full" placeholder="Password" />
+              <label class="label" for="current-password">Current Password: </label>
+              <input id="current-password" bind:value={currentPassword} type="password" class="input w-full" placeholder="Password" />
             </div>
             <div class="row">
-              <label class="label">New Password: </label>
-              <input bind:value={newPassword} type="password" class="input w-full" placeholder="Password" />
+              <label class="label" for="new-password">New Password: </label>
+              <input id="new-password" bind:value={newPassword} type="password" class="input w-full" placeholder="Password" />
             </div>
             <div class="row pb-3">
-              <label class="label">Confirm Password:</label>
-              <input bind:value={confirmPassword} type="password" class="input {confirmClass} w-full" placeholder="Password" />
+              <label class="label" for="confirm-password">Confirm Password:</label>
+              <input id="confirm-password" bind:value={confirmPassword} type="password" class="input {confirmClass} w-full" placeholder="Password" />
               <button class="btn btn-error mt-4" onclick={()=>{updatePassword()}}>Update Password</button>
             </div>
           </div>
@@ -219,11 +220,7 @@
   /* justify-content: center; */
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
+
 
 
 </style>

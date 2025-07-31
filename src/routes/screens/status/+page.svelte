@@ -13,8 +13,8 @@
     {column:"startedDate", dir:"desc"}
   ]
 
-  let transfers = [];
-  let statusTable; // Reference to the TabulatorTable component
+  let transfers: any[] = [];
+  let statusTable: any; // Reference to the TabulatorTable component
 
   // Reactive statement to handle transfer updates
   $: {
@@ -27,13 +27,13 @@
     const instance = statusTable?.getTabulatorInstance();
     if (instance) {
       // Get all rows with "Complete" status
-      const completedRows = instance.getRows().filter(row => {
+      const completedRows = instance.getRows().filter((row: any) => {
         const data = row.getData();
         return data.status === "Complete";
       });
 
       // Delete the completed rows
-      completedRows.forEach(row => row.delete());
+      completedRows.forEach((row: any) => row.delete());
 
       addToast(`Cleared ${completedRows.length} completed transfers`, "success");
     }
@@ -44,13 +44,13 @@
     const instance = statusTable?.getTabulatorInstance();
     if (instance) {
       // Get all rows with "Errored" or "Cancelled" status
-      const errorRows = instance.getRows().filter(row => {
+      const errorRows = instance.getRows().filter((row: any) => {
         const data = row.getData();
         return data.status === "Errored" || data.status === "Cancelled";
       });
 
       // Delete the error rows
-      errorRows.forEach(row => row.delete());
+      errorRows.forEach((row: any) => row.delete());
 
       addToast(`Cleared ${errorRows.length} error transfers`, "success");
     }

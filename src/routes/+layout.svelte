@@ -1,13 +1,13 @@
-<script>
+<script lang="ts">
   import "../app.css";
   import Toast from '../components/toast.svelte';
 
-  import { attachConsole, trace, debug, info, warn, error } from '@tauri-apps/plugin-log';
+  import { trace, debug, info, warn, error } from '@tauri-apps/plugin-log';
 
   // Optional: show Rust logs in DevTools
   // attachConsole();
 
-  function serialize(arg) {
+  function serialize(arg: any): string {
     if (Array.isArray(arg) || (typeof arg === "object" && arg !== null)) {
       try {
         return JSON.stringify(arg);
@@ -18,16 +18,16 @@
     return String(arg);
   }
 
-  function forwardConsole(fnName, logger) {
+  function forwardConsole(fnName: string, logger: (message: string) => void): void {
     // Prevent duplicate patching (important with HMR)
-    if (console[fnName]._isPatchedByApp) return;
+    if ((console as any)[fnName]._isPatchedByApp) return;
 
-    const original = console[fnName];
-    console[fnName] = (...args) => {
+    const original = (console as any)[fnName];
+    (console as any)[fnName] = (...args: any[]) => {
       original(...args); // Continue DevTools logging
       logger(args.map(serialize).join(' ')); // Forward to Tauri
     };
-    console[fnName]._isPatchedByApp = true;
+    (console as any)[fnName]._isPatchedByApp = true;
   }
 
   // Hook up all the console methods to Tauri logger

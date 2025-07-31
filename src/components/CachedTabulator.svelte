@@ -1,22 +1,24 @@
-<script>
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { TabulatorFull as Tabulator } from 'tabulator-tables';
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { DateTime } from "luxon";
   import { globalTheme } from '../stores/globals';
 
-  export let columns, data, rowMenu, initialSort, cacheKey = 'default';
+  export let columns: any[];
+  export let data: any[];
+  export let rowMenu: any[];
+  export let initialSort: any[];
+  export let cacheKey: string = 'default';
 
-  const dispatch = createEventDispatcher();
-
-  let tableComponent;
-  let tabulatorInstance = null;
-  let unlisten;
-  let tableReady = false;
-  let tableHeight = 300;
-  let resizeTimeout;
-  let scrollSaveTimeout;
-  let isRestoringFromCache = false;
+  let tableComponent: HTMLElement;
+  let tabulatorInstance: any = null;
+  let unlisten: (() => void) | undefined;
+  let tableReady: boolean = false;
+  let tableHeight: number = 300;
+  let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+  let scrollSaveTimeout: ReturnType<typeof setTimeout> | undefined;
+  let isRestoringFromCache: boolean = false;
 
   // Export the tabulator instance so parent components can access it
   export { tabulatorInstance };
@@ -46,8 +48,8 @@
     }, 100);
   }
 
-  function switchTabulatorTheme(theme) {
-    const link = document.getElementById('tabulator-theme');
+  function switchTabulatorTheme(theme: Theme): void {
+    const link = document.getElementById('tabulator-theme') as HTMLLinkElement;
     if (link) {
       link.href = theme === 'dark'
         ? '/css/tabulator_midnight.min.css'
@@ -145,6 +147,7 @@
         },
         persistenceMode: "local",
         persistenceID: `colony-${cacheKey}-table`,
+        // @ts-ignore - tableBuilt is a valid Tabulator option
         tableBuilt: function() {
           tableReady = true;
 
@@ -158,7 +161,7 @@
 
               // Restore filters
               if (cached.filters && cached.filters.length > 0 && tabulatorInstance.setFilter) {
-                cached.filters.forEach(filter => {
+                cached.filters.forEach((filter: any) => {
                   tabulatorInstance.setFilter(filter.field, filter.type, filter.value);
                 });
               }
@@ -230,6 +233,7 @@
         rowContextMenu: rowMenu,
         reactiveData: false,
         layout: 'fitDataStretch',
+        // @ts-ignore - dependencies is a valid Tabulator option
         dependencies: {
           DateTime: DateTime,
         },
@@ -348,7 +352,7 @@
   }
 
   $: if (typeof $globalTheme === 'string') {
-    switchTabulatorTheme($globalTheme);
+    switchTabulatorTheme($globalTheme as Theme);
   }
 
   $: if (tabulatorInstance && tableReady && tableHeight) {

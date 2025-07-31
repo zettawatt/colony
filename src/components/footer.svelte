@@ -6,7 +6,7 @@
     <p>Thank you for using Colony</p>
   </aside>
   <nav class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
-    <a href="https://github.com/zettawatt/colony" target="_blank">
+    <a href="https://github.com/zettawatt/colony" target="_blank" aria-label="View Colony project on GitHub">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="24"

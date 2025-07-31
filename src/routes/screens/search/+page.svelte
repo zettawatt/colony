@@ -1,6 +1,6 @@
 <script lang="ts">
   import CachedTabulator from '../../../components/CachedTabulator.svelte';
-  import { searchColumns } from '../../../utils/search/searchColumns';
+  import { searchColumns as importedSearchColumns } from '../../../utils/search/searchColumns';
   import { invoke } from "@tauri-apps/api/core";
   import { transferManager } from '../../../stores/transferManager';
   import { onMount, onDestroy } from 'svelte';
@@ -22,11 +22,11 @@
   }
 
   // Local variables that will be synced with the store
-  let searchInput = "";
-  let tableSearchResults = [];
-  let activeRow = {};
-  let showLogin = false;
-  let isSearching = false;
+  let searchInput: string = "";
+  let tableSearchResults: SearchResult[] = [];
+  let activeRow: SearchResult | Record<string, never> = {};
+  let showLogin: boolean = false;
+  let isSearching: boolean = false;
   let fileMetadataModal: HTMLDialogElement;
   let searchMetrics = {
     itemCount: 0,
@@ -35,10 +35,13 @@
   };
 
   // Store subscription to keep local state in sync
-  let storeUnsubscribe;
+  let storeUnsubscribe: (() => void) | undefined;
 
-  let windowWidth = 0;
-  let tabulatorTable; // Reference to the TabulatorTable component
+  let windowWidth: number = 0;
+  let tabulatorTable: any; // Reference to the TabulatorTable component
+
+  // Use the imported search columns
+  let searchColumns: any[] = importedSearchColumns;
 
   // Calculate optimal description column width based on window size
   function updateDescriptionColumnWidth() {
@@ -72,7 +75,7 @@
   }
 
   
-  function shallowEqualArrays(a, b) {
+  function shallowEqualArrays(a: any[], b: any[]): boolean {
     if (a === b) return true;
     if (!a || !b) return false;
     if (a.length !== b.length) return false;
@@ -82,7 +85,7 @@
     return true;
   }
 
-  let transfers = [];
+  let transfers: any[] = [];
 
   $: {
     const values = Object.values($transferManager);
@@ -94,13 +97,13 @@
   let rowMenu = [
     {
         label:"Download",
-        action:function(e, row){
+        action:function(_e: any, row: any){
             row.update({name:"Steve Bobberson"});
         }
     },
     {
       label:"View Metadata",
-      action:function(e, row){
+      action:function(_e: any, row: any){
         activeRow = row.getData();
         searchState.setActiveRow(activeRow);
         fileMetadataModal.showModal()
@@ -108,77 +111,7 @@
     }
   ];
 
-  // set cellClick function for download column (column 0)
-  searchColumns[0].cellClick = function(e, cell) {
-    activeRow = cell.getRow().getData();
 
-    // Don't do anything if it's a pod or has no type (no icon shown)
-    if (activeRow.type === 'ant://colonylib/v1/pod' || !activeRow.type || activeRow.type === '') {
-      return;
-    }
-
-    if (activeRow.type === 'ant://dweb/v1/WebSite') {
-      openDweb(activeRow.address)
-    } else if(activeRow.type && activeRow.type.includes("directory")) {
-      const request = {
-        name: activeRow.name,
-        address: activeRow.address,
-        bytes: activeRow.bytes ?? 0
-      }
-
-      downloadFile(request, 'directory');
-    } else {
-      const request = {
-        name: activeRow.name,
-        address: activeRow.address,
-        bytes: activeRow.bytes ?? 0
-      }
-
-      downloadFile(request, 'file');
-    }
-  }
-
-  // set cellClick function for name column (show modal) - column 1
-  searchColumns[1].cellClick = function(e, cell) {
-    activeRow = cell.getRow().getData();
-    searchState.setActiveRow(activeRow);
-    fileMetadataModal.showModal()
-  }
-
-  // set cellClick function for description column (show modal) - column 2
-  searchColumns[2].cellClick = function(e, cell) {
-    activeRow = cell.getRow().getData();
-    searchState.setActiveRow(activeRow);
-    fileMetadataModal.showModal()
-  }
-
-  // set cellClick function for type column (show modal) - column 3
-  searchColumns[3].cellClick = function(e, cell) {
-    activeRow = cell.getRow().getData();
-    searchState.setActiveRow(activeRow);
-    fileMetadataModal.showModal()
-  }
-
-  // set cellClick function for size column (show modal) - column 4
-  searchColumns[4].cellClick = function(e, cell) {
-    activeRow = cell.getRow().getData();
-    searchState.setActiveRow(activeRow);
-    fileMetadataModal.showModal()
-  }
-
-  // set cellClick function for address column (copy to clipboard) - column 5
-  searchColumns[5].cellClick = function(e, cell) {
-    const rowData = cell.getRow().getData();
-    const fullAddress = rowData.address;
-
-    // Copy to clipboard and show toast
-    navigator.clipboard.writeText(fullAddress).then(() => {
-      addToast(`Address ${fullAddress} copied!`, 'success');
-    }).catch(err => {
-      console.error('Failed to copy address:', err);
-      addToast('Failed to copy address', 'error');
-    });
-  }
 
   // Helper functions for modal download button
   function shouldShowDownloadButton(row: any): boolean {
@@ -243,7 +176,7 @@
         },
       };
       // const request = {query: "beg"}
-      const response = await invoke('search', { request });
+      const response = await invoke('search', { request }) as SearchResponse;
       // console.log(response)
       const parsedResults = parseTextSparqlResults(response.results)
       // console.log(parsedResults)
@@ -427,9 +360,98 @@
     searchState.setSearchInput(searchInput);
   }
 
-  let handleTabulatorResize;
-  let handleWindowResize;
-  let resizeTimeout;
+  let handleTabulatorResize: (() => void) | undefined;
+  let handleWindowResize: (() => void) | undefined;
+  let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+
+  // Function to setup column click handlers
+  function setupColumnClickHandlers() {
+    if (!searchColumns || searchColumns.length === 0) return;
+
+    // set cellClick function for download column (column 0)
+    if (searchColumns[0]) {
+      searchColumns[0].cellClick = function(_e: any, cell: any) {
+        activeRow = cell.getRow().getData() as SearchResult;
+
+        // Don't do anything if it's a pod or has no type (no icon shown)
+        if (activeRow.type === 'ant://colonylib/v1/pod' || !activeRow.type || activeRow.type === '') {
+          return;
+        }
+
+        if (activeRow.type === 'ant://dweb/v1/WebSite') {
+          openDweb(activeRow.address)
+        } else if(activeRow.type && activeRow.type.includes("directory")) {
+          const request = {
+            name: activeRow.name,
+            address: activeRow.address,
+            bytes: activeRow.bytes ?? 0
+          }
+
+          downloadFile(request, 'directory');
+        } else {
+          const request = {
+            name: activeRow.name,
+            address: activeRow.address,
+            bytes: activeRow.bytes ?? 0
+          }
+
+          downloadFile(request, 'file');
+        }
+      }
+    }
+
+    // set cellClick function for name column (show modal) - column 1
+    if (searchColumns[1]) {
+      searchColumns[1].cellClick = function(_e: any, cell: any) {
+        activeRow = cell.getRow().getData() as SearchResult;
+        searchState.setActiveRow(activeRow);
+        fileMetadataModal?.showModal()
+      }
+    }
+
+    // set cellClick function for description column (show modal) - column 2
+    if (searchColumns[2]) {
+      searchColumns[2].cellClick = function(_e: any, cell: any) {
+        activeRow = cell.getRow().getData() as SearchResult;
+        searchState.setActiveRow(activeRow);
+        fileMetadataModal?.showModal()
+      }
+    }
+
+    // set cellClick function for type column (show modal) - column 3
+    if (searchColumns[3]) {
+      searchColumns[3].cellClick = function(_e: any, cell: any) {
+        activeRow = cell.getRow().getData() as SearchResult;
+        searchState.setActiveRow(activeRow);
+        fileMetadataModal?.showModal()
+      }
+    }
+
+    // set cellClick function for size column (show modal) - column 4
+    if (searchColumns[4]) {
+      searchColumns[4].cellClick = function(_e: any, cell: any) {
+        activeRow = cell.getRow().getData() as SearchResult;
+        searchState.setActiveRow(activeRow);
+        fileMetadataModal?.showModal()
+      }
+    }
+
+    // set cellClick function for address column (copy to clipboard) - column 5
+    if (searchColumns[5]) {
+      searchColumns[5].cellClick = function(_e: any, cell: any) {
+        const rowData = cell.getRow().getData() as SearchResult;
+        const fullAddress = rowData.address;
+
+        // Copy to clipboard and show toast
+        navigator.clipboard.writeText(fullAddress).then(() => {
+          addToast(`Copied address to clipboard: ${fullAddress}`, 'success');
+        }).catch(err => {
+          console.error('Failed to copy address: ', err);
+          addToast('Failed to copy address to clipboard', 'error');
+        });
+      }
+    }
+  }
 
   onMount(async () => {
     try {
@@ -438,6 +460,9 @@
       addToast("Failed to init transfer manager, see logs...", "error");
       console.error(error);
     }
+
+    // Set up column click handlers
+    setupColumnClickHandlers();
     const pw = await getPassword();
     if (pw === null) {
       console.error("password was null");

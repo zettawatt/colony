@@ -11,8 +11,9 @@
   import AddressDisplay from "../../../../components/AddressDisplay.svelte";
 
   let fileObjs: FileObj[] = [];
-  let stagedFileObj: FileObj | null = null;
+  let stagedFileObj = $state<FileObj | null>(null);
   let workingFileObj: FileInfo | undefined;
+  let uploadNewFileModal: HTMLDialogElement;
   let isPreviewLoading = $state(false);
   let selectedPath = $state("");
   let selectedFileName = $state("");
@@ -64,12 +65,13 @@
   async function uploadFile(fileObj: FileObj) {
     addToast(`Uploading ${fileObj.name}...`, "info", 7000);
     try {
-      const [uploadResult, address] = await invoke('upload_data', {
+      const result = await invoke('upload_data', {
         request: {
           id: fileObj.uuid,
           file_path: fileObj.path
         }
-      });
+      }) as [any, string];
+      const [uploadResult, address] = result;
 
       fileObj.setActualCost(uploadResult);
       fileObj.setAutonomiAddress(address);
@@ -124,7 +126,7 @@
             <p style="margin: 0;" id="totalUploadedCounter">0.0 B</p>
             <p style="margin: 0;">uploaded</p>
           </div>
-          <button class="btn btn-warning" onclick={uploadNewFile.showModal()}>Upload New File</button>
+          <button class="btn btn-warning" onclick={() => uploadNewFileModal.showModal()}>Upload New File</button>
         </div>
       </div>
       <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
@@ -149,7 +151,7 @@
                         <th>{idx + 1}</th>
                         <td>{file.name}</td>
                         <td>
-                          <AddressDisplay address={file.autonomiAddress} />
+                          <AddressDisplay address={file.autonomiAddress || ''} />
                         </td>
                         <td>{file.uploadedDate}</td>
                         <td>{formatFileSize(file.fileSize)}</td>
@@ -169,12 +171,12 @@
     </div>
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
       <li><a href="/screens/pod-management/your-pods">Your Pods</a></li>
-      <li><a href="#"class="menu-active">Uploads</a></li>
+      <li><span class="menu-active">Uploads</span></li>
       <li><a href="/screens/pod-management/downloads">Downloads</a></li>
     </ul>
   </Drawer>
 
-  <dialog id="uploadNewFile" class="modal">
+  <dialog bind:this={uploadNewFileModal} id="uploadNewFile" class="modal">
     <div class="modal-box">
       <h3 class="text-lg font-bold">Select File for Upload</h3>
       <div class="py-2">
@@ -202,7 +204,7 @@
               if (stagedFileObj) {
                 void uploadFile(stagedFileObj); // start upload in background
                 resetUploadState();   // hide modal, reset UI
-                uploadNewFile.close();
+                uploadNewFileModal.close();
               }
             }}
           >
@@ -223,20 +225,7 @@
 </main>
 
 <style>
-  .tooltip[data-tip]::before,
-  .tooltip.tooltip-open[data-tip]::before {
-    max-width: 50rem !important;
-    min-width: 16rem;
-    white-space: pre-wrap !important;
-    font-family: monospace !important;
-  }
-  .address-tooltip {
-    transition: color 0.15s;
-  }
-  .address-tooltip:hover, .address-tooltip:focus {
-    color: #009799;
-    text-decoration-style: solid;
-  }
+
   .row {
     display: flex;
     flex-direction: row;

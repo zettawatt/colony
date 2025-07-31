@@ -55,12 +55,12 @@
     <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label">New Password: </label>
-    <input bind:value={newPassword} type="password" class="input" placeholder="Password" />
+    <label class="label" for="new-password-intro">New Password: </label>
+    <input id="new-password-intro" bind:value={newPassword} type="password" class="input" placeholder="Password" />
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label">Confirm Password:</label>
-    <input bind:value={confirmPassword} type="password" class="input {confirmClass}" placeholder="Password" />
+    <label class="label" for="confirm-password-intro">Confirm Password:</label>
+    <input id="confirm-password-intro" bind:value={confirmPassword} type="password" class="input {confirmClass}" placeholder="Password" />
   </div>
 
   <h3 class="text-3xl font-extrabold dark:text-white pt-3 pb-3">12 Word Seed Phrase</h3>
@@ -131,19 +131,7 @@
   justify-content: center;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
 
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
 
 button {
   border-radius: 8px;
@@ -175,8 +163,6 @@ button {
   outline: none;
 }
 
-#greet-input {
-  margin-right: 5px;
-}
+
 
 </style>

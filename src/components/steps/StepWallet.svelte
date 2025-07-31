@@ -1,8 +1,8 @@
 <!-- src/components/StepWelcome.svelte -->
 <script lang="ts">
   
-  export let walletPrivateKey;
-  $: isValidPrivateKey = /^([a-fA-F0-9]{64})$/.test(walletPrivateKey);
+  export let walletPrivateKey: string = '';
+  $: isValidPrivateKey = /^([a-fA-F0-9]{64})$/.test(walletPrivateKey || '');
 </script>
 
 <div>
@@ -14,16 +14,15 @@
     </p>    <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label">Wallet Private Key: </label>
-    <input 
-      bind:value={walletPrivateKey} 
-      type="text" 
+    <label class="label" for="wallet-private-key">Wallet Private Key: </label>
+    <input
+      id="wallet-private-key"
+      bind:value={walletPrivateKey}
+      type="text"
       class="input"
       maxlength="64"
-      autocorrect="off"
       spellcheck="false"
       autocomplete="off"
-      autocapitalize="off"
       placeholder="wallet private key" />
   </div>
   {#if walletPrivateKey && !isValidPrivateKey}
