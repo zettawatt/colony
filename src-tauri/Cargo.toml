@@ -1,6 +1,6 @@
 [package]
 name = "colony-app"
-version = "1.1.0"
+version = "1.1.1"
 description = "A GUI frontend to the Autonomi network with a client side search engine"
 authors = ["Chuck McClish", "Maxx Rodriguez"]
 edition = "2021"
@@ -24,8 +24,8 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-notification = "2"
-colonylib = "0.5.12"
-autonomi = "0.5.2"
+colonylib = "0.5.13"
+autonomi = "0.5.3"
 tracing = "0.1.41"
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }

@@ -79,6 +79,11 @@ jobs:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             target: 'aarch64-apple-darwin'
+            arch: 'aarch64'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            arch: 'x86_64'
           - platform: 'ubuntu-22.04'
             args: '--target x86_64-unknown-linux-gnu'
             target: 'x86_64-unknown-linux-gnu'
@@ -134,10 +139,38 @@ jobs:
           echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
           echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
 
+      - name: Import Apple Developer Certificate
+        if: matrix.platform == 'macos-latest'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Import Apple Installer Certificate
+        if: matrix.platform == 'macos-latest'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
+          create-keychain: false
+
+      - name: Download Apple Provisioning Profile
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > embedded.provisionprofile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp embedded.provisionprofile ~/Library/MobileDevice/Provisioning\ Profiles/
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: ${{ github.event.inputs.tag_name || github.ref_name }}
           releaseName: 'Colony ${{ github.event.inputs.tag_name || github.ref_name }}'
@@ -164,6 +197,80 @@ jobs:
           includeUpdaterJson: false
           args: ${{ matrix.args }}
           bundleIdentifier: 'com.colony.gui'
+
+      - name: Notarize and Upload to App Store Connect
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # Find the built .app bundle
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found"
+            exit 1
+          fi
+
+          echo "Found app bundle: $APP_PATH"
+
+          # Create API key file for App Store Connect
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+          # Create a zip archive for notarization
+          APP_NAME=$(basename "$APP_PATH")
+          ZIP_PATH="${APP_PATH%/*}/${APP_NAME%.app}.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+
+          echo "Created zip archive: $ZIP_PATH"
+
+          # Submit for notarization
+          echo "Submitting for notarization..."
+          xcrun notarytool submit "$ZIP_PATH" \
+            --key ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+            --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            --issuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+            --wait \
+            --timeout 30m \
+            --verbose
+
+          # Staple the notarization ticket
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$APP_PATH"
+
+          # Verify notarization
+          echo "Verifying notarization..."
+          xcrun stapler validate "$APP_PATH"
+          spctl -a -v "$APP_PATH"
+
+          # Create final DMG with notarized app (this is already done by Tauri, but we verify it)
+          DMG_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name "*.dmg" | head -1)
+          if [ -n "$DMG_PATH" ]; then
+            echo "Found DMG: $DMG_PATH"
+            # Notarize the DMG as well
+            xcrun notarytool submit "$DMG_PATH" \
+              --key ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+              --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+              --issuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+              --wait \
+              --timeout 30m \
+              --verbose
+
+            # Staple the DMG
+            xcrun stapler staple "$DMG_PATH"
+          fi
+
+          # Upload to App Store Connect using altool (for App Store distribution)
+          # Note: This step is optional and only needed if you want to distribute via App Store
+          # For now, we'll comment it out as it requires additional App Store setup
+          # echo "Uploading to App Store Connect..."
+          # xcrun altool --upload-app \
+          #   --type osx \
+          #   --file "$APP_PATH" \
+          #   --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+          #   --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+          #   --verbose
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
 
       - name: Verify build artifacts
         run: |

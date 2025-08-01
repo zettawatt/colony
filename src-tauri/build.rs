@@ -24,6 +24,7 @@ fn fetch_binaries() {
         ("dweb-x86_64-unknown-linux-gnu", "dweb-linux-amd64"),
         ("dweb-x86_64-pc-windows-msvc.exe", "dweb-amd64.exe"),
         ("dweb-aarch64-apple-darwin", "dweb-darwin-arm64"),
+        ("dweb-x86_64-apple-darwin", "dweb-darwin-amd64"),
     ];
 
     // Check if all binaries already exist
@@ -92,7 +93,7 @@ fn fetch_binaries() {
 }
 
 fn get_latest_release_tag() -> Result<String, Box<dyn std::error::Error>> {
-    const FALLBACK_VERSION: &str = "v0.10.5"; // Latest known working version as of 2025-07-15
+    const FALLBACK_VERSION: &str = "v0.10.6"; // Latest known working version as of 2025-07-15
     const MAX_RETRIES: u32 = 4;
     const RETRY_DELAY_SECONDS: u64 = 30;
 

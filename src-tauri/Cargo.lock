@@ -819,9 +819,9 @@ dependencies = [
 
 [[package]]
 name = "ant-bootstrap"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd1f5ed73fee411204ba0e5e39535ac4b89ead50c9d2d400d635e9abccbd7a5a"
+checksum = "f4ed5140085019946037c3e8bbf3fcd51e6437178b2fb699bf3c8f8242e41f7d"
 dependencies = [
  "ant-logging",
  "ant-protocol",
@@ -831,6 +831,7 @@ dependencies = [
  "dirs-next",
  "futures",
  "libp2p",
+ "rand 0.8.5",
  "reqwest",
  "serde",
  "serde_json",
@@ -1368,9 +1369,9 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "autonomi"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8c2f7a0abb3a2bf5e1d2ac0b4c27a5f9252c8ab419090fa8c8e1a7be30dad62"
+checksum = "783fc03784402efbad210c02dfc9c886010e3b7a9e3bacc451451c72c276b990"
 dependencies = [
  "ant-bootstrap",
  "ant-evm",
@@ -1382,6 +1383,7 @@ dependencies = [
  "bytes",
  "const-hex",
  "custom_debug",
+ "dirs-next",
  "evmlib",
  "exponential-backoff",
  "eyre",
@@ -2160,7 +2162,7 @@ dependencies = [
 
 [[package]]
 name = "colony-app"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "autonomi",
  "chrono",
@@ -2188,9 +2190,9 @@ dependencies = [
 
 [[package]]
 name = "colonylib"
-version = "0.5.12"
+version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb0ec351dc0e16419defd4bacb832c51f1ba18477cf0a0d279bb9a238864fcc2"
+checksum = "7baf1d29a78a31fc20d9623223aa1a2419bcbfb6f07228cd11dc71b5b74d072e"
 dependencies = [
  "autonomi",
  "bip39",
