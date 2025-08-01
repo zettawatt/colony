@@ -139,20 +139,37 @@ jobs:
           echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
           echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
 
-      - name: Import Apple Developer Certificate
+      - name: Import Apple Certificates
         if: matrix.platform == 'macos-latest'
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH="$HOME/Library/Keychains/signing_temp.keychain"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
-      - name: Import Apple Installer Certificate
-        if: matrix.platform == 'macos-latest'
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
-          create-keychain: false
+          # Create keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" signing_temp.keychain
+          security set-keychain-settings -lut 21600 signing_temp.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" signing_temp.keychain
+
+          # Add to keychain search list
+          security list-keychains -d user -s signing_temp.keychain $(security list-keychains -d user | sed s/\"//g)
+
+          # Import Developer ID Application certificate
+          echo "${{ secrets.APPLE_CERTIFICATE }}" | base64 --decode > /tmp/cert1.p12
+          security import /tmp/cert1.p12 -k signing_temp.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -A
+
+          # Import Installer certificate
+          echo "${{ secrets.APPLE_INSTALLER_CERTIFICATE }}" | base64 --decode > /tmp/cert2.p12
+          security import /tmp/cert2.p12 -k signing_temp.keychain -P "${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}" -A
+
+          # Set partition list for both certificates
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" signing_temp.keychain
+
+          # Clean up temporary files
+          rm -f /tmp/cert1.p12 /tmp/cert2.p12
+
+          # Store keychain password for later use
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
 
       - name: Download Apple Provisioning Profile
         if: matrix.platform == 'macos-latest'
@@ -291,4 +308,11 @@ jobs:
             echo "macOS DMG files:"
             find . -name "*.dmg" -exec ls -lh {} \;
           fi
+        shell: bash
+
+      - name: Cleanup Keychain
+        if: matrix.platform == 'macos-latest' && always()
+        run: |
+          # Remove the temporary keychain
+          security delete-keychain signing_temp.keychain || true
         shell: bash
