@@ -247,6 +247,52 @@ jobs:
           args: ${{ matrix.args }}
           bundleIdentifier: 'com.colony.gui'
 
+      - name: Fix App Bundle Info.plist
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # Find the built .app bundle
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found"
+            exit 1
+          fi
+
+          echo "Found app bundle: $APP_PATH"
+
+          # Check and fix the Info.plist
+          INFO_PLIST="$APP_PATH/Contents/Info.plist"
+
+          if [ -f "$INFO_PLIST" ]; then
+            echo "Info.plist exists, checking contents..."
+
+            # Ensure CFBundlePackageType is set to APPL
+            /usr/libexec/PlistBuddy -c "Set :CFBundlePackageType APPL" "$INFO_PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string APPL" "$INFO_PLIST"
+
+            # Ensure CFBundleIdentifier is set
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.colony.gui" "$INFO_PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.colony.gui" "$INFO_PLIST"
+
+            # Ensure CFBundleExecutable is set
+            /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable colony-app" "$INFO_PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string colony-app" "$INFO_PLIST"
+
+            # Ensure CFBundleVersion is set
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1.1.1" "$INFO_PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 1.1.1" "$INFO_PLIST"
+
+            # Ensure CFBundleShortVersionString is set
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.1.1" "$INFO_PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 1.1.1" "$INFO_PLIST"
+
+            echo "Info.plist updated successfully"
+            echo "Contents:"
+            cat "$INFO_PLIST"
+          else
+            echo "Error: Info.plist not found at $INFO_PLIST"
+            exit 1
+          fi
+
       - name: Notarize and Upload to App Store Connect
         if: matrix.platform == 'macos-latest'
         run: |
