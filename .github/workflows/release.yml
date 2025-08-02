@@ -210,111 +210,6 @@ jobs:
 
           echo "Updated icon.icns with 1024x1024 icon for App Store compatibility"
 
-      - name: Prepare Tauri Configuration for App Store
-        if: matrix.platform == 'macos-latest'
-        run: |
-          # Create a temporary tauri.conf.json with App Store specific settings
-          cp src-tauri/tauri.conf.json src-tauri/tauri.conf.json.backup
-
-          # Update the configuration for App Store compatibility
-          cat > temp_config.json << 'EOF'
-          {
-            "productName": "Colony",
-            "version": "1.1.1",
-            "identifier": "com.colony.gui",
-            "build": {
-              "beforeDevCommand": "npm run dev",
-              "devUrl": "http://localhost:1420",
-              "beforeBuildCommand": "npm run build",
-              "frontendDist": "../build"
-            },
-            "app": {
-              "windows": [
-                {
-                  "title": "Colony",
-                  "width": 1024,
-                  "height": 700,
-                  "minWidth": 1024,
-                  "dragDropEnabled": false,
-                  "maximized": true
-                }
-              ],
-              "security": {
-                "csp": null
-              }
-            },
-            "bundle": {
-              "active": true,
-              "targets": "all",
-              "createUpdaterArtifacts": false,
-              "publisher": "Colony",
-              "icon": [
-                "icons/32x32.png",
-                "icons/128x128.png",
-                "icons/128x128@2x.png",
-                "icons/icon-1024x1024.png",
-                "icons/icon.icns",
-                "icons/icon.ico"
-              ],
-              "resources": [],
-              "externalBin": ["binaries/dweb"],
-              "copyright": "Copyright © 2025 Chuck McClish. All rights reserved.",
-              "category": "Utility",
-              "shortDescription": "Colony - Autonomi Semantic Search Engine and File Manager",
-              "longDescription": "A desktop application for interacting with the Autonomi network",
-              "linux": {
-                "appimage": {
-                  "bundleMediaFramework": true
-                },
-                "deb": {
-                  "depends": []
-                }
-              },
-              "macOS": {
-                "signingIdentity": "Developer ID Application: Charles McClish (3364NM68HH)",
-                "hardenedRuntime": true,
-                "entitlements": "entitlements.plist",
-                "exceptionDomain": null,
-                "frameworks": [],
-                "minimumSystemVersion": "10.13",
-                "dmg": {
-                  "appPosition": {
-                    "x": 180,
-                    "y": 170
-                  },
-                  "applicationFolderPosition": {
-                    "x": 480,
-                    "y": 170
-                  },
-                  "windowSize": {
-                    "width": 660,
-                    "height": 400
-                  }
-                }
-              },
-              "windows": {
-                "certificateThumbprint": null,
-                "digestAlgorithm": "sha256",
-                "timestampUrl": "",
-                "tsp": false,
-                "webviewInstallMode": {
-                  "type": "downloadBootstrapper"
-                },
-                "nsis": {
-                  "installMode": "perMachine",
-                  "displayLanguageSelector": true
-                },
-                "wix": {
-                  "language": "en-US"
-                }
-              }
-            }
-          }
-          EOF
-
-          # Replace the original config
-          mv temp_config.json src-tauri/tauri.conf.json
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -352,11 +247,34 @@ jobs:
           args: ${{ matrix.args }}
           bundleIdentifier: 'com.colony.gui'
 
-      - name: Restore Original Tauri Configuration
+      - name: Debug App Bundle Structure
         if: matrix.platform == 'macos-latest'
         run: |
-          # Restore the original configuration
-          mv src-tauri/tauri.conf.json.backup src-tauri/tauri.conf.json
+          # Find the built .app bundle
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found"
+            exit 1
+          fi
+
+          echo "Found app bundle: $APP_PATH"
+          echo "Bundle structure:"
+          ls -la "$APP_PATH/Contents/"
+
+          INFO_PLIST="$APP_PATH/Contents/Info.plist"
+          if [ -f "$INFO_PLIST" ]; then
+            echo "Info.plist exists. Contents:"
+            cat "$INFO_PLIST"
+            echo ""
+            echo "Checking specific keys:"
+            /usr/libexec/PlistBuddy -c "Print :CFBundlePackageType" "$INFO_PLIST" || echo "CFBundlePackageType not found"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$INFO_PLIST" || echo "CFBundleIdentifier not found"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$INFO_PLIST" || echo "CFBundleExecutable not found"
+          else
+            echo "Info.plist NOT FOUND at $INFO_PLIST"
+            echo "Contents of Contents directory:"
+            ls -la "$APP_PATH/Contents/"
+          fi
 
       - name: Notarize and Upload to App Store Connect
         if: matrix.platform == 'macos-latest'
