@@ -247,6 +247,29 @@ jobs:
           args: ${{ matrix.args }}
           bundleIdentifier: 'com.colony.gui'
 
+      - name: Re-sign App Bundle for Notarization
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # Find the built .app bundle
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found"
+            exit 1
+          fi
+
+          echo "Re-signing app bundle: $APP_PATH"
+
+          # Re-sign the app with proper entitlements for notarization
+          codesign --force --deep --sign "${{ secrets.APPLE_SIGNING_IDENTITY }}" \
+            --entitlements src-tauri/entitlements.plist \
+            --options runtime \
+            --timestamp \
+            "$APP_PATH"
+
+          # Verify the signature
+          codesign -v -v --deep --strict "$APP_PATH"
+          echo "App bundle re-signed successfully"
+
       - name: Fix App Bundle Info.plist
         if: matrix.platform == 'macos-latest'
         run: |
@@ -316,15 +339,45 @@ jobs:
 
           echo "Created zip archive: $ZIP_PATH"
 
+          # Verify code signing before notarization
+          echo "Verifying code signature..."
+          codesign -v -v --deep --strict "$APP_PATH"
+          if [ $? -ne 0 ]; then
+            echo "Code signature verification failed!"
+            exit 1
+          fi
+
+          # Check if hardened runtime is enabled
+          echo "Checking hardened runtime..."
+          codesign -d --entitlements - "$APP_PATH"
+
           # Submit for notarization
           echo "Submitting for notarization..."
-          xcrun notarytool submit "$ZIP_PATH" \
+          SUBMISSION_ID=$(xcrun notarytool submit "$ZIP_PATH" \
             --key ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
             --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
             --issuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
             --wait \
             --timeout 30m \
-            --verbose
+            --output-format json | jq -r '.id')
+
+          # Check notarization status and get detailed logs if it failed
+          STATUS=$(xcrun notarytool info "$SUBMISSION_ID" \
+            --key ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+            --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            --issuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+            --output-format json | jq -r '.status')
+
+          echo "Notarization status: $STATUS"
+
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Notarization failed. Getting detailed logs..."
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --key ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+              --key-id ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+              --issuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+            exit 1
+          fi
 
           # Staple the notarization ticket
           echo "Stapling notarization ticket..."

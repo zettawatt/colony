@@ -22,20 +22,16 @@
     <key>com.apple.security.files.user-selected.executable</key>
     <true/>
     
-    <!-- Required for hardened runtime -->
+    <!-- Required for hardened runtime and WebKit -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
-    
+
     <!-- Allow unsigned executable memory for WebKit -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    
-    <!-- Disable library validation for third-party libraries -->
+
+    <!-- Disable library validation for third-party libraries (required for Tauri) -->
     <key>com.apple.security.cs.disable-library-validation</key>
-    <true/>
-    
-    <!-- Allow DYLD environment variables -->
-    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
     
     <!-- Microphone access (if needed for future features) -->
