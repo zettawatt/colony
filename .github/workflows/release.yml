@@ -178,6 +178,38 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp embedded.provisionprofile ~/Library/MobileDevice/Provisioning\ Profiles/
 
+      - name: Prepare macOS Icons
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # Create iconset directory
+          mkdir -p Colony.iconset
+
+          # Copy existing icons
+          cp src-tauri/icons/32x32.png Colony.iconset/icon_32x32.png
+          cp src-tauri/icons/128x128.png Colony.iconset/icon_128x128.png
+          cp src-tauri/icons/128x128@2x.png Colony.iconset/icon_128x128@2x.png
+
+          # Add the 1024x1024 icon for App Store
+          cp src-tauri/icons/icon-1024x1024.png Colony.iconset/icon_1024x1024.png
+
+          # Generate additional required sizes from the 1024x1024 icon
+          sips -z 16 16 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16.png
+          sips -z 32 32 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16@2x.png
+          sips -z 64 64 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_32x32@2x.png
+          sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_128x128@2x.png
+          sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256.png
+          sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256@2x.png
+          sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512.png
+          sips -z 1024 1024 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512@2x.png
+
+          # Create new .icns file with all sizes including 1024x1024
+          iconutil -c icns Colony.iconset -o src-tauri/icons/icon.icns
+
+          # Clean up
+          rm -rf Colony.iconset
+
+          echo "Updated icon.icns with 1024x1024 icon for App Store compatibility"
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -275,15 +307,13 @@ jobs:
           fi
 
           # Upload to App Store Connect using altool (for App Store distribution)
-          # Note: This step is optional and only needed if you want to distribute via App Store
-          # For now, we'll comment it out as it requires additional App Store setup
-          # echo "Uploading to App Store Connect..."
-          # xcrun altool --upload-app \
-          #   --type osx \
-          #   --file "$APP_PATH" \
-          #   --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-          #   --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
-          #   --verbose
+          echo "Uploading to App Store Connect..."
+          xcrun altool --upload-app \
+            --type osx \
+            --file "$APP_PATH" \
+            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+            --verbose
         env:
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
