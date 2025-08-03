@@ -154,9 +154,15 @@ jobs:
           # Add to keychain search list
           security list-keychains -d user -s signing_temp.keychain $(security list-keychains -d user | sed s/\"//g)
 
-          # Import Developer ID Application certificate
+          # Import Developer ID Application certificate (for DMG distribution)
           echo "${{ secrets.APPLE_CERTIFICATE }}" | base64 --decode > /tmp/cert1.p12
           security import /tmp/cert1.p12 -k signing_temp.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -A
+
+          # Import 3rd Party Mac Developer Application certificate (for App Store)
+          if [ -n "${{ secrets.APPLE_APP_STORE_CERTIFICATE }}" ]; then
+            echo "${{ secrets.APPLE_APP_STORE_CERTIFICATE }}" | base64 --decode > /tmp/cert_appstore.p12
+            security import /tmp/cert_appstore.p12 -k signing_temp.keychain -P "${{ secrets.APPLE_APP_STORE_CERTIFICATE_PASSWORD }}" -A
+          fi
 
           # Import Installer certificate
           echo "${{ secrets.APPLE_INSTALLER_CERTIFICATE }}" | base64 --decode > /tmp/cert2.p12
@@ -166,7 +172,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" signing_temp.keychain
 
           # Clean up temporary files
-          rm -f /tmp/cert1.p12 /tmp/cert2.p12
+          rm -f /tmp/cert1.p12 /tmp/cert2.p12 /tmp/cert_appstore.p12
 
           # Store keychain password for later use
           echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
@@ -365,11 +371,31 @@ jobs:
             xcrun stapler staple "$DMG_PATH"
           fi
 
-          # Upload to App Store Connect using altool (for App Store distribution)
-          echo "Uploading to App Store Connect..."
+          # Create PKG installer for App Store Connect upload
+          echo "Creating PKG installer for App Store Connect..."
+          PKG_PATH="${APP_PATH%/*}/Colony_${{ github.event.inputs.tag_name || github.ref_name }}_${{ matrix.arch }}.pkg"
+
+          # Use productbuild to create a proper installer package
+          productbuild --component "$APP_PATH" /Applications \
+            --sign "3rd Party Mac Developer Installer: Charles McClish (3364NM68HH)" \
+            "$PKG_PATH"
+
+          if [ ! -f "$PKG_PATH" ]; then
+            echo "Failed to create PKG installer"
+            exit 1
+          fi
+
+          echo "Created PKG installer: $PKG_PATH"
+
+          # Verify PKG signature
+          echo "Verifying PKG signature..."
+          pkgutil --check-signature "$PKG_PATH"
+
+          # Upload PKG to App Store Connect using xcrun altool
+          echo "Uploading PKG to App Store Connect..."
           xcrun altool --upload-app \
             --type osx \
-            --file "$APP_PATH" \
+            --file "$PKG_PATH" \
             --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
             --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
             --verbose
