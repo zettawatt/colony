@@ -282,7 +282,7 @@ jobs:
             ls -la "$APP_PATH/Contents/"
           fi
 
-      - name: Notarize and Upload to App Store Connect
+      - name: Notarize DMG for Distribution
         if: matrix.platform == 'macos-latest'
         run: |
           # Find the built .app bundle
@@ -371,38 +371,15 @@ jobs:
             xcrun stapler staple "$DMG_PATH"
           fi
 
-          # Create PKG installer for App Store Connect upload
-          echo "Creating PKG installer for App Store Connect..."
-          PKG_PATH="${APP_PATH%/*}/Colony_${{ github.event.inputs.tag_name || github.ref_name }}_${{ matrix.arch }}.pkg"
-
-          # Use productbuild to create a proper installer package
-          productbuild --component "$APP_PATH" /Applications \
-            --sign "3rd Party Mac Developer Installer: Charles McClish (3364NM68HH)" \
-            "$PKG_PATH"
-
-          if [ ! -f "$PKG_PATH" ]; then
-            echo "Failed to create PKG installer"
-            exit 1
-          fi
-
-          echo "Created PKG installer: $PKG_PATH"
-
-          # Verify PKG signature
-          echo "Verifying PKG signature..."
-          pkgutil --check-signature "$PKG_PATH"
-
-          # Upload PKG to App Store Connect using xcrun altool
-          echo "Uploading PKG to App Store Connect..."
-          xcrun altool --upload-app \
-            --type osx \
-            --file "$PKG_PATH" \
-            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
-            --verbose
-        env:
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      - name: Upload macOS artifacts for App Store build
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-artifacts
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
+            src-tauri/target/${{ matrix.target }}/release/colony-app
+          retention-days: 1
 
       - name: Verify build artifacts
         run: |
@@ -430,4 +407,266 @@ jobs:
         run: |
           # Remove the temporary keychain
           security delete-keychain signing_temp.keychain || true
+        shell: bash
+
+  app-store-build:
+    name: Build Universal App for App Store
+    needs: build
+    runs-on: macos-latest
+    if: contains(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*-artifacts
+          merge-multiple: true
+          path: artifacts/
+
+      - name: Set SDKROOT and CPLUS_INCLUDE_PATH for macOS
+        run: |
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
+          echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
+
+      - name: Import Apple Certificates for App Store
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH="$HOME/Library/Keychains/appstore_temp.keychain"
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Create keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" appstore_temp.keychain
+          security set-keychain-settings -lut 21600 appstore_temp.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" appstore_temp.keychain
+
+          # Add to keychain search list
+          security list-keychains -d user -s appstore_temp.keychain $(security list-keychains -d user | sed s/\"//g)
+
+          # Import 3rd Party Mac Developer Application certificate (for App Store)
+          echo "${{ secrets.APPLE_APP_STORE_CERTIFICATE }}" | base64 --decode > /tmp/cert_appstore.p12
+          security import /tmp/cert_appstore.p12 -k appstore_temp.keychain -P "${{ secrets.APPLE_APP_STORE_CERTIFICATE_PASSWORD }}" -A
+
+          # Import 3rd Party Mac Developer Installer certificate
+          echo "${{ secrets.APPLE_INSTALLER_CERTIFICATE }}" | base64 --decode > /tmp/cert_installer.p12
+          security import /tmp/cert_installer.p12 -k appstore_temp.keychain -P "${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}" -A
+
+          # Set partition list for certificates
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" appstore_temp.keychain
+
+          # Clean up temporary files
+          rm -f /tmp/cert_appstore.p12 /tmp/cert_installer.p12
+
+          # Store keychain password for later use
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
+
+      - name: Download Apple Provisioning Profile
+        run: |
+          echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > embedded.provisionprofile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp embedded.provisionprofile ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Prepare macOS Icons
+        run: |
+          # Create iconset directory
+          mkdir -p Colony.iconset
+
+          # Copy existing icons
+          cp src-tauri/icons/32x32.png Colony.iconset/icon_32x32.png
+          cp src-tauri/icons/128x128.png Colony.iconset/icon_128x128.png
+          cp src-tauri/icons/128x128@2x.png Colony.iconset/icon_128x128@2x.png
+
+          # Add the 1024x1024 icon for App Store
+          cp src-tauri/icons/icon-1024x1024.png Colony.iconset/icon_1024x1024.png
+
+          # Generate additional required sizes from the 1024x1024 icon
+          sips -z 16 16 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16.png
+          sips -z 32 32 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16@2x.png
+          sips -z 64 64 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_32x32@2x.png
+          sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_128x128@2x.png
+          sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256.png
+          sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256@2x.png
+          sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512.png
+          sips -z 1024 1024 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512@2x.png
+
+          # Create new .icns file with all sizes including 1024x1024
+          iconutil -c icns Colony.iconset -o src-tauri/icons/icon.icns
+
+          # Clean up
+          rm -rf Colony.iconset
+
+          echo "Updated icon.icns with 1024x1024 icon for App Store compatibility"
+
+      - name: Create Universal Binary and App Store Build
+        run: |
+          # Create universal dweb binary from downloaded artifacts
+          echo "Creating universal dweb binary..."
+          mkdir -p src-tauri/binaries
+
+          # Find the dweb binaries from artifacts
+          DWEB_ARM64=$(find artifacts -name "dweb" -path "*/aarch64-apple-darwin/*" | head -1)
+          DWEB_X86_64=$(find artifacts -name "dweb" -path "*/x86_64-apple-darwin/*" | head -1)
+
+          if [ -z "$DWEB_ARM64" ] || [ -z "$DWEB_X86_64" ]; then
+            echo "Could not find dweb binaries in artifacts"
+            find artifacts -name "dweb" -type f
+            exit 1
+          fi
+
+          echo "Found ARM64 dweb: $DWEB_ARM64"
+          echo "Found x86_64 dweb: $DWEB_X86_64"
+
+          # Create universal dweb binary
+          lipo -create "$DWEB_ARM64" "$DWEB_X86_64" -output src-tauri/binaries/dweb
+          chmod +x src-tauri/binaries/dweb
+
+          echo "Created universal dweb binary"
+          file src-tauri/binaries/dweb
+
+          # Create universal main binary
+          echo "Creating universal main binary..."
+          MAIN_ARM64=$(find artifacts -name "colony-app" -path "*/aarch64-apple-darwin/*" | head -1)
+          MAIN_X86_64=$(find artifacts -name "colony-app" -path "*/x86_64-apple-darwin/*" | head -1)
+
+          if [ -z "$MAIN_ARM64" ] || [ -z "$MAIN_X86_64" ]; then
+            echo "Could not find main binaries in artifacts"
+            find artifacts -name "colony-app" -type f
+            exit 1
+          fi
+
+          echo "Found ARM64 main: $MAIN_ARM64"
+          echo "Found x86_64 main: $MAIN_X86_64"
+
+          # Create directory for universal binary
+          mkdir -p src-tauri/target/universal-apple-darwin/release
+          lipo -create "$MAIN_ARM64" "$MAIN_X86_64" -output src-tauri/target/universal-apple-darwin/release/colony-app
+          chmod +x src-tauri/target/universal-apple-darwin/release/colony-app
+
+          echo "Created universal main binary"
+          file src-tauri/target/universal-apple-darwin/release/colony-app
+
+      - name: Build App Store Bundle
+        run: |
+          # Create a temporary tauri config for App Store
+          cp src-tauri/tauri.conf.json src-tauri/tauri.conf.appstore.json
+
+          # Update the config for App Store signing
+          cat src-tauri/tauri.conf.appstore.json | \
+            jq '.bundle.macOS.signingIdentity = "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" | .bundle.macOS.entitlements = "entitlements.appstore.plist"' > \
+            src-tauri/tauri.conf.appstore.tmp.json && \
+            mv src-tauri/tauri.conf.appstore.tmp.json src-tauri/tauri.conf.appstore.json
+
+          cd src-tauri
+
+          # Build for App Store with custom config
+          cargo tauri build --config tauri.conf.appstore.json --target universal-apple-darwin
+
+      - name: Sign App Store Bundle and Sidecar
+        run: |
+          # Find the built .app bundle
+          APP_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found"
+            exit 1
+          fi
+
+          echo "Found app bundle: $APP_PATH"
+
+          # Sign the dweb sidecar with App Store certificate
+          DWEB_PATH="$APP_PATH/Contents/MacOS/dweb"
+          if [ -f "$DWEB_PATH" ]; then
+            echo "Signing dweb sidecar..."
+            codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
+              --entitlements src-tauri/entitlements.appstore.plist \
+              "$DWEB_PATH"
+
+            # Verify dweb signature
+            codesign -v -v --deep --strict "$DWEB_PATH"
+            echo "dweb sidecar signed successfully"
+          else
+            echo "Warning: dweb sidecar not found at $DWEB_PATH"
+          fi
+
+          # Re-sign the main app bundle with App Store certificate
+          echo "Signing main app bundle..."
+          codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
+            --entitlements src-tauri/entitlements.appstore.plist \
+            --deep \
+            "$APP_PATH"
+
+          # Verify app signature
+          echo "Verifying app signature..."
+          codesign -v -v --deep --strict "$APP_PATH"
+
+          # Check entitlements
+          echo "Checking entitlements..."
+          codesign -d --entitlements - "$APP_PATH"
+
+      - name: Create PKG for App Store Connect
+        run: |
+          # Find the signed .app bundle
+          APP_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+
+          # Create API key file for App Store Connect
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+          # Create PKG installer for App Store Connect upload
+          echo "Creating PKG installer for App Store Connect..."
+          PKG_PATH="${APP_PATH%/*}/Colony_${{ github.event.inputs.tag_name || github.ref_name }}_Universal.pkg"
+
+          # Use productbuild to create a proper installer package
+          productbuild --component "$APP_PATH" /Applications \
+            --sign "3rd Party Mac Developer Installer: Charles McClish (3364NM68HH)" \
+            "$PKG_PATH"
+
+          if [ ! -f "$PKG_PATH" ]; then
+            echo "Failed to create PKG installer"
+            exit 1
+          fi
+
+          echo "Created PKG installer: $PKG_PATH"
+
+          # Verify PKG signature
+          echo "Verifying PKG signature..."
+          pkgutil --check-signature "$PKG_PATH"
+
+          # Upload PKG to App Store Connect using xcrun altool
+          echo "Uploading PKG to App Store Connect..."
+          xcrun altool --upload-app \
+            --type osx \
+            --file "$PKG_PATH" \
+            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+            --verbose
+
+      - name: Cleanup App Store Keychain
+        if: always()
+        run: |
+          # Remove the temporary keychain
+          security delete-keychain appstore_temp.keychain || true
         shell: bash
