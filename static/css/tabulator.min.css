@@ -1,4 +1,4 @@
-/* Modern Light Tabulator Theme with High Contrast */
+/* Modern Light Tabulator Theme with High Contrast - Theme Aware */
 
 /* Main container with modern font */
 .tabulator {
@@ -14,6 +14,8 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transform: translateZ(0);
 }
+
+
 
 .tabulator[tabulator-layout=fitDataFill] .tabulator-tableholder .tabulator-table {
     min-width: 100%;

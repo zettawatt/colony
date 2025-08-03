@@ -48,10 +48,18 @@
     }, 100);
   }
 
-  function switchTabulatorTheme(theme: Theme): void {
+  function switchTabulatorTheme(_theme?: Theme): void {
     const link = document.getElementById('tabulator-theme') as HTMLLinkElement;
     if (link) {
-      link.href = theme === 'dark'
+      // Get the current data-theme attribute to determine if we're in a dark theme
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const isDarkTheme = currentTheme && [
+        'dark', 'halloween', 'synthwave', 'forest', 'aqua', 'black',
+        'luxury', 'dracula', 'business', 'night', 'coffee', 'dim',
+        'sunset', 'abyss'
+      ].includes(currentTheme);
+
+      link.href = isDarkTheme
         ? '/css/tabulator_midnight.min.css'
         : '/css/tabulator.min.css';
       if (tabulatorInstance) tabulatorInstance.redraw(true);
@@ -321,6 +329,11 @@
     clearTimeout(resizeTimeout);
     clearTimeout(scrollSaveTimeout);
   });
+
+  // Reactive statement for theme changes
+  $: if ($globalTheme && tabulatorInstance) {
+    switchTabulatorTheme();
+  }
 
   // Reactive statements for data and column updates
   $: if (tabulatorInstance && Array.isArray(data) && tableReady && !isRestoringFromCache) {

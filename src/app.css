@@ -19,6 +19,375 @@
   @apply text-2xl font-bold;
 }
 
+/* Custom theme-aware button styling */
+/* Primary buttons - Orange with black text for most actions */
+.btn-primary {
+  background-color: #e28743 !important;
+  border-color: #e28743 !important;
+  color: #000000 !important;
+}
+
+.btn-primary:hover {
+  background-color: #d67a3a !important;
+  border-color: #d67a3a !important;
+  color: #000000 !important;
+}
+
+/* Warning buttons - Orange with black text for create/edit actions */
+.btn-warning {
+  background-color: #e28743 !important;
+  border-color: #e28743 !important;
+  color: #000000 !important;
+}
+
+.btn-warning:hover {
+  background-color: #d67a3a !important;
+  border-color: #d67a3a !important;
+  color: #000000 !important;
+}
+
+/* Neutral buttons - Orange with black text for general actions */
+.btn-neutral {
+  background-color: #e28743 !important;
+  border-color: #e28743 !important;
+  color: #000000 !important;
+}
+
+.btn-neutral:hover {
+  background-color: #d67a3a !important;
+  border-color: #d67a3a !important;
+  color: #000000 !important;
+}
+
+/* Error buttons - Keep red for destructive actions, close, cancel */
+.btn-error {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+.btn-error:hover {
+  background-color: #c82333 !important;
+  border-color: #c82333 !important;
+  color: #ffffff !important;
+}
+
+/* Theme-aware adjustments for dark themes */
+[data-theme="dark"] .btn-primary,
+[data-theme="halloween"] .btn-primary,
+[data-theme="synthwave"] .btn-primary,
+[data-theme="forest"] .btn-primary,
+[data-theme="aqua"] .btn-primary,
+[data-theme="black"] .btn-primary,
+[data-theme="luxury"] .btn-primary,
+[data-theme="dracula"] .btn-primary,
+[data-theme="business"] .btn-primary,
+[data-theme="night"] .btn-primary,
+[data-theme="coffee"] .btn-primary,
+[data-theme="dim"] .btn-primary,
+[data-theme="sunset"] .btn-primary,
+[data-theme="abyss"] .btn-primary {
+  background-color: #ff8c42 !important;
+  border-color: #ff8c42 !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="halloween"] .btn-primary:hover,
+[data-theme="synthwave"] .btn-primary:hover,
+[data-theme="forest"] .btn-primary:hover,
+[data-theme="aqua"] .btn-primary:hover,
+[data-theme="black"] .btn-primary:hover,
+[data-theme="luxury"] .btn-primary:hover,
+[data-theme="dracula"] .btn-primary:hover,
+[data-theme="business"] .btn-primary:hover,
+[data-theme="night"] .btn-primary:hover,
+[data-theme="coffee"] .btn-primary:hover,
+[data-theme="dim"] .btn-primary:hover,
+[data-theme="sunset"] .btn-primary:hover,
+[data-theme="abyss"] .btn-primary:hover {
+  background-color: #e67e3c !important;
+  border-color: #e67e3c !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .btn-warning,
+[data-theme="halloween"] .btn-warning,
+[data-theme="synthwave"] .btn-warning,
+[data-theme="forest"] .btn-warning,
+[data-theme="aqua"] .btn-warning,
+[data-theme="black"] .btn-warning,
+[data-theme="luxury"] .btn-warning,
+[data-theme="dracula"] .btn-warning,
+[data-theme="business"] .btn-warning,
+[data-theme="night"] .btn-warning,
+[data-theme="coffee"] .btn-warning,
+[data-theme="dim"] .btn-warning,
+[data-theme="sunset"] .btn-warning,
+[data-theme="abyss"] .btn-warning {
+  background-color: #ff8c42 !important;
+  border-color: #ff8c42 !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .btn-warning:hover,
+[data-theme="halloween"] .btn-warning:hover,
+[data-theme="synthwave"] .btn-warning:hover,
+[data-theme="forest"] .btn-warning:hover,
+[data-theme="aqua"] .btn-warning:hover,
+[data-theme="black"] .btn-warning:hover,
+[data-theme="luxury"] .btn-warning:hover,
+[data-theme="dracula"] .btn-warning:hover,
+[data-theme="business"] .btn-warning:hover,
+[data-theme="night"] .btn-warning:hover,
+[data-theme="coffee"] .btn-warning:hover,
+[data-theme="dim"] .btn-warning:hover,
+[data-theme="sunset"] .btn-warning:hover,
+[data-theme="abyss"] .btn-warning:hover {
+  background-color: #e67e3c !important;
+  border-color: #e67e3c !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .btn-neutral,
+[data-theme="halloween"] .btn-neutral,
+[data-theme="synthwave"] .btn-neutral,
+[data-theme="forest"] .btn-neutral,
+[data-theme="aqua"] .btn-neutral,
+[data-theme="black"] .btn-neutral,
+[data-theme="luxury"] .btn-neutral,
+[data-theme="dracula"] .btn-neutral,
+[data-theme="business"] .btn-neutral,
+[data-theme="night"] .btn-neutral,
+[data-theme="coffee"] .btn-neutral,
+[data-theme="dim"] .btn-neutral,
+[data-theme="sunset"] .btn-neutral,
+[data-theme="abyss"] .btn-neutral {
+  background-color: #ff8c42 !important;
+  border-color: #ff8c42 !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .btn-neutral:hover,
+[data-theme="halloween"] .btn-neutral:hover,
+[data-theme="synthwave"] .btn-neutral:hover,
+[data-theme="forest"] .btn-neutral:hover,
+[data-theme="aqua"] .btn-neutral:hover,
+[data-theme="black"] .btn-neutral:hover,
+[data-theme="luxury"] .btn-neutral:hover,
+[data-theme="dracula"] .btn-neutral:hover,
+[data-theme="business"] .btn-neutral:hover,
+[data-theme="night"] .btn-neutral:hover,
+[data-theme="coffee"] .btn-neutral:hover,
+[data-theme="dim"] .btn-neutral:hover,
+[data-theme="sunset"] .btn-neutral:hover,
+[data-theme="abyss"] .btn-neutral:hover {
+  background-color: #e67e3c !important;
+  border-color: #e67e3c !important;
+  color: #000000 !important;
+}
+
+/* Light theme specific adjustments for better contrast */
+[data-theme="light"] .btn-primary,
+[data-theme="cupcake"] .btn-primary,
+[data-theme="bumblebee"] .btn-primary,
+[data-theme="emerald"] .btn-primary,
+[data-theme="corporate"] .btn-primary,
+[data-theme="retro"] .btn-primary,
+[data-theme="cyberpunk"] .btn-primary,
+[data-theme="valentine"] .btn-primary,
+[data-theme="garden"] .btn-primary,
+[data-theme="lofi"] .btn-primary,
+[data-theme="pastel"] .btn-primary,
+[data-theme="fantasy"] .btn-primary,
+[data-theme="wireframe"] .btn-primary,
+[data-theme="cmyk"] .btn-primary,
+[data-theme="autumn"] .btn-primary,
+[data-theme="acid"] .btn-primary,
+[data-theme="lemonade"] .btn-primary,
+[data-theme="winter"] .btn-primary,
+[data-theme="nord"] .btn-primary,
+[data-theme="caramellatte"] .btn-primary,
+[data-theme="silk"] .btn-primary {
+  background-color: #e28743 !important;
+  border-color: #e28743 !important;
+  color: #000000 !important;
+}
+
+[data-theme="light"] .btn-primary:hover,
+[data-theme="cupcake"] .btn-primary:hover,
+[data-theme="bumblebee"] .btn-primary:hover,
+[data-theme="emerald"] .btn-primary:hover,
+[data-theme="corporate"] .btn-primary:hover,
+[data-theme="retro"] .btn-primary:hover,
+[data-theme="cyberpunk"] .btn-primary:hover,
+[data-theme="valentine"] .btn-primary:hover,
+[data-theme="garden"] .btn-primary:hover,
+[data-theme="lofi"] .btn-primary:hover,
+[data-theme="pastel"] .btn-primary:hover,
+[data-theme="fantasy"] .btn-primary:hover,
+[data-theme="wireframe"] .btn-primary:hover,
+[data-theme="cmyk"] .btn-primary:hover,
+[data-theme="autumn"] .btn-primary:hover,
+[data-theme="acid"] .btn-primary:hover,
+[data-theme="lemonade"] .btn-primary:hover,
+[data-theme="winter"] .btn-primary:hover,
+[data-theme="nord"] .btn-primary:hover,
+[data-theme="caramellatte"] .btn-primary:hover,
+[data-theme="silk"] .btn-primary:hover {
+  background-color: #d67a3a !important;
+  border-color: #d67a3a !important;
+  color: #000000 !important;
+}
+
+/* Apply same styling to warning and neutral for light themes */
+[data-theme="light"] .btn-warning,
+[data-theme="cupcake"] .btn-warning,
+[data-theme="bumblebee"] .btn-warning,
+[data-theme="emerald"] .btn-warning,
+[data-theme="corporate"] .btn-warning,
+[data-theme="retro"] .btn-warning,
+[data-theme="cyberpunk"] .btn-warning,
+[data-theme="valentine"] .btn-warning,
+[data-theme="garden"] .btn-warning,
+[data-theme="lofi"] .btn-warning,
+[data-theme="pastel"] .btn-warning,
+[data-theme="fantasy"] .btn-warning,
+[data-theme="wireframe"] .btn-warning,
+[data-theme="cmyk"] .btn-warning,
+[data-theme="autumn"] .btn-warning,
+[data-theme="acid"] .btn-warning,
+[data-theme="lemonade"] .btn-warning,
+[data-theme="winter"] .btn-warning,
+[data-theme="nord"] .btn-warning,
+[data-theme="caramellatte"] .btn-warning,
+[data-theme="silk"] .btn-warning,
+[data-theme="light"] .btn-neutral,
+[data-theme="cupcake"] .btn-neutral,
+[data-theme="bumblebee"] .btn-neutral,
+[data-theme="emerald"] .btn-neutral,
+[data-theme="corporate"] .btn-neutral,
+[data-theme="retro"] .btn-neutral,
+[data-theme="cyberpunk"] .btn-neutral,
+[data-theme="valentine"] .btn-neutral,
+[data-theme="garden"] .btn-neutral,
+[data-theme="lofi"] .btn-neutral,
+[data-theme="pastel"] .btn-neutral,
+[data-theme="fantasy"] .btn-neutral,
+[data-theme="wireframe"] .btn-neutral,
+[data-theme="cmyk"] .btn-neutral,
+[data-theme="autumn"] .btn-neutral,
+[data-theme="acid"] .btn-neutral,
+[data-theme="lemonade"] .btn-neutral,
+[data-theme="winter"] .btn-neutral,
+[data-theme="nord"] .btn-neutral,
+[data-theme="caramellatte"] .btn-neutral,
+[data-theme="silk"] .btn-neutral {
+  background-color: #e28743 !important;
+  border-color: #e28743 !important;
+  color: #000000 !important;
+}
+
+[data-theme="light"] .btn-warning:hover,
+[data-theme="cupcake"] .btn-warning:hover,
+[data-theme="bumblebee"] .btn-warning:hover,
+[data-theme="emerald"] .btn-warning:hover,
+[data-theme="corporate"] .btn-warning:hover,
+[data-theme="retro"] .btn-warning:hover,
+[data-theme="cyberpunk"] .btn-warning:hover,
+[data-theme="valentine"] .btn-warning:hover,
+[data-theme="garden"] .btn-warning:hover,
+[data-theme="lofi"] .btn-warning:hover,
+[data-theme="pastel"] .btn-warning:hover,
+[data-theme="fantasy"] .btn-warning:hover,
+[data-theme="wireframe"] .btn-warning:hover,
+[data-theme="cmyk"] .btn-warning:hover,
+[data-theme="autumn"] .btn-warning:hover,
+[data-theme="acid"] .btn-warning:hover,
+[data-theme="lemonade"] .btn-warning:hover,
+[data-theme="winter"] .btn-warning:hover,
+[data-theme="nord"] .btn-warning:hover,
+[data-theme="caramellatte"] .btn-warning:hover,
+[data-theme="silk"] .btn-warning:hover,
+[data-theme="light"] .btn-neutral:hover,
+[data-theme="cupcake"] .btn-neutral:hover,
+[data-theme="bumblebee"] .btn-neutral:hover,
+[data-theme="emerald"] .btn-neutral:hover,
+[data-theme="corporate"] .btn-neutral:hover,
+[data-theme="retro"] .btn-neutral:hover,
+[data-theme="cyberpunk"] .btn-neutral:hover,
+[data-theme="valentine"] .btn-neutral:hover,
+[data-theme="garden"] .btn-neutral:hover,
+[data-theme="lofi"] .btn-neutral:hover,
+[data-theme="pastel"] .btn-neutral:hover,
+[data-theme="fantasy"] .btn-neutral:hover,
+[data-theme="wireframe"] .btn-neutral:hover,
+[data-theme="cmyk"] .btn-neutral:hover,
+[data-theme="autumn"] .btn-neutral:hover,
+[data-theme="acid"] .btn-neutral:hover,
+[data-theme="lemonade"] .btn-neutral:hover,
+[data-theme="winter"] .btn-neutral:hover,
+[data-theme="nord"] .btn-neutral:hover,
+[data-theme="caramellatte"] .btn-neutral:hover,
+[data-theme="silk"] .btn-neutral:hover {
+  background-color: #d67a3a !important;
+  border-color: #d67a3a !important;
+  color: #000000 !important;
+}
+
+/* Soft button variants - lighter versions of the main colors */
+.btn-soft {
+  opacity: 0.8;
+}
+
+.btn-soft:hover {
+  opacity: 1;
+}
+
+/* Success buttons - keep green for positive actions */
+.btn-success {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+  color: #ffffff !important;
+}
+
+.btn-success:hover {
+  background-color: #218838 !important;
+  border-color: #218838 !important;
+  color: #ffffff !important;
+}
+
+/* Info buttons - keep blue for informational actions */
+.btn-info {
+  background-color: #17a2b8 !important;
+  border-color: #17a2b8 !important;
+  color: #ffffff !important;
+}
+
+.btn-info:hover {
+  background-color: #138496 !important;
+  border-color: #138496 !important;
+  color: #ffffff !important;
+}
+
+/* Remove ghost button styling entirely - let DaisyUI handle it */
+/* This allows header buttons to use their original DaisyUI ghost styling */
+
+/* Reset header navigation buttons to original DaisyUI ghost styling */
+header .btn-ghost,
+.navbar .btn-ghost {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: inherit !important;
+}
+
+header .btn-ghost:hover,
+.navbar .btn-ghost:hover {
+  background-color: hsl(var(--b2)) !important;
+  border-color: transparent !important;
+  color: inherit !important;
+}
+
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;

@@ -1,4 +1,4 @@
-/* Modern Dark Tabulator Theme with High Contrast */
+/* Modern Dark Tabulator Theme with High Contrast - Theme Aware */
 
 /* Main container with modern font */
 .tabulator {
@@ -9,11 +9,38 @@
     position: relative;
     text-align: left;
     background-color: #0f0f0f;
-    color: #e8e8e8;
+    color: #ffffff;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transform: translateZ(0);
 }
+
+/* Light grey scrollbars for dark mode */
+.tabulator .tabulator-tableholder::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-track {
+    background: #2a2a2a;
+    border-radius: 6px;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 6px;
+    border: 2px solid #2a2a2a;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+    background: #d0d0d0;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-corner {
+    background: #2a2a2a;
+}
+
+
 
 .tabulator[tabulator-layout=fitDataFill] .tabulator-tableholder .tabulator-table {
     min-width: 100%;
@@ -142,7 +169,7 @@
 
 .tabulator .tabulator-tableholder .tabulator-table {
     background-color: #0f0f0f;
-    color: #e8e8e8;
+    color: #ffffff;
     display: inline-block;
     overflow: visible;
     position: relative;
@@ -192,7 +219,7 @@
     white-space: nowrap;
     font-weight: 400;
     line-height: 1.4;
-    color: #e8e8e8;
+    color: #ffffff;
 }
 
 .tabulator-row .tabulator-cell.tabulator-row-header {
@@ -206,7 +233,7 @@
 .tabulator .tabulator-footer {
     background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
     border-top: 2px solid #404040;
-    color: #e8e8e8;
+    color: #ffffff;
     font-weight: 500;
     user-select: none;
     white-space: nowrap;
@@ -226,7 +253,7 @@
 }
 
 .tabulator .tabulator-footer .tabulator-paginator {
-    color: #e8e8e8;
+    color: #ffffff;
     flex: 1;
     font-family: inherit;
     font-size: inherit;
@@ -241,7 +268,7 @@
     display: inline-block;
     margin: 0 2px;
     padding: 4px 8px;
-    color: #e8e8e8;
+    color: #ffffff;
     transition: all 0.2s ease;
 }
 
@@ -287,7 +314,7 @@
     padding: 8px 16px;
     position: relative;
     user-select: none;
-    color: #e8e8e8;
+    color: #ffffff;
     transition: background-color 0.15s ease;
 }
 
@@ -306,7 +333,7 @@
 }
 
 .tabulator-edit-list .tabulator-edit-list-item {
-    color: #e8e8e8;
+    color: #ffffff;
     outline: none;
     padding: 8px 12px;
     transition: background-color 0.15s ease;

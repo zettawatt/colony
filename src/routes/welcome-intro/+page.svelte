@@ -140,22 +140,21 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
+  color: #000000;
+  background-color: #e28743;
+  transition: all 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
   cursor: pointer;
 }
 
 button:hover {
-  border-color: #396cd8;
+  background-color: #d67a3a;
+  border-color: #d67a3a;
 }
+
 button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
+  background-color: #c66d31;
+  border-color: #c66d31;
 }
 
 input,

@@ -107,10 +107,10 @@
     <div class="row mb-3">
       <h2 class="text-2xl font-bold">Transfer Status</h2>
       <div class="button-group">
-        <button class="btn btn-sof btn-warning mr-2" onclick={clearCompleted}>
+        <button class="btn btn-soft btn-warning mr-2" onclick={clearCompleted}>
           Clear Completed
         </button>
-        <button class="btn btn-sof btn-warning" onclick={clearErrors}>
+        <button class="btn btn-soft btn-warning" onclick={clearErrors}>
           Clear Errors
         </button>
       </div>
