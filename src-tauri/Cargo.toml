@@ -1,6 +1,6 @@
 [package]
 name = "colony-app"
-version = "1.1.1"
+version = "1.1.2"
 description = "A GUI frontend to the Autonomi network with a client side search engine"
 authors = ["Chuck McClish", "Maxx Rodriguez"]
 edition = "2021"
