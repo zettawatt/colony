@@ -78,5 +78,7 @@
   {:else}
     <img src="/app-icons/moon-cloud-icon.svg" alt="dark mode icon" width="24" height="24" class="dark:invert" />
   {/if}
-  <span>{themeLabel(theme)}</span>
+  <span class="xl:inline hidden">{themeLabel(theme)}</span>
 </button>
+
+
