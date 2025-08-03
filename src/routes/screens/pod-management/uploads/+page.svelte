@@ -9,6 +9,8 @@
   import { formatFileSize, totalFileSizeCounter } from "../../../../utils/fileFormaters";
   import { handleCopyAddress } from "../../../../utils/copyAutonomiAddress";
   import AddressDisplay from "../../../../components/AddressDisplay.svelte";
+  import { checkActiveWalletBalance } from "../../../../utils/wallet/getPrimaryWallet";
+  import InsufficientBalanceDialog from "../../../../components/InsufficientBalanceDialog.svelte";
 
   let fileObjs: FileObj[] = [];
   let stagedFileObj = $state<FileObj | null>(null);
@@ -20,6 +22,11 @@
   let uploadCost = $state("");
   let wasUploadCanceled = $state(false)
   let uploadedFiles = $state<FileObj[]>([]);
+
+  // Insufficient balance dialog state
+  let showInsufficientBalanceDialog = $state(false);
+  let currentEthBalance = $state(0);
+  let currentAntBalance = $state(0);
 
 
   async function selectFile() {
@@ -85,6 +92,26 @@
     }
   }
 
+  async function handleUploadNewFileClick() {
+    try {
+      // Check wallet balance before showing file selection dialog
+      const balanceCheck = await checkActiveWalletBalance();
+
+      if (!balanceCheck.hasBalance) {
+        currentEthBalance = balanceCheck.ethBalance;
+        currentAntBalance = balanceCheck.antBalance;
+        showInsufficientBalanceDialog = true;
+        return;
+      }
+
+      // If balance is sufficient, show the file selection modal
+      uploadNewFileModal.showModal();
+    } catch (error) {
+      console.error('Error checking wallet balance:', error);
+      addToast('Error checking wallet balance. Please try again.', 'error');
+    }
+  }
+
 
   function resetUploadState() {
     selectedPath = "";
@@ -126,7 +153,7 @@
             <p style="margin: 0;" id="totalUploadedCounter">0.0 B</p>
             <p style="margin: 0;">uploaded</p>
           </div>
-          <button class="btn btn-warning" onclick={() => uploadNewFileModal.showModal()}>Upload New File</button>
+          <button class="btn btn-warning" onclick={handleUploadNewFileClick}>Upload New File</button>
         </div>
       </div>
       <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
@@ -222,6 +249,13 @@
       </div>
     </div>
   </dialog>
+
+  <!-- Insufficient Balance Dialog -->
+  <InsufficientBalanceDialog
+    bind:isOpen={showInsufficientBalanceDialog}
+    ethBalance={currentEthBalance}
+    antBalance={currentAntBalance}
+  />
 </main>
 
 <style>

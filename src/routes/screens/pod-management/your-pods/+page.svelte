@@ -11,6 +11,8 @@
   import { v4 as uuidv4 } from 'uuid';
   import { parseSubjectData } from "../../../../utils/pod-management/parseSubjectData";
   import { templates } from "../../../../utils/pod-management/jsonLDTemplates";
+  import { checkActiveWalletBalance } from "../../../../utils/wallet/getPrimaryWallet";
+  import InsufficientBalanceDialog from "../../../../components/InsufficientBalanceDialog.svelte";
 
 
 
@@ -60,6 +62,11 @@
   let createNewPodModal: HTMLDialogElement;
   let deletePodModal: HTMLDialogElement;
   let syncPodsModal: HTMLDialogElement;
+
+  // Insufficient balance dialog state
+  let showInsufficientBalanceDialog = $state(false);
+  let currentEthBalance = $state(0);
+  let currentAntBalance = $state(0);
 
   // Reactive updates to sync data between modes
   let isUpdatingFromMode = false;
@@ -448,6 +455,16 @@
 
   async function uploadAllPods() {
     try {
+      // Check wallet balance before proceeding
+      const balanceCheck = await checkActiveWalletBalance();
+
+      if (!balanceCheck.hasBalance) {
+        currentEthBalance = balanceCheck.ethBalance;
+        currentAntBalance = balanceCheck.antBalance;
+        showInsufficientBalanceDialog = true;
+        return;
+      }
+
       addToast("Uploading all pods to the network...", "info", 8000);
       allPodsUploading.set(true);
       const result = await invoke<string>('upload_all');
@@ -1255,6 +1272,13 @@
       <p class="mb-2 text-center">All pods are being uploaded. Please do not close or leave this page until uploading is complete.</p>
     </div>
   </dialog>
+
+  <!-- Insufficient Balance Dialog -->
+  <InsufficientBalanceDialog
+    bind:isOpen={showInsufficientBalanceDialog}
+    ethBalance={currentEthBalance}
+    antBalance={currentAntBalance}
+  />
 </main>
 
 <style>

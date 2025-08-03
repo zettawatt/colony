@@ -24,3 +24,32 @@ export async function getPrimaryWallet(): Promise<WalletInfo | null> {
     return null;
   }
 }
+
+export async function checkActiveWalletBalance(): Promise<{ hasBalance: boolean; ethBalance: number; antBalance: number }> {
+  try {
+    // Get the active wallet
+    const [walletName, walletAddress] = await invoke('get_active_wallet') as [string, string];
+
+    // Get the wallet key
+    const walletKey = await invoke('get_wallet', { name: walletName }) as string;
+
+    // Get the wallet balance
+    const [antBalance, ethBalance] = await invoke('get_wallet_balance', { walletKey }) as [number, number];
+
+    // Check if both balances are greater than zero
+    const hasBalance = ethBalance > 0 && antBalance > 0;
+
+    return {
+      hasBalance,
+      ethBalance,
+      antBalance
+    };
+  } catch (error) {
+    console.error('Error checking wallet balance:', error);
+    return {
+      hasBalance: false,
+      ethBalance: 0,
+      antBalance: 0
+    };
+  }
+}
