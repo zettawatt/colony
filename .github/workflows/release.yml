@@ -435,6 +435,9 @@ jobs:
         with:
           workspaces: src-tauri
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0" --locked
+
       - name: Install frontend dependencies
         run: npm ci
 
@@ -528,15 +531,15 @@ jobs:
 
           echo "Updated icon.icns with 1024x1024 icon for App Store compatibility"
 
-      - name: Create Universal Binary and App Store Build
+      - name: Prepare Universal Binaries
         run: |
           # Debug: Show what artifacts we have
           echo "=== Artifact contents ==="
           find artifacts -type f -name "*" | head -20
           echo "========================="
 
-          # Create universal dweb binary from downloaded artifacts
-          echo "Creating universal dweb binary..."
+          # Create universal dweb binary from downloaded artifacts for the build process
+          echo "Creating universal dweb binary for build..."
           mkdir -p src-tauri/binaries
 
           # Find the architecture-specific dweb binaries from artifacts
@@ -555,36 +558,13 @@ jobs:
           echo "Found ARM64 dweb: $DWEB_ARM64"
           echo "Found x86_64 dweb: $DWEB_X86_64"
 
-          # Create universal dweb binary
-          lipo -create "$DWEB_ARM64" "$DWEB_X86_64" -output src-tauri/binaries/dweb
-          chmod +x src-tauri/binaries/dweb
+          # Copy the architecture-specific binaries to the expected locations
+          cp "$DWEB_ARM64" src-tauri/binaries/dweb-aarch64-apple-darwin
+          cp "$DWEB_X86_64" src-tauri/binaries/dweb-x86_64-apple-darwin
+          chmod +x src-tauri/binaries/dweb-*
 
-          echo "Created universal dweb binary"
-          file src-tauri/binaries/dweb
-
-          # Create universal main binary
-          echo "Creating universal main binary..."
-          MAIN_ARM64=$(find artifacts -name "colony-app" | head -1)
-          MAIN_X86_64=$(find artifacts -name "colony-app" | tail -1)
-
-          # Verify we have two different binaries
-          if [ -z "$MAIN_ARM64" ] || [ -z "$MAIN_X86_64" ] || [ "$MAIN_ARM64" = "$MAIN_X86_64" ]; then
-            echo "Could not find both main binaries in artifacts"
-            echo "All colony-app files found:"
-            find artifacts -name "colony-app" -type f
-            exit 1
-          fi
-
-          echo "Found ARM64 main: $MAIN_ARM64"
-          echo "Found x86_64 main: $MAIN_X86_64"
-
-          # Create directory for universal binary
-          mkdir -p src-tauri/target/universal-apple-darwin/release
-          lipo -create "$MAIN_ARM64" "$MAIN_X86_64" -output src-tauri/target/universal-apple-darwin/release/colony-app
-          chmod +x src-tauri/target/universal-apple-darwin/release/colony-app
-
-          echo "Created universal main binary"
-          file src-tauri/target/universal-apple-darwin/release/colony-app
+          echo "Prepared dweb binaries for build"
+          ls -la src-tauri/binaries/dweb-*
 
       - name: Build App Store Bundle
         run: |
@@ -597,56 +577,83 @@ jobs:
             src-tauri/tauri.conf.appstore.tmp.json && \
             mv src-tauri/tauri.conf.appstore.tmp.json src-tauri/tauri.conf.appstore.json
 
-          cd src-tauri
+          # Build for both architectures separately, then we'll combine them
+          echo "Building for aarch64-apple-darwin..."
+          cargo tauri build --config tauri.conf.appstore.json --target aarch64-apple-darwin
 
-          # Build for App Store with custom config
-          cargo tauri build --config tauri.conf.appstore.json --target universal-apple-darwin
+          echo "Building for x86_64-apple-darwin..."
+          cargo tauri build --config tauri.conf.appstore.json --target x86_64-apple-darwin
 
-      - name: Sign App Store Bundle and Sidecar
+      - name: Create Universal App Bundle and Sign
         run: |
-          # Find the built .app bundle
-          APP_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "No .app bundle found"
+          # Find the built .app bundles for both architectures
+          APP_ARM64=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+          APP_X86_64=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+
+          if [ -z "$APP_ARM64" ] || [ -z "$APP_X86_64" ]; then
+            echo "Could not find both app bundles"
+            echo "ARM64 app: $APP_ARM64"
+            echo "x86_64 app: $APP_X86_64"
             exit 1
           fi
 
-          echo "Found app bundle: $APP_PATH"
+          echo "Found ARM64 app: $APP_ARM64"
+          echo "Found x86_64 app: $APP_X86_64"
+
+          # Create universal app bundle directory
+          mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/macos
+          UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/Colony.app"
+
+          # Copy the ARM64 app as the base (it has the correct structure)
+          cp -R "$APP_ARM64" "$UNIVERSAL_APP"
+
+          # Create universal binaries for main executable and dweb
+          echo "Creating universal main executable..."
+          lipo -create \
+            "$APP_ARM64/Contents/MacOS/colony-app" \
+            "$APP_X86_64/Contents/MacOS/colony-app" \
+            -output "$UNIVERSAL_APP/Contents/MacOS/colony-app"
+
+          echo "Creating universal dweb binary..."
+          lipo -create \
+            "$APP_ARM64/Contents/MacOS/dweb" \
+            "$APP_X86_64/Contents/MacOS/dweb" \
+            -output "$UNIVERSAL_APP/Contents/MacOS/dweb"
+
+          # Verify the universal binaries
+          echo "Verifying universal binaries..."
+          file "$UNIVERSAL_APP/Contents/MacOS/colony-app"
+          file "$UNIVERSAL_APP/Contents/MacOS/dweb"
 
           # Sign the dweb sidecar with App Store certificate
-          DWEB_PATH="$APP_PATH/Contents/MacOS/dweb"
-          if [ -f "$DWEB_PATH" ]; then
-            echo "Signing dweb sidecar..."
-            codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
-              --entitlements src-tauri/entitlements.appstore.plist \
-              "$DWEB_PATH"
+          echo "Signing dweb sidecar..."
+          codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
+            --entitlements src-tauri/entitlements.appstore.plist \
+            "$UNIVERSAL_APP/Contents/MacOS/dweb"
 
-            # Verify dweb signature
-            codesign -v -v --deep --strict "$DWEB_PATH"
-            echo "dweb sidecar signed successfully"
-          else
-            echo "Warning: dweb sidecar not found at $DWEB_PATH"
-          fi
+          # Verify dweb signature
+          codesign -v -v --deep --strict "$UNIVERSAL_APP/Contents/MacOS/dweb"
+          echo "dweb sidecar signed successfully"
 
           # Re-sign the main app bundle with App Store certificate
           echo "Signing main app bundle..."
           codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
             --entitlements src-tauri/entitlements.appstore.plist \
             --deep \
-            "$APP_PATH"
+            "$UNIVERSAL_APP"
 
           # Verify app signature
           echo "Verifying app signature..."
-          codesign -v -v --deep --strict "$APP_PATH"
+          codesign -v -v --deep --strict "$UNIVERSAL_APP"
 
           # Check entitlements
           echo "Checking entitlements..."
-          codesign -d --entitlements - "$APP_PATH"
+          codesign -d --entitlements - "$UNIVERSAL_APP"
 
       - name: Create PKG for App Store Connect
         run: |
-          # Find the signed .app bundle
-          APP_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+          # Use the universal .app bundle we just created
+          APP_PATH="src-tauri/target/universal-apple-darwin/release/bundle/macos/Colony.app"
 
           # Create API key file for App Store Connect
           mkdir -p ~/.appstoreconnect/private_keys
