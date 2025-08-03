@@ -379,6 +379,7 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
             src-tauri/target/${{ matrix.target }}/release/colony-app
+            src-tauri/binaries/dweb-${{ matrix.target }}
           retention-days: 1
 
       - name: Verify build artifacts
@@ -439,6 +440,12 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+      - name: Fetch binaries for App Store build
+        run: |
+          cd src-tauri
+          # Run the fetch script to ensure we have the dweb binaries
+          bash binaries/fetch_binaries.sh
 
       - name: Download macOS artifacts
         uses: actions/download-artifact@v4
@@ -523,17 +530,25 @@ jobs:
 
       - name: Create Universal Binary and App Store Build
         run: |
+          # Debug: Show what artifacts we have
+          echo "=== Artifact contents ==="
+          find artifacts -type f -name "*" | head -20
+          echo "========================="
+
           # Create universal dweb binary from downloaded artifacts
           echo "Creating universal dweb binary..."
           mkdir -p src-tauri/binaries
 
-          # Find the dweb binaries from artifacts
-          DWEB_ARM64=$(find artifacts -name "dweb" -path "*/aarch64-apple-darwin/*" | head -1)
-          DWEB_X86_64=$(find artifacts -name "dweb" -path "*/x86_64-apple-darwin/*" | head -1)
+          # Find the architecture-specific dweb binaries from artifacts
+          DWEB_ARM64=$(find artifacts -name "dweb-aarch64-apple-darwin" | head -1)
+          DWEB_X86_64=$(find artifacts -name "dweb-x86_64-apple-darwin" | head -1)
 
           if [ -z "$DWEB_ARM64" ] || [ -z "$DWEB_X86_64" ]; then
-            echo "Could not find dweb binaries in artifacts"
-            find artifacts -name "dweb" -type f
+            echo "Could not find architecture-specific dweb binaries in artifacts"
+            echo "All dweb files found:"
+            find artifacts -name "*dweb*" -type f
+            echo "All files in artifacts:"
+            find artifacts -type f | grep -E "(dweb|colony-app)"
             exit 1
           fi
 
@@ -549,11 +564,13 @@ jobs:
 
           # Create universal main binary
           echo "Creating universal main binary..."
-          MAIN_ARM64=$(find artifacts -name "colony-app" -path "*/aarch64-apple-darwin/*" | head -1)
-          MAIN_X86_64=$(find artifacts -name "colony-app" -path "*/x86_64-apple-darwin/*" | head -1)
+          MAIN_ARM64=$(find artifacts -name "colony-app" | head -1)
+          MAIN_X86_64=$(find artifacts -name "colony-app" | tail -1)
 
-          if [ -z "$MAIN_ARM64" ] || [ -z "$MAIN_X86_64" ]; then
-            echo "Could not find main binaries in artifacts"
+          # Verify we have two different binaries
+          if [ -z "$MAIN_ARM64" ] || [ -z "$MAIN_X86_64" ] || [ "$MAIN_ARM64" = "$MAIN_X86_64" ]; then
+            echo "Could not find both main binaries in artifacts"
+            echo "All colony-app files found:"
             find artifacts -name "colony-app" -type f
             exit 1
           fi
