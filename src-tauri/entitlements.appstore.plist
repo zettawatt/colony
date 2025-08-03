@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required for App Store distribution -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    
+    <!-- Network access for Autonomi network communication -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    
+    <!-- File system access for downloads and file management -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    
+    <!-- Downloads folder access -->
+    <key>com.apple.security.files.downloads.read-write</key>
+    <true/>
+    
+    <!-- Allow opening files with external applications -->
+    <key>com.apple.security.files.user-selected.executable</key>
+    <true/>
+    
+    <!-- Microphone access (disabled for App Store) -->
+    <key>com.apple.security.device.microphone</key>
+    <false/>
+    
+    <!-- Camera access (disabled for App Store) -->
+    <key>com.apple.security.device.camera</key>
+    <false/>
+    
+    <!-- Location access (disabled for App Store) -->
+    <key>com.apple.security.personal-information.location</key>
+    <false/>
+    
+    <!-- Contacts access (disabled for App Store) -->
+    <key>com.apple.security.personal-information.addressbook</key>
+    <false/>
+    
+    <!-- Calendar access (disabled for App Store) -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <false/>
+</dict>
+</plist>
