@@ -579,10 +579,10 @@ jobs:
 
           # Build for both architectures separately, then we'll combine them
           echo "Building for aarch64-apple-darwin..."
-          cargo tauri build --config tauri.conf.appstore.json --target aarch64-apple-darwin
+          cargo tauri build --config src-tauri/tauri.conf.appstore.json --target aarch64-apple-darwin
 
           echo "Building for x86_64-apple-darwin..."
-          cargo tauri build --config tauri.conf.appstore.json --target x86_64-apple-darwin
+          cargo tauri build --config src-tauri/tauri.conf.appstore.json --target x86_64-apple-darwin
 
       - name: Create Universal App Bundle and Sign
         run: |
