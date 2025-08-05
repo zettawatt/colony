@@ -9,7 +9,10 @@ fn main() {
 }
 
 fn fetch_binaries() {
-    let binaries_dir = Path::new("binaries");
+    // Use a directory outside src-tauri to avoid triggering file watcher
+    let binaries_dir = Path::new("../target/binaries");
+
+    println!("cargo:info=Checking for dweb binaries...");
 
     // Create binaries directory if it doesn't exist
     if !binaries_dir.exists() {
@@ -33,11 +36,11 @@ fn fetch_binaries() {
         .all(|(local_name, _)| binaries_dir.join(local_name).exists());
 
     if all_exist {
-        println!("cargo:warning=Binaries already exist, skipping download");
+        println!("cargo:info=Binaries already exist, skipping download");
         return;
     }
 
-    println!("cargo:warning=Fetching dweb binaries...");
+    println!("cargo:info=Fetching dweb binaries...");
 
     // Get the latest release tag
     let latest_tag = match get_latest_release_tag() {
@@ -48,7 +51,7 @@ fn fetch_binaries() {
         }
     };
 
-    println!("cargo:warning=Latest dweb release: {latest_tag}");
+    println!("cargo:info=Latest dweb release: {latest_tag}");
 
     // Remove existing dweb binaries
     if let Ok(entries) = fs::read_dir(binaries_dir) {
@@ -70,7 +73,7 @@ fn fetch_binaries() {
 
         match download_file(&url, &local_path) {
             Ok(_) => {
-                println!("cargo:warning=Downloaded {local_name}");
+                println!("cargo:info=Downloaded {local_name}");
 
                 // Make executable on Unix systems
                 #[cfg(unix)]
@@ -89,7 +92,39 @@ fn fetch_binaries() {
         }
     }
 
-    println!("cargo:warning=Binary fetch completed");
+    println!("cargo:info=Binary fetch completed");
+
+    // Copy the appropriate binary for the current platform to the expected location
+    copy_platform_binary(&binaries_dir);
+}
+
+fn copy_platform_binary(binaries_dir: &Path) {
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+
+    let source_binary = match (target_os.as_str(), target_arch.as_str()) {
+        ("linux", "x86_64") => "dweb-x86_64-unknown-linux-gnu",
+        ("windows", "x86_64") => "dweb-x86_64-pc-windows-msvc.exe",
+        ("macos", "aarch64") => "dweb-aarch64-apple-darwin",
+        ("macos", "x86_64") => "dweb-x86_64-apple-darwin",
+        _ => {
+            println!("cargo:warning=Unsupported platform: {target_os}-{target_arch}");
+            return;
+        }
+    };
+
+    let source_path = binaries_dir.join(source_binary);
+    let dest_path = binaries_dir.join("dweb");
+
+    if source_path.exists() {
+        if let Err(e) = fs::copy(&source_path, &dest_path) {
+            println!("cargo:warning=Failed to copy binary from {} to {}: {e}", source_path.display(), dest_path.display());
+        } else {
+            println!("cargo:info=Copied {} to dweb", source_binary);
+        }
+    } else {
+        println!("cargo:warning=Source binary not found: {}", source_path.display());
+    }
 }
 
 fn get_latest_release_tag() -> Result<String, Box<dyn std::error::Error>> {

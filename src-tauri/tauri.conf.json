@@ -38,7 +38,7 @@
       "icons/icon.ico"
     ],
     "resources": [],
-    "externalBin": ["binaries/dweb"],
+    "externalBin": ["../target/binaries/dweb"],
     "copyright": "Copyright © 2025 Chuck McClish. All rights reserved.",
     "category": "Utility",
     "shortDescription": "Colony - Autonomi Semantic Search Engine and File Manager",
