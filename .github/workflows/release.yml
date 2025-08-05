@@ -50,9 +50,8 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      #FIXME: reenable this check when all errors/warnings are resolved
-      #- name: Check frontend
-      #  run: npm run check
+      - name: Check frontend
+        run: npm run check
 
       - name: Build frontend
         run: npm run build
@@ -410,287 +409,288 @@ jobs:
           security delete-keychain signing_temp.keychain || true
         shell: bash
 
-  app-store-build:
-    name: Build Universal App for App Store
-    needs: build
-    runs-on: macos-latest
-    if: contains(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # TODO: add this back if we decide to go the app store route
+  # app-store-build:
+  #   name: Build Universal App for App Store
+  #   needs: build
+  #   runs-on: macos-latest
+  #   if: contains(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+  #     - name: Setup Rust
+  #       uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
+  #     - name: Cache Rust dependencies
+  #       uses: Swatinem/rust-cache@v2
+  #       with:
+  #         workspaces: src-tauri
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" --locked
+  #     - name: Install Tauri CLI
+  #       run: cargo install tauri-cli --version "^2.0" --locked
 
-      - name: Install frontend dependencies
-        run: npm ci
+  #     - name: Install frontend dependencies
+  #       run: npm ci
 
-      - name: Build frontend
-        run: npm run build
+  #     - name: Build frontend
+  #       run: npm run build
 
-      - name: Fetch binaries for App Store build
-        run: |
-          cd src-tauri
-          # Run the fetch script to ensure we have the dweb binaries
-          bash binaries/fetch_binaries.sh
+  #     - name: Fetch binaries for App Store build
+  #       run: |
+  #         cd src-tauri
+  #         # Run the fetch script to ensure we have the dweb binaries
+  #         bash binaries/fetch_binaries.sh
 
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: macos-*-artifacts
-          merge-multiple: true
-          path: artifacts/
+  #     - name: Download macOS artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: macos-*-artifacts
+  #         merge-multiple: true
+  #         path: artifacts/
 
-      - name: Set SDKROOT and CPLUS_INCLUDE_PATH for macOS
-        run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
-          echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
+  #     - name: Set SDKROOT and CPLUS_INCLUDE_PATH for macOS
+  #       run: |
+  #         export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+  #         echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
+  #         echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
 
-      - name: Import Apple Certificates for App Store
-        run: |
-          # Create a temporary keychain
-          KEYCHAIN_PATH="$HOME/Library/Keychains/appstore_temp.keychain"
-          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+  #     - name: Import Apple Certificates for App Store
+  #       run: |
+  #         # Create a temporary keychain
+  #         KEYCHAIN_PATH="$HOME/Library/Keychains/appstore_temp.keychain"
+  #         KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
-          # Create keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" appstore_temp.keychain
-          security set-keychain-settings -lut 21600 appstore_temp.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" appstore_temp.keychain
+  #         # Create keychain
+  #         security create-keychain -p "$KEYCHAIN_PASSWORD" appstore_temp.keychain
+  #         security set-keychain-settings -lut 21600 appstore_temp.keychain
+  #         security unlock-keychain -p "$KEYCHAIN_PASSWORD" appstore_temp.keychain
 
-          # Add to keychain search list
-          security list-keychains -d user -s appstore_temp.keychain $(security list-keychains -d user | sed s/\"//g)
+  #         # Add to keychain search list
+  #         security list-keychains -d user -s appstore_temp.keychain $(security list-keychains -d user | sed s/\"//g)
 
-          # Import 3rd Party Mac Developer Application certificate (for App Store)
-          echo "${{ secrets.APPLE_APP_STORE_CERTIFICATE }}" | base64 --decode > /tmp/cert_appstore.p12
-          security import /tmp/cert_appstore.p12 -k appstore_temp.keychain -P "${{ secrets.APPLE_APP_STORE_CERTIFICATE_PASSWORD }}" -A
+  #         # Import 3rd Party Mac Developer Application certificate (for App Store)
+  #         echo "${{ secrets.APPLE_APP_STORE_CERTIFICATE }}" | base64 --decode > /tmp/cert_appstore.p12
+  #         security import /tmp/cert_appstore.p12 -k appstore_temp.keychain -P "${{ secrets.APPLE_APP_STORE_CERTIFICATE_PASSWORD }}" -A
 
-          # Import 3rd Party Mac Developer Installer certificate
-          echo "${{ secrets.APPLE_INSTALLER_CERTIFICATE }}" | base64 --decode > /tmp/cert_installer.p12
-          security import /tmp/cert_installer.p12 -k appstore_temp.keychain -P "${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}" -A
+  #         # Import 3rd Party Mac Developer Installer certificate
+  #         echo "${{ secrets.APPLE_INSTALLER_CERTIFICATE }}" | base64 --decode > /tmp/cert_installer.p12
+  #         security import /tmp/cert_installer.p12 -k appstore_temp.keychain -P "${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}" -A
 
-          # Set partition list for certificates
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" appstore_temp.keychain
+  #         # Set partition list for certificates
+  #         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" appstore_temp.keychain
 
-          # Clean up temporary files
-          rm -f /tmp/cert_appstore.p12 /tmp/cert_installer.p12
+  #         # Clean up temporary files
+  #         rm -f /tmp/cert_appstore.p12 /tmp/cert_installer.p12
 
-          # Store keychain password for later use
-          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
+  #         # Store keychain password for later use
+  #         echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
 
-      - name: Download Apple Provisioning Profile
-        run: |
-          echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > embedded.provisionprofile
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp embedded.provisionprofile ~/Library/MobileDevice/Provisioning\ Profiles/
+  #     - name: Download Apple Provisioning Profile
+  #       run: |
+  #         echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > embedded.provisionprofile
+  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #         cp embedded.provisionprofile ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: Prepare macOS Icons
-        run: |
-          # Create iconset directory
-          mkdir -p Colony.iconset
+  #     - name: Prepare macOS Icons
+  #       run: |
+  #         # Create iconset directory
+  #         mkdir -p Colony.iconset
 
-          # Copy existing icons
-          cp src-tauri/icons/32x32.png Colony.iconset/icon_32x32.png
-          cp src-tauri/icons/128x128.png Colony.iconset/icon_128x128.png
-          cp src-tauri/icons/128x128@2x.png Colony.iconset/icon_128x128@2x.png
+  #         # Copy existing icons
+  #         cp src-tauri/icons/32x32.png Colony.iconset/icon_32x32.png
+  #         cp src-tauri/icons/128x128.png Colony.iconset/icon_128x128.png
+  #         cp src-tauri/icons/128x128@2x.png Colony.iconset/icon_128x128@2x.png
 
-          # Add the 1024x1024 icon for App Store
-          cp src-tauri/icons/icon-1024x1024.png Colony.iconset/icon_1024x1024.png
+  #         # Add the 1024x1024 icon for App Store
+  #         cp src-tauri/icons/icon-1024x1024.png Colony.iconset/icon_1024x1024.png
 
-          # Generate additional required sizes from the 1024x1024 icon
-          sips -z 16 16 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16.png
-          sips -z 32 32 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16@2x.png
-          sips -z 64 64 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_32x32@2x.png
-          sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_128x128@2x.png
-          sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256.png
-          sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256@2x.png
-          sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512.png
-          sips -z 1024 1024 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512@2x.png
+  #         # Generate additional required sizes from the 1024x1024 icon
+  #         sips -z 16 16 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16.png
+  #         sips -z 32 32 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_16x16@2x.png
+  #         sips -z 64 64 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_32x32@2x.png
+  #         sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_128x128@2x.png
+  #         sips -z 256 256 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256.png
+  #         sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_256x256@2x.png
+  #         sips -z 512 512 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512.png
+  #         sips -z 1024 1024 src-tauri/icons/icon-1024x1024.png --out Colony.iconset/icon_512x512@2x.png
 
-          # Create new .icns file with all sizes including 1024x1024
-          iconutil -c icns Colony.iconset -o src-tauri/icons/icon.icns
+  #         # Create new .icns file with all sizes including 1024x1024
+  #         iconutil -c icns Colony.iconset -o src-tauri/icons/icon.icns
 
-          # Clean up
-          rm -rf Colony.iconset
+  #         # Clean up
+  #         rm -rf Colony.iconset
 
-          echo "Updated icon.icns with 1024x1024 icon for App Store compatibility"
+  #         echo "Updated icon.icns with 1024x1024 icon for App Store compatibility"
 
-      - name: Prepare Universal Binaries
-        run: |
-          # Debug: Show what artifacts we have
-          echo "=== Artifact contents ==="
-          find artifacts -type f -name "*" | head -20
-          echo "========================="
+  #     - name: Prepare Universal Binaries
+  #       run: |
+  #         # Debug: Show what artifacts we have
+  #         echo "=== Artifact contents ==="
+  #         find artifacts -type f -name "*" | head -20
+  #         echo "========================="
 
-          # Create universal dweb binary from downloaded artifacts for the build process
-          echo "Creating universal dweb binary for build..."
-          mkdir -p src-tauri/binaries
+  #         # Create universal dweb binary from downloaded artifacts for the build process
+  #         echo "Creating universal dweb binary for build..."
+  #         mkdir -p src-tauri/binaries
 
-          # Find the architecture-specific dweb binaries from artifacts
-          DWEB_ARM64=$(find artifacts -name "dweb-aarch64-apple-darwin" | head -1)
-          DWEB_X86_64=$(find artifacts -name "dweb-x86_64-apple-darwin" | head -1)
+  #         # Find the architecture-specific dweb binaries from artifacts
+  #         DWEB_ARM64=$(find artifacts -name "dweb-aarch64-apple-darwin" | head -1)
+  #         DWEB_X86_64=$(find artifacts -name "dweb-x86_64-apple-darwin" | head -1)
 
-          if [ -z "$DWEB_ARM64" ] || [ -z "$DWEB_X86_64" ]; then
-            echo "Could not find architecture-specific dweb binaries in artifacts"
-            echo "All dweb files found:"
-            find artifacts -name "*dweb*" -type f
-            echo "All files in artifacts:"
-            find artifacts -type f | grep -E "(dweb|colony-app)"
-            exit 1
-          fi
+  #         if [ -z "$DWEB_ARM64" ] || [ -z "$DWEB_X86_64" ]; then
+  #           echo "Could not find architecture-specific dweb binaries in artifacts"
+  #           echo "All dweb files found:"
+  #           find artifacts -name "*dweb*" -type f
+  #           echo "All files in artifacts:"
+  #           find artifacts -type f | grep -E "(dweb|colony-app)"
+  #           exit 1
+  #         fi
 
-          echo "Found ARM64 dweb: $DWEB_ARM64"
-          echo "Found x86_64 dweb: $DWEB_X86_64"
+  #         echo "Found ARM64 dweb: $DWEB_ARM64"
+  #         echo "Found x86_64 dweb: $DWEB_X86_64"
 
-          # Copy the architecture-specific binaries to the expected locations
-          cp "$DWEB_ARM64" src-tauri/binaries/dweb-aarch64-apple-darwin
-          cp "$DWEB_X86_64" src-tauri/binaries/dweb-x86_64-apple-darwin
-          chmod +x src-tauri/binaries/dweb-*
+  #         # Copy the architecture-specific binaries to the expected locations
+  #         cp "$DWEB_ARM64" src-tauri/binaries/dweb-aarch64-apple-darwin
+  #         cp "$DWEB_X86_64" src-tauri/binaries/dweb-x86_64-apple-darwin
+  #         chmod +x src-tauri/binaries/dweb-*
 
-          echo "Prepared dweb binaries for build"
-          ls -la src-tauri/binaries/dweb-*
+  #         echo "Prepared dweb binaries for build"
+  #         ls -la src-tauri/binaries/dweb-*
 
-      - name: Build App Store Bundle
-        run: |
-          # Create a temporary tauri config for App Store
-          cp src-tauri/tauri.conf.json src-tauri/tauri.conf.appstore.json
+  #     - name: Build App Store Bundle
+  #       run: |
+  #         # Create a temporary tauri config for App Store
+  #         cp src-tauri/tauri.conf.json src-tauri/tauri.conf.appstore.json
 
-          # Update the config for App Store signing
-          cat src-tauri/tauri.conf.appstore.json | \
-            jq '.bundle.macOS.signingIdentity = "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" | .bundle.macOS.entitlements = "entitlements.appstore.plist"' > \
-            src-tauri/tauri.conf.appstore.tmp.json && \
-            mv src-tauri/tauri.conf.appstore.tmp.json src-tauri/tauri.conf.appstore.json
+  #         # Update the config for App Store signing
+  #         cat src-tauri/tauri.conf.appstore.json | \
+  #           jq '.bundle.macOS.signingIdentity = "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" | .bundle.macOS.entitlements = "entitlements.appstore.plist"' > \
+  #           src-tauri/tauri.conf.appstore.tmp.json && \
+  #           mv src-tauri/tauri.conf.appstore.tmp.json src-tauri/tauri.conf.appstore.json
 
-          # Build for both architectures separately, then we'll combine them
-          echo "Building for aarch64-apple-darwin..."
-          cargo tauri build --config src-tauri/tauri.conf.appstore.json --target aarch64-apple-darwin
+  #         # Build for both architectures separately, then we'll combine them
+  #         echo "Building for aarch64-apple-darwin..."
+  #         cargo tauri build --config src-tauri/tauri.conf.appstore.json --target aarch64-apple-darwin
 
-          echo "Building for x86_64-apple-darwin..."
-          cargo tauri build --config src-tauri/tauri.conf.appstore.json --target x86_64-apple-darwin
+  #         echo "Building for x86_64-apple-darwin..."
+  #         cargo tauri build --config src-tauri/tauri.conf.appstore.json --target x86_64-apple-darwin
 
-      - name: Create Universal App Bundle and Sign
-        run: |
-          # Find the built .app bundles for both architectures
-          APP_ARM64=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
-          APP_X86_64=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+  #     - name: Create Universal App Bundle and Sign
+  #       run: |
+  #         # Find the built .app bundles for both architectures
+  #         APP_ARM64=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
+  #         APP_X86_64=$(find src-tauri/target/x86_64-apple-darwin/release/bundle/macos -name "*.app" | head -1)
 
-          if [ -z "$APP_ARM64" ] || [ -z "$APP_X86_64" ]; then
-            echo "Could not find both app bundles"
-            echo "ARM64 app: $APP_ARM64"
-            echo "x86_64 app: $APP_X86_64"
-            exit 1
-          fi
+  #         if [ -z "$APP_ARM64" ] || [ -z "$APP_X86_64" ]; then
+  #           echo "Could not find both app bundles"
+  #           echo "ARM64 app: $APP_ARM64"
+  #           echo "x86_64 app: $APP_X86_64"
+  #           exit 1
+  #         fi
 
-          echo "Found ARM64 app: $APP_ARM64"
-          echo "Found x86_64 app: $APP_X86_64"
+  #         echo "Found ARM64 app: $APP_ARM64"
+  #         echo "Found x86_64 app: $APP_X86_64"
 
-          # Create universal app bundle directory
-          mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/macos
-          UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/Colony.app"
+  #         # Create universal app bundle directory
+  #         mkdir -p src-tauri/target/universal-apple-darwin/release/bundle/macos
+  #         UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/Colony.app"
 
-          # Copy the ARM64 app as the base (it has the correct structure)
-          cp -R "$APP_ARM64" "$UNIVERSAL_APP"
+  #         # Copy the ARM64 app as the base (it has the correct structure)
+  #         cp -R "$APP_ARM64" "$UNIVERSAL_APP"
 
-          # Create universal binaries for main executable and dweb
-          echo "Creating universal main executable..."
-          lipo -create \
-            "$APP_ARM64/Contents/MacOS/colony-app" \
-            "$APP_X86_64/Contents/MacOS/colony-app" \
-            -output "$UNIVERSAL_APP/Contents/MacOS/colony-app"
+  #         # Create universal binaries for main executable and dweb
+  #         echo "Creating universal main executable..."
+  #         lipo -create \
+  #           "$APP_ARM64/Contents/MacOS/colony-app" \
+  #           "$APP_X86_64/Contents/MacOS/colony-app" \
+  #           -output "$UNIVERSAL_APP/Contents/MacOS/colony-app"
 
-          echo "Creating universal dweb binary..."
-          lipo -create \
-            "$APP_ARM64/Contents/MacOS/dweb" \
-            "$APP_X86_64/Contents/MacOS/dweb" \
-            -output "$UNIVERSAL_APP/Contents/MacOS/dweb"
+  #         echo "Creating universal dweb binary..."
+  #         lipo -create \
+  #           "$APP_ARM64/Contents/MacOS/dweb" \
+  #           "$APP_X86_64/Contents/MacOS/dweb" \
+  #           -output "$UNIVERSAL_APP/Contents/MacOS/dweb"
 
-          # Verify the universal binaries
-          echo "Verifying universal binaries..."
-          file "$UNIVERSAL_APP/Contents/MacOS/colony-app"
-          file "$UNIVERSAL_APP/Contents/MacOS/dweb"
+  #         # Verify the universal binaries
+  #         echo "Verifying universal binaries..."
+  #         file "$UNIVERSAL_APP/Contents/MacOS/colony-app"
+  #         file "$UNIVERSAL_APP/Contents/MacOS/dweb"
 
-          # Sign the dweb sidecar with App Store certificate
-          echo "Signing dweb sidecar..."
-          codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
-            --entitlements src-tauri/entitlements.appstore.plist \
-            "$UNIVERSAL_APP/Contents/MacOS/dweb"
+  #         # Sign the dweb sidecar with App Store certificate
+  #         echo "Signing dweb sidecar..."
+  #         codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
+  #           --entitlements src-tauri/entitlements.appstore.plist \
+  #           "$UNIVERSAL_APP/Contents/MacOS/dweb"
 
-          # Verify dweb signature
-          codesign -v -v --deep --strict "$UNIVERSAL_APP/Contents/MacOS/dweb"
-          echo "dweb sidecar signed successfully"
+  #         # Verify dweb signature
+  #         codesign -v -v --deep --strict "$UNIVERSAL_APP/Contents/MacOS/dweb"
+  #         echo "dweb sidecar signed successfully"
 
-          # Re-sign the main app bundle with App Store certificate
-          echo "Signing main app bundle..."
-          codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
-            --entitlements src-tauri/entitlements.appstore.plist \
-            --deep \
-            "$UNIVERSAL_APP"
+  #         # Re-sign the main app bundle with App Store certificate
+  #         echo "Signing main app bundle..."
+  #         codesign --force --sign "3rd Party Mac Developer Application: Charles McClish (3364NM68HH)" \
+  #           --entitlements src-tauri/entitlements.appstore.plist \
+  #           --deep \
+  #           "$UNIVERSAL_APP"
 
-          # Verify app signature
-          echo "Verifying app signature..."
-          codesign -v -v --deep --strict "$UNIVERSAL_APP"
+  #         # Verify app signature
+  #         echo "Verifying app signature..."
+  #         codesign -v -v --deep --strict "$UNIVERSAL_APP"
 
-          # Check entitlements
-          echo "Checking entitlements..."
-          codesign -d --entitlements - "$UNIVERSAL_APP"
+  #         # Check entitlements
+  #         echo "Checking entitlements..."
+  #         codesign -d --entitlements - "$UNIVERSAL_APP"
 
-      - name: Create PKG for App Store Connect
-        run: |
-          # Use the universal .app bundle we just created
-          APP_PATH="src-tauri/target/universal-apple-darwin/release/bundle/macos/Colony.app"
+  #     - name: Create PKG for App Store Connect
+  #       run: |
+  #         # Use the universal .app bundle we just created
+  #         APP_PATH="src-tauri/target/universal-apple-darwin/release/bundle/macos/Colony.app"
 
-          # Create API key file for App Store Connect
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+  #         # Create API key file for App Store Connect
+  #         mkdir -p ~/.appstoreconnect/private_keys
+  #         echo "${{ secrets.APP_STORE_CONNECT_API_KEY }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
 
-          # Create PKG installer for App Store Connect upload
-          echo "Creating PKG installer for App Store Connect..."
-          PKG_PATH="${APP_PATH%/*}/Colony_${{ github.event.inputs.tag_name || github.ref_name }}_Universal.pkg"
+  #         # Create PKG installer for App Store Connect upload
+  #         echo "Creating PKG installer for App Store Connect..."
+  #         PKG_PATH="${APP_PATH%/*}/Colony_${{ github.event.inputs.tag_name || github.ref_name }}_Universal.pkg"
 
-          # Use productbuild to create a proper installer package
-          productbuild --component "$APP_PATH" /Applications \
-            --sign "3rd Party Mac Developer Installer: Charles McClish (3364NM68HH)" \
-            "$PKG_PATH"
+  #         # Use productbuild to create a proper installer package
+  #         productbuild --component "$APP_PATH" /Applications \
+  #           --sign "3rd Party Mac Developer Installer: Charles McClish (3364NM68HH)" \
+  #           "$PKG_PATH"
 
-          if [ ! -f "$PKG_PATH" ]; then
-            echo "Failed to create PKG installer"
-            exit 1
-          fi
+  #         if [ ! -f "$PKG_PATH" ]; then
+  #           echo "Failed to create PKG installer"
+  #           exit 1
+  #         fi
 
-          echo "Created PKG installer: $PKG_PATH"
+  #         echo "Created PKG installer: $PKG_PATH"
 
-          # Verify PKG signature
-          echo "Verifying PKG signature..."
-          pkgutil --check-signature "$PKG_PATH"
+  #         # Verify PKG signature
+  #         echo "Verifying PKG signature..."
+  #         pkgutil --check-signature "$PKG_PATH"
 
-          # Upload PKG to App Store Connect using xcrun altool
-          echo "Uploading PKG to App Store Connect..."
-          xcrun altool --upload-app \
-            --type osx \
-            --file "$PKG_PATH" \
-            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
-            --verbose
+  #         # Upload PKG to App Store Connect using xcrun altool
+  #         echo "Uploading PKG to App Store Connect..."
+  #         xcrun altool --upload-app \
+  #           --type osx \
+  #           --file "$PKG_PATH" \
+  #           --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+  #           --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+  #           --verbose
 
-      - name: Cleanup App Store Keychain
-        if: always()
-        run: |
-          # Remove the temporary keychain
-          security delete-keychain appstore_temp.keychain || true
-        shell: bash
+  #     - name: Cleanup App Store Keychain
+  #       if: always()
+  #       run: |
+  #         # Remove the temporary keychain
+  #         security delete-keychain appstore_temp.keychain || true
+  #       shell: bash

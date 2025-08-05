@@ -30,13 +30,15 @@ Download the latest release for your platform from the [Releases page](https://g
 - **AppImage**: `colony-app_x.x.x_amd64.AppImage` - Portable application, no installation required. Mark it as executable, double click, and go.
 - **DEB Package**: `colony-app_x.x.x_amd64.deb` - For Debian/Ubuntu systems
 - **RPM Package**: `colony-app-x.x.x-1.x86_64.rpm` - For Red Hat/Fedora systems
+- ⚠️ **Tauri Issues**: Some systems such as Arch linux and/or those running the Wayland compositor may have issues with the AppImage. If you encounter issues, buidling from source is recommended.
 
 #### 🪟 Windows
 - **MSI Installer**: `colony-app_x.x.x_x64_en-US.msi` - Standard Windows installer
-- ⚠️ **Security Notice**: The app is not signed with a Microsoft certificate. Windows may show a security warning. Click "More info" and then "Run anyway" to proceed.
+- ⚠️ **Security Notice**: The app is not signed with a Microsoft certificate. Windows will show a security warning. Click "More info" and then "Run anyway" to proceed.
 
-#### 🍎 macOS - BROKEN
-- Due to the very stringent "security" measures taken by MacOS, we are unable to deliver binaries at this time. See below for how to build the Colony App binary from source.
+#### 🍎 macOS
+- **DMG Installer**: `Colony_x.x.x_aarch64.dmg` - For Apple silicon macOS systems
+- **DMG Installer**: `Colony_x.x.x_x86_64.dmg` - For Intel-based macOS systems
 
 ### Network Options
 
