@@ -95,7 +95,7 @@ fn fetch_binaries() {
     println!("cargo:info=Binary fetch completed");
 
     // Copy the appropriate binary for the current platform to the expected location
-    copy_platform_binary(&binaries_dir);
+    copy_platform_binary(binaries_dir);
 }
 
 fn copy_platform_binary(binaries_dir: &Path) {
@@ -118,12 +118,19 @@ fn copy_platform_binary(binaries_dir: &Path) {
 
     if source_path.exists() {
         if let Err(e) = fs::copy(&source_path, &dest_path) {
-            println!("cargo:warning=Failed to copy binary from {} to {}: {e}", source_path.display(), dest_path.display());
+            println!(
+                "cargo:warning=Failed to copy binary from {} to {}: {e}",
+                source_path.display(),
+                dest_path.display()
+            );
         } else {
-            println!("cargo:info=Copied {} to dweb", source_binary);
+            println!("cargo:info=Copied {source_binary} to dweb");
         }
     } else {
-        println!("cargo:warning=Source binary not found: {}", source_path.display());
+        println!(
+            "cargo:warning=Source binary not found: {}",
+            source_path.display()
+        );
     }
 }
 
