@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  
+  import { page } from '$app/state';
+
   let isOpen = $state(false);
-  
+
   // Get current route to highlight active item
-  $: currentRoute = $page.url.pathname;
+  let currentRoute = $derived(page.url.pathname);
   
   function toggleMenu() {
     isOpen = !isOpen;

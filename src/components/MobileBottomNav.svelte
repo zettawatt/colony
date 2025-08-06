@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
   // Get current route to highlight active tab
-  $: currentRoute = $page.url.pathname;
+  let currentRoute = $derived(page.url.pathname);
 
   function isActive(route: string): boolean {
     if (route === '/screens/pod-management' && currentRoute.includes('/screens/pod-management')) {

@@ -8,7 +8,7 @@
   import { addToast } from '../../../stores/toast';
   import { isMobile } from '../../../utils/responsive.js';
 
-  let showLogin = false;
+  let showLogin = $state(false);
 
   let statusInitialSort = [
     {column:"startedDate", dir:"desc"}
@@ -22,16 +22,16 @@
   ];
 
   // Use mobile or desktop columns based on screen size
-  $: statusColumns = $isMobile ? mobileStatusColumns : importedStatusColumns;
+  let statusColumns = $derived($isMobile ? mobileStatusColumns : importedStatusColumns);
 
-  let transfers: any[] = [];
+  let transfers = $state<any[]>([]);
   let statusTable: any; // Reference to the TabulatorTable component
 
   // Reactive statement to handle transfer updates
-  $: {
+  $effect(() => {
     const values = Object.values($transferManager);
     transfers = values;
-  }
+  });
 
   // Function to clear completed transfers
   function clearCompleted() {

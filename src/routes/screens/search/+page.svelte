@@ -23,22 +23,22 @@
   }
 
   // Local variables that will be synced with the store
-  let searchInput: string = "";
-  let tableSearchResults: SearchResult[] = [];
-  let activeRow: SearchResult | Record<string, never> = {};
-  let showLogin: boolean = false;
-  let isSearching: boolean = false;
+  let searchInput = $state("");
+  let tableSearchResults = $state<SearchResult[]>([]);
+  let activeRow = $state<SearchResult | Record<string, never>>({});
+  let showLogin = $state(false);
+  let isSearching = $state(false);
   let fileMetadataModal: HTMLDialogElement;
-  let searchMetrics = {
+  let searchMetrics = $state({
     itemCount: 0,
     searchTime: 0,
     hasSearched: false
-  };
+  });
 
   // Store subscription to keep local state in sync
   let storeUnsubscribe: (() => void) | undefined;
 
-  let windowWidth: number = 0;
+  let windowWidth = $state(0);
   let tabulatorTable: any; // Reference to the TabulatorTable component
 
   // Create mobile-specific columns (icon, Name, Type, Size only)
@@ -56,7 +56,7 @@
   }
 
   // Use mobile or desktop columns based on screen size
-  $: searchColumns = $isMobile ? createMobileColumns() : createDesktopColumns();
+  let searchColumns = $derived($isMobile ? createMobileColumns() : createDesktopColumns());
 
   // Calculate optimal description column width based on window size
   function updateDescriptionColumnWidth() {
@@ -85,9 +85,11 @@
   }
 
   // Update column width when window resizes
-  $: if (windowWidth) {
-    updateDescriptionColumnWidth();
-  }
+  $effect(() => {
+    if (windowWidth) {
+      updateDescriptionColumnWidth();
+    }
+  });
 
   
   function shallowEqualArrays(a: any[], b: any[]): boolean {
@@ -102,12 +104,12 @@
 
   let transfers: any[] = [];
 
-  $: {
+  $effect(() => {
     const values = Object.values($transferManager);
     if (!shallowEqualArrays(transfers, values)) {
       transfers = values;
     }
-  }
+  });
 
   let rowMenu = [
     {
@@ -615,9 +617,11 @@
     checkTabulator();
   }
 
-  $: if (tableSearchResults.length > 0) {
-    setTimeout(waitForTabulatorAndSetup, 500);
-  }
+  $effect(() => {
+    if (tableSearchResults.length > 0) {
+      setTimeout(waitForTabulatorAndSetup, 500);
+    }
+  });
 
   onDestroy(() => {
     // Clean up store subscription
