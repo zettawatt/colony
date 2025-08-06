@@ -8,6 +8,7 @@
   import { addToast } from "../../../stores/toast";
   import { setPassword, getPassword } from "../../../utils/password/session";
   import { lightDaisyThemes, darkDaisyThemes } from "../../../utils/theme/daisyUIThemes";
+  import { isMobile } from '../../../utils/responsive.js';
 
   let name = $state("");
   let greetMsg = $state("");
@@ -81,14 +82,16 @@
   })
 </script>
 
-<main class="config-container">
+<main class="config-container" class:mobile-config={$isMobile}>
   <div class="row">
-    <h2 class="h2">Configuration Settings</h2>
+    {#if !$isMobile}
+      <h2 class="h2">Configuration Settings</h2>
+    {/if}
     <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
       <div class="card-body p-4">
-        <div class="flex-container" style="display: flex;">
+        <div class="flex-container" class:mobile-flex={$isMobile} style="display: flex;">
           <!-- Left: Existing content -->
-          <div class="left-section" style="flex: 1;">
+          <div class="left-section" class:mobile-section={$isMobile} style="flex: 1;">
             <div class="row pt-3">
               <label for="download-path">Download Path:</label>
               <input
@@ -126,11 +129,13 @@
             </div>
           </div>
 
-          <!-- Vertical rule -->
-          <div style="width:1px; background:#cdcfd1; margin: 0 2rem;"></div>
+          <!-- Vertical rule - hidden on mobile -->
+          {#if !$isMobile}
+            <div style="width:1px; background:#cdcfd1; margin: 0 2rem;"></div>
+          {/if}
 
           <!-- Right: Change Password -->
-          <div class="right-section" style="flex: 1;">
+          <div class="right-section" class:mobile-section={$isMobile} style="flex: 1;">
             <div class="row pt-3">
               <label class="label" for="current-password">Current Password: </label>
               <input id="current-password" bind:value={currentPassword} type="password" class="input w-full" placeholder="Password" />
@@ -218,6 +223,39 @@
   margin-right: 2%;
   padding-bottom: 2vh;
   /* justify-content: center; */
+}
+
+/* Mobile-specific styles */
+.mobile-config {
+  padding: 10px !important;
+  padding-top: 20px !important;
+}
+
+.mobile-flex {
+  flex-direction: column !important;
+  gap: 20px;
+}
+
+.mobile-section {
+  flex: none !important;
+  width: 100%;
+}
+
+.mobile-config .card {
+  margin: 0 -10px; /* Extend to screen edges */
+}
+
+.mobile-config .row {
+  margin-left: 0;
+  margin-right: 0;
+  padding-bottom: 1vh;
+}
+
+@media (max-width: 767px) {
+  .flex-container {
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+  }
 }
 
 

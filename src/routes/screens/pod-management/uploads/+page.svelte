@@ -11,6 +11,7 @@
   import AddressDisplay from "../../../../components/AddressDisplay.svelte";
   import { checkActiveWalletBalance } from "../../../../utils/wallet/getPrimaryWallet";
   import InsufficientBalanceDialog from "../../../../components/InsufficientBalanceDialog.svelte";
+  import { isMobile } from '../../../../utils/responsive.js';
 
   let fileObjs: FileObj[] = [];
   let stagedFileObj = $state<FileObj | null>(null);
@@ -164,10 +165,14 @@
               <table class="table table-zebra" id="uploadsTable">
                 <thead>
                   <tr>
-                    <th></th>
+                    {#if !$isMobile}
+                      <th></th>
+                    {/if}
                     <th>Name</th>
                     <th>Upload Address</th>
-                    <th>Upload Date</th>
+                    {#if !$isMobile}
+                      <th>Upload Date</th>
+                    {/if}
                     <th>Size</th>
                   </tr>
                 </thead>
@@ -175,18 +180,22 @@
                   {#if uploadedFiles.length > 0}
                     {#each uploadedFiles as file, idx}
                       <tr>
-                        <th>{idx + 1}</th>
+                        {#if !$isMobile}
+                          <th>{idx + 1}</th>
+                        {/if}
                         <td>{file.name}</td>
                         <td>
                           <AddressDisplay address={file.autonomiAddress || ''} />
                         </td>
-                        <td>{file.uploadedDate}</td>
+                        {#if !$isMobile}
+                          <td>{file.uploadedDate}</td>
+                        {/if}
                         <td>{formatFileSize(file.fileSize)}</td>
                       </tr>
                     {/each}
                   {:else}
                     <tr>
-                      <td colspan="5" style="text-align:center;">No uploads yet</td>
+                      <td colspan={$isMobile ? 3 : 5} style="text-align:center;">No uploads yet</td>
                     </tr>
                   {/if}
                 </tbody>

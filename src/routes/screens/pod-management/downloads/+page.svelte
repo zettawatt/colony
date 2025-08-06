@@ -10,6 +10,7 @@
   import AddressDisplay from "../../../../components/AddressDisplay.svelte";
   import { v4 as uuidv4 } from 'uuid';
   import { openPath } from '@tauri-apps/plugin-opener';
+  import { isMobile } from '../../../../utils/responsive.js';
 
   // $: downloads = Object.values($downloadManager);
 
@@ -97,19 +98,25 @@
               <table class="table table-zebra" id="downloadsTable">
                 <thead>
                   <tr>
-                    <th></th>
+                    {#if !$isMobile}
+                      <th></th>
+                    {/if}
                     <th>Name</th>
                     <th>From Address</th>
                     <th>Size</th>
-                    <th>Downloaded Date</th>
-                    <th>Download Directory</th>
+                    {#if !$isMobile}
+                      <th>Downloaded Date</th>
+                      <th>Download Directory</th>
+                    {/if}
                   </tr>
                 </thead>
                 <tbody>
                   {#if downloadedFiles.length > 0}
                     {#each downloadedFiles as file, idx}
                       <tr>
-                        <th>{idx + 1}</th>
+                        {#if !$isMobile}
+                          <th>{idx + 1}</th>
+                        {/if}
                         <td>
                           <button
                             class="file-name-button"
@@ -124,13 +131,15 @@
                           <AddressDisplay address={file.autonomiAddress || ''} />
                         </td>
                         <td>{formatFileSize(file.fileSize)}</td>
-                        <td>{file.downloadedDate}</td>
-                        <td>{file.downloadPath}</td>
+                        {#if !$isMobile}
+                          <td>{file.downloadedDate}</td>
+                          <td>{file.downloadPath}</td>
+                        {/if}
                       </tr>
                     {/each}
                   {:else}
                     <tr>
-                      <td colspan="12" style="text-align:center;">No downloads yet</td>
+                      <td colspan={$isMobile ? 3 : 6} style="text-align:center;">No downloads yet</td>
                     </tr>
                   {/if}
                 </tbody>

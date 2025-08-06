@@ -1,17 +1,28 @@
 <script lang="ts">
   import TabulatorTable from '../../../components/tabulator.svelte';
-  import { statusColumns } from '../../../utils/search/statusColumns';
+  import { statusColumns as importedStatusColumns } from '../../../utils/search/statusColumns';
   import { transferManager } from '../../../stores/transferManager';
   import { onMount } from 'svelte';
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
   import { addToast } from '../../../stores/toast';
+  import { isMobile } from '../../../utils/responsive.js';
 
   let showLogin = false;
 
   let statusInitialSort = [
     {column:"startedDate", dir:"desc"}
   ]
+
+  // Create mobile-specific columns (status icon, Name, Type only)
+  const mobileStatusColumns = [
+    importedStatusColumns[0], // Status icon
+    importedStatusColumns[1], // Name
+    importedStatusColumns[3], // Type
+  ];
+
+  // Use mobile or desktop columns based on screen size
+  $: statusColumns = $isMobile ? mobileStatusColumns : importedStatusColumns;
 
   let transfers: any[] = [];
   let statusTable: any; // Reference to the TabulatorTable component
@@ -102,10 +113,12 @@
 {#if showLogin}
   <LoginModal/>
 {/if}
-<main class="status-container" style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px;">
+<main class="status-container" class:mobile-status={$isMobile} style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px;">
   <div class="status-header" style="flex-shrink: 0; margin-bottom: 20px;">
     <div class="row mb-3">
-      <h2 class="text-2xl font-bold">Transfer Status</h2>
+      {#if !$isMobile}
+        <h2 class="text-2xl font-bold">Transfer Status</h2>
+      {/if}
       <div class="button-group">
         <button class="btn btn-soft btn-warning mr-2" onclick={clearCompleted}>
           Clear Completed
@@ -138,5 +151,30 @@
 .button-group {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Mobile-specific styles */
+.mobile-status {
+  padding: 10px !important;
+  height: calc(100vh - 116px) !important; /* Account for mobile header + bottom nav */
+}
+
+.mobile-status .status-header {
+  margin-bottom: 10px !important;
+}
+
+.mobile-status .row {
+  justify-content: center;
+}
+
+.mobile-status .button-group {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .status-table-container {
+    margin: 0 -10px; /* Extend table to screen edges */
+  }
 }
 </style>

@@ -13,6 +13,7 @@
   import { templates } from "../../../../utils/pod-management/jsonLDTemplates";
   import { checkActiveWalletBalance } from "../../../../utils/wallet/getPrimaryWallet";
   import InsufficientBalanceDialog from "../../../../components/InsufficientBalanceDialog.svelte";
+  import { isMobile } from '../../../../utils/responsive.js';
 
 
 
@@ -807,12 +808,20 @@
 <main style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
   <Drawer>
     <div slot="main" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
-      <div class="row" style="display: flex; flex-direction: row; justify-content: space-between; padding: 20px; flex-shrink: 0;">
-        <h2 class="h2">Your Pods</h2>
-        <div class="utility-bar" style="display: flex;">
-          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>Sync Pods</button>
-          <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>Upload All Pods</button>
-          <button class="btn btn-warning" onclick={() => createNewPodModal.showModal()}>Create New Pod</button>
+      <div class="row" class:mobile-row={$isMobile} style="display: flex; flex-direction: row; justify-content: space-between; padding: 20px; flex-shrink: 0;">
+        {#if !$isMobile}
+          <h2 class="h2">Your Pods</h2>
+        {/if}
+        <div class="utility-bar" class:mobile-utility-bar={$isMobile} style="display: flex;">
+          <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>
+            {$isMobile ? 'Sync' : 'Sync Pods'}
+          </button>
+          <button class="btn btn-neutral" onclick={() => uploadAllPods()} disabled={$allPodsUploading}>
+            {$isMobile ? 'Upload Pods' : 'Upload All Pods'}
+          </button>
+          <button class="btn btn-warning" onclick={() => createNewPodModal.showModal()}>
+            {$isMobile ? 'Create Pod' : 'Create New Pod'}
+          </button>
         </div>
       </div>
       <div class="row" style="flex: 1; min-height: 0; overflow: hidden;">
@@ -822,11 +831,15 @@
               <table class="table table-zebra">
                 <thead>
                   <tr>
-                    <th></th>
+                    {#if !$isMobile}
+                      <th></th>
+                    {/if}
                     <th>Pod Name</th>
                     <th>Pod Address</th>
-                    <th>Created Date</th>
-                    <th>Last Modified</th>
+                    {#if !$isMobile}
+                      <th>Created Date</th>
+                      <th>Last Modified</th>
+                    {/if}
                     <th>Operations</th>
                   </tr>
                 </thead>
@@ -834,13 +847,17 @@
                   {#if createdPods.length > 0}
                     {#each createdPods as pod, idx}
                       <tr>
-                        <th>{idx + 1}</th>
+                        {#if !$isMobile}
+                          <th>{idx + 1}</th>
+                        {/if}
                         <td>{pod.name}</td>
                         <td>
                           <AddressDisplay address={pod.address} />
                         </td>
-                        <td>{makeDateReadable(pod.creation)}</td>
-                        <td>{makeDateReadable(pod.modified)}</td>
+                        {#if !$isMobile}
+                          <td>{makeDateReadable(pod.creation)}</td>
+                          <td>{makeDateReadable(pod.modified)}</td>
+                        {/if}
                         <td>
                           {#if pod.name !== "User Configuration"}
                             <!-- <button
@@ -1375,5 +1392,44 @@
 }
 
 .code-input { font-family: monospace; }
+
+/* Mobile-specific styles */
+.mobile-row {
+  justify-content: center !important;
+  padding: 10px !important;
+}
+
+.mobile-utility-bar {
+  width: 100%;
+  justify-content: space-around;
+  gap: 8px !important;
+}
+
+.mobile-utility-bar .btn {
+  flex: 1;
+  font-size: 14px;
+  padding: 8px 4px;
+}
+
+@media (max-width: 767px) {
+  .card {
+    margin: 0 -10px; /* Extend table to screen edges */
+  }
+
+  .table th:last-child,
+  .table td:last-child {
+    min-width: 120px; /* Reduce operations column width on mobile */
+  }
+
+  .btn-square {
+    width: 36px;
+    height: 36px;
+  }
+
+  .btn-square img {
+    width: 16px;
+    height: 16px;
+  }
+}
 
 </style>

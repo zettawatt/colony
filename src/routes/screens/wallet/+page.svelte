@@ -6,6 +6,7 @@
   import { getPassword } from "../../../utils/password/session";
     import { addToast } from "../../../stores/toast";
   import AddressDisplay from "../../../components/AddressDisplay.svelte";
+  import { isMobile } from '../../../utils/responsive.js';
 
   let primaryWalletName = $state("");
   let storedWallets = $state<WalletInfo[]>([]);
@@ -190,23 +191,70 @@
 
 </script>
 
-<main class="wallet-container">
-  <div class="row ps-5 pe-5 mb-3" style="display: flex; flex-direction: row; justify-content: space-between;">
-    <h2 class="h2">Wallets</h2>
-    <div class="utility-bar" style="display: flex;">
-      <button 
-        class="btn btn-neutral" 
-        onclick={()=>{
-          activeWallet = {
-            name: "",
-            key: "",
-            makePrimary: false,
-          };
-          referenceWallet = activeWallet;
-          addWalletModal.showModal()
-        }}>Add New Wallet</button>
+<main class="wallet-container" class:mobile-wallet={$isMobile}>
+  {#if $isMobile}
+    <!-- Mobile layout with active wallet balances at top -->
+    <div class="mobile-wallet-header">
+      {#if primaryWalletName}
+        <div class="active-wallet-info">
+          <h3 class="text-lg font-semibold mb-2">Active Wallet: {primaryWalletName}</h3>
+          <div class="balance-display">
+            <div class="balance-item">
+              <span class="balance-label">ETH Balance:</span>
+              {#if walletBalances[primaryWalletName]?.loading !== false}
+                <span class="loading loading-spinner loading-sm"></span>
+              {:else if walletBalances[primaryWalletName]?.gas_balance !== undefined}
+                <span class="balance-value">{walletBalances[primaryWalletName]?.gas_balance?.toFixed(6)} ETH</span>
+              {:else}
+                <span class="balance-value">--</span>
+              {/if}
+            </div>
+            <div class="balance-item">
+              <span class="balance-label">AUTONOMI Balance:</span>
+              {#if walletBalances[primaryWalletName]?.loading !== false}
+                <span class="loading loading-spinner loading-sm"></span>
+              {:else if walletBalances[primaryWalletName]?.ant_balance !== undefined}
+                <span class="balance-value">{walletBalances[primaryWalletName]?.ant_balance?.toFixed(6)} AUTONOMI</span>
+              {:else}
+                <span class="balance-value">--</span>
+              {/if}
+            </div>
+          </div>
+        </div>
+      {/if}
+      <div class="mobile-add-wallet">
+        <button
+          class="btn btn-neutral"
+          onclick={()=>{
+            activeWallet = {
+              name: "",
+              key: "",
+              makePrimary: false,
+            };
+            referenceWallet = activeWallet;
+            addWalletModal.showModal()
+          }}>Add Wallet</button>
+      </div>
     </div>
-  </div>
+  {:else}
+    <!-- Desktop layout -->
+    <div class="row ps-5 pe-5 mb-3" style="display: flex; flex-direction: row; justify-content: space-between;">
+      <h2 class="h2">Wallets</h2>
+      <div class="utility-bar" style="display: flex;">
+        <button
+          class="btn btn-neutral"
+          onclick={()=>{
+            activeWallet = {
+              name: "",
+              key: "",
+              makePrimary: false,
+            };
+            referenceWallet = activeWallet;
+            addWalletModal.showModal()
+          }}>Add New Wallet</button>
+      </div>
+    </div>
+  {/if}
   <div class="row">
     <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: 95%;">
       <div class="card-body items-center text-center p-4">
@@ -214,11 +262,15 @@
         <table class="table table-zebra">
           <thead>
             <tr>
-              <th></th>
+              {#if !$isMobile}
+                <th></th>
+              {/if}
               <th>Wallet Name</th>
               <th>Wallet Key</th>
-              <th>ETH Balance</th>
-              <th>AUTONOMI Balance</th>
+              {#if !$isMobile}
+                <th>ETH Balance</th>
+                <th>AUTONOMI Balance</th>
+              {/if}
               <th>Operations</th>
             </tr>
           </thead>
@@ -226,33 +278,38 @@
               {#if storedWallets.length > 0}
                 {#each storedWallets as wallet, idx}
                   <tr>
-                    <th>{idx + 1}</th>
-                      <td>
-                        {wallet.name}
-                        {#if wallet.name === primaryWalletName}
-                          <span title="Primary Wallet" style="margin-left:4px; color: #ffc940; font-size: 1.1rem;">💰</span>
-                        {/if}
-                      </td>                    <td>
+                    {#if !$isMobile}
+                      <th>{idx + 1}</th>
+                    {/if}
+                    <td>
+                      {wallet.name}
+                      {#if wallet.name === primaryWalletName}
+                        <span title="Primary Wallet" style="margin-left:4px; color: #ffc940; font-size: 1.1rem;">💰</span>
+                      {/if}
+                    </td>
+                    <td>
                       <AddressDisplay address={wallet.address} />
                     </td>
-                    <td>
-                      {#if walletBalances[wallet.name]?.loading !== false}
-                        <span class="loading loading-spinner loading-sm"></span>
-                      {:else if walletBalances[wallet.name]?.gas_balance !== undefined}
-                        {walletBalances[wallet.name]?.gas_balance?.toFixed(6)} ETH
-                      {:else}
-                        --
-                      {/if}
-                    </td>
-                    <td>
-                      {#if walletBalances[wallet.name]?.loading !== false}
-                        <span class="loading loading-spinner loading-sm"></span>
-                      {:else if walletBalances[wallet.name]?.ant_balance !== undefined}
-                        {walletBalances[wallet.name]?.ant_balance?.toFixed(6)} AUTONOMI
-                      {:else}
-                        --
-                      {/if}
-                    </td>
+                    {#if !$isMobile}
+                      <td>
+                        {#if walletBalances[wallet.name]?.loading !== false}
+                          <span class="loading loading-spinner loading-sm"></span>
+                        {:else if walletBalances[wallet.name]?.gas_balance !== undefined}
+                          {walletBalances[wallet.name]?.gas_balance?.toFixed(6)} ETH
+                        {:else}
+                          --
+                        {/if}
+                      </td>
+                      <td>
+                        {#if walletBalances[wallet.name]?.loading !== false}
+                          <span class="loading loading-spinner loading-sm"></span>
+                        {:else if walletBalances[wallet.name]?.ant_balance !== undefined}
+                          {walletBalances[wallet.name]?.ant_balance?.toFixed(6)} AUTONOMI
+                        {:else}
+                          --
+                        {/if}
+                      </td>
+                    {/if}
                     <td>
                       <button 
                         class="btn btn-warning btn-square"
@@ -273,7 +330,7 @@
                 {/each}
               {:else}
                 <tr>
-                  <td colspan="6" style="text-align:center;">No wallets found</td>
+                  <td colspan={$isMobile ? 3 : 6} style="text-align:center;">No wallets found</td>
                 </tr>
               {/if}
             </tbody>
@@ -391,6 +448,68 @@
 
 .input{
   width: 100%;
+}
+
+/* Mobile-specific styles */
+.mobile-wallet {
+  padding: 10px !important;
+  padding-top: 20px !important;
+}
+
+.mobile-wallet-header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 0 10px;
+}
+
+.active-wallet-info {
+  background: var(--fallback-b2, oklch(var(--b2)));
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.balance-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.balance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--fallback-b1, oklch(var(--b1)));
+  border-radius: 6px;
+}
+
+.balance-label {
+  font-weight: 600;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.8));
+}
+
+.balance-value {
+  font-weight: 700;
+  color: var(--fallback-bc, oklch(var(--bc)));
+}
+
+.mobile-add-wallet {
+  display: flex;
+  justify-content: center;
+}
+
+.mobile-add-wallet .btn {
+  width: 200px;
+}
+
+@media (max-width: 767px) {
+  .card {
+    margin: 0 -10px; /* Extend table to screen edges */
+  }
 }
 
 </style>

@@ -1,15 +1,17 @@
 <script lang="ts">
   import ThemeSwitcher from './themeSwitcher.svelte';
+  import { isMobile } from '../utils/responsive.js';
 </script>
 
 <header class="">
-  <div class="navbar bg-base-100 shadow-sm">
+  <div class="navbar bg-base-100 shadow-sm" class:mobile-header={$isMobile}>
     <div class="flex-1">
       <a href="/screens/app-info" class="btn btn-ghost text-xl">
         <span><img src="/logo.svg" class="logo svelte-kit" alt="Colony Logo" width="40" height="40"/></span>
-        <span class="colony-logo-text xl:inline hidden">Colony</span>
+        <span class="colony-logo-text" class:mobile-logo-text={$isMobile}>Colony</span>
       </a>
     </div>
+{#if !$isMobile}
     <div class="flex-3 flex justify-center">
       <ul class="menu menu-horizontal px-1 flex justify-between w-full">
         <li>
@@ -49,7 +51,7 @@
         <li>
           <a href="/screens/wallet" class="btn btn-ghost">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3 3v8a3 3 0 003 3z" />
             </svg>
             <span class="xl:inline hidden">Wallet</span>
           </a>
@@ -67,6 +69,7 @@
         <!-- <li><a href="/screens/test">Test</a></li> -->
       </ul>
     </div>
+    {/if}
     <div class="flex-1 flex justify-end">
       <ThemeSwitcher />
     </div>
@@ -86,6 +89,24 @@
     font-weight: 800;
     font-size: 30px;
     color: #e28743;
+  }
+
+  /* Mobile-specific header styles */
+  .mobile-header {
+    padding: 0 16px;
+    min-height: 56px;
+  }
+
+  .mobile-logo-text {
+    display: inline !important;
+    font-size: 24px;
+  }
+
+  /* Ensure header is properly sized on mobile */
+  @media (max-width: 767px) {
+    .navbar {
+      min-height: 56px;
+    }
   }
 
 

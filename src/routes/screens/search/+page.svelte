@@ -4,6 +4,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { transferManager } from '../../../stores/transferManager';
   import { onMount, onDestroy } from 'svelte';
+  import { isMobile } from '../../../utils/responsive.js';
 
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
@@ -40,8 +41,22 @@
   let windowWidth: number = 0;
   let tabulatorTable: any; // Reference to the TabulatorTable component
 
-  // Use the imported search columns
-  let searchColumns: any[] = importedSearchColumns;
+  // Create mobile-specific columns (icon, Name, Type, Size only)
+  function createMobileColumns() {
+    return [
+      { ...importedSearchColumns[0] }, // Download icon
+      { ...importedSearchColumns[1] }, // Name
+      { ...importedSearchColumns[3] }, // Type
+      { ...importedSearchColumns[4] }, // Size
+    ];
+  }
+
+  function createDesktopColumns() {
+    return importedSearchColumns.map(col => ({ ...col }));
+  }
+
+  // Use mobile or desktop columns based on screen size
+  $: searchColumns = $isMobile ? createMobileColumns() : createDesktopColumns();
 
   // Calculate optimal description column width based on window size
   function updateDescriptionColumnWidth() {
@@ -368,9 +383,17 @@
   function setupColumnClickHandlers() {
     if (!searchColumns || searchColumns.length === 0) return;
 
-    // set cellClick function for download column (column 0)
-    if (searchColumns[0]) {
-      searchColumns[0].cellClick = function(_e: any, cell: any) {
+    // Find columns by field name instead of index to handle mobile/desktop differences
+    const downloadColumn = searchColumns.find(col => col.field === 'download');
+    const nameColumn = searchColumns.find(col => col.field === 'name');
+    const descriptionColumn = searchColumns.find(col => col.field === 'description');
+    const typeColumn = searchColumns.find(col => col.field === 'type');
+    const sizeColumn = searchColumns.find(col => col.field === 'size');
+    const addressColumn = searchColumns.find(col => col.field === 'address');
+
+    // set cellClick function for download column
+    if (downloadColumn) {
+      (downloadColumn as any).cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
 
         // Don't do anything if it's a pod or has no type (no icon shown)
@@ -400,45 +423,45 @@
       }
     }
 
-    // set cellClick function for name column (show modal) - column 1
-    if (searchColumns[1]) {
-      searchColumns[1].cellClick = function(_e: any, cell: any) {
+    // set cellClick function for name column (show modal)
+    if (nameColumn) {
+      (nameColumn as any).cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for description column (show modal) - column 2
-    if (searchColumns[2]) {
-      searchColumns[2].cellClick = function(_e: any, cell: any) {
+    // set cellClick function for description column (show modal) - only on desktop
+    if (descriptionColumn) {
+      (descriptionColumn as any).cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for type column (show modal) - column 3
-    if (searchColumns[3]) {
-      searchColumns[3].cellClick = function(_e: any, cell: any) {
+    // set cellClick function for type column (show modal)
+    if (typeColumn) {
+      (typeColumn as any).cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for size column (show modal) - column 4
-    if (searchColumns[4]) {
-      searchColumns[4].cellClick = function(_e: any, cell: any) {
+    // set cellClick function for size column (show modal)
+    if (sizeColumn) {
+      (sizeColumn as any).cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for address column (copy to clipboard) - column 5
-    if (searchColumns[5]) {
-      searchColumns[5].cellClick = function(_e: any, cell: any) {
+    // set cellClick function for address column (copy to clipboard) - only on desktop
+    if (addressColumn) {
+      (addressColumn as any).cellClick = function(_e: any, cell: any) {
         const rowData = cell.getRow().getData() as SearchResult;
         const fullAddress = rowData.address;
 
@@ -621,7 +644,7 @@
 {#if showLogin}
   <LoginModal/>
 {/if}
-<main class="search-container" style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px; overflow: hidden;">
+<main class="search-container" class:mobile-search={$isMobile} style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px; overflow: hidden;">
   <div class="search-header" style="flex-shrink: 0; margin-bottom: 20px;">
     <div class="row mb-3">
       <label class="input mr-2">
@@ -731,6 +754,47 @@
 .row {
   display: flex;
   justify-content: center;
+}
+
+/* Mobile-specific styles */
+.mobile-search {
+  padding: 10px !important;
+  height: calc(100vh - 116px) !important; /* Account for mobile header + bottom nav */
+}
+
+.mobile-search .search-header {
+  margin-bottom: 10px !important;
+}
+
+.mobile-search .input {
+  width: 100% !important;
+  max-width: none !important;
+  font-size: 16px; /* Prevent zoom on iOS */
+}
+
+.mobile-search .row {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-search .row.mb-3 {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Mobile table adjustments */
+@media (max-width: 767px) {
+  .search-table-container {
+    margin: 0 -10px; /* Extend table to screen edges */
+  }
+
+  /* Ensure mobile modal is properly sized */
+  #fileMetadataModal .modal-box {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 0 auto;
+  }
 }
 /* ---- Modern styling for fileMetadataModal table ---- */
 #fileMetadataModal table {
