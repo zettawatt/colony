@@ -39,5 +39,5 @@ async fn main() {
     //tracing_subscriber::fmt::init();
 
     // Run the Tauri application
-    colony_app::run(network)
+    colony_app::run_with_network_param(network)
 }

@@ -96,21 +96,80 @@ fn fetch_binaries() {
 
     println!("cargo:info=Binary fetch completed");
 
+    // Create Android dummy binaries
+    create_android_dummy_binaries(binaries_dir);
+
     // Copy the appropriate binary for the current platform to the expected location
     copy_platform_binary(binaries_dir);
+}
+
+fn create_android_dummy_binaries(binaries_dir: &Path) {
+    println!("cargo:info=Creating Android dummy binaries...");
+
+    let android_targets = [
+        "aarch64-linux-android",
+        "armv7-linux-androideabi",
+        "arm-linux-androideabi",
+        "x86_64-linux-android",
+        "i686-linux-android",
+    ];
+
+    for target in &android_targets {
+        let binary_name = format!("colony-dweb-{}", target);
+        let binary_path = binaries_dir.join(&binary_name);
+
+        // Skip if already exists
+        if binary_path.exists() {
+            continue;
+        }
+
+        let dummy_content = r#"#!/bin/sh
+# Dummy colony-dweb binary for Android
+# This binary is not functional and should not be executed
+# The actual dweb functionality is disabled at runtime on Android
+echo "colony-dweb is not supported on Android"
+exit 0
+"#;
+
+        if let Err(e) = fs::write(&binary_path, dummy_content) {
+            println!("cargo:warning=Failed to create Android dummy binary {}: {}", binary_name, e);
+            continue;
+        }
+
+        // Make executable on Unix systems
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(metadata) = fs::metadata(&binary_path) {
+                let mut perms = metadata.permissions();
+                perms.set_mode(0o755);
+                let _ = fs::set_permissions(&binary_path, perms);
+            }
+        }
+
+        println!("cargo:info=Created Android dummy binary: {}", binary_name);
+    }
+
+    println!("cargo:info=Android dummy binaries creation completed");
 }
 
 fn copy_platform_binary(binaries_dir: &Path) {
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
 
-    let source_binary = match (target_os.as_str(), target_arch.as_str()) {
-        ("linux", "x86_64") => "colony-dweb-x86_64-unknown-linux-gnu",
-        ("windows", "x86_64") => "colony-dweb-x86_64-pc-windows-msvc.exe",
-        ("macos", "aarch64") => "colony-dweb-aarch64-apple-darwin",
-        ("macos", "x86_64") => "colony-dweb-x86_64-apple-darwin",
+    let source_binary = match (target_os.as_str(), target_arch.as_str(), target_env.as_str()) {
+        ("linux", "x86_64", "gnu") => "colony-dweb-x86_64-unknown-linux-gnu",
+        ("windows", "x86_64", _) => "colony-dweb-x86_64-pc-windows-msvc.exe",
+        ("macos", "aarch64", _) => "colony-dweb-aarch64-apple-darwin",
+        ("macos", "x86_64", _) => "colony-dweb-x86_64-apple-darwin",
+        // Android targets - use dummy binaries
+        ("android", "aarch64", _) => "colony-dweb-aarch64-linux-android",
+        ("android", "arm", _) => "colony-dweb-armv7-linux-androideabi",
+        ("android", "x86_64", _) => "colony-dweb-x86_64-linux-android",
+        ("android", "x86", _) => "colony-dweb-i686-linux-android",
         _ => {
-            println!("cargo:warning=Unsupported platform: {target_os}-{target_arch}");
+            println!("cargo:warning=Unsupported platform: {target_os}-{target_arch}-{target_env}");
             return;
         }
     };

@@ -63,6 +63,12 @@ async fn is_dweb_serve_running() -> bool {
 
 /// Determine which dweb binary to use based on system state
 async fn determine_dweb_binary() -> DwebBinary {
+    // Android doesn't support dweb sidecar
+    if cfg!(target_os = "android") {
+        info!("Android: dweb sidecar not supported, using system binary");
+        return DwebBinary::System;
+    }
+
     if is_dweb_serve_running().await {
         info!("Using system dweb binary (serve already running)");
         DwebBinary::System
@@ -320,8 +326,34 @@ fn get_new_seed_phrase() -> Result<String, String> {
 ////////////////////////////////////////////////////////////////////
 
 #[tauri::command]
-fn initialize_datastore(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
-    let datastore = DataStore::create()?;
+fn initialize_datastore(app: AppHandle, state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
+    let datastore = if cfg!(target_os = "android") {
+        // Android-specific initialization using from_paths
+        let app_data_dir = app.path().app_data_dir()
+            .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to get app data dir: {}", e))))?;
+
+        let data_dir = app_data_dir.clone();
+        let pods_dir = app_data_dir.join("pods");
+
+        // Ensure the pods directory exists
+        if !pods_dir.exists() {
+            std::fs::create_dir_all(&pods_dir)
+                .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create pods directory: {}", e))))?;
+        }
+
+        info!("Android: Using data_dir: {:?}, pods_dir: {:?}", data_dir, pods_dir);
+        // Try with downloads directory as third parameter (common pattern)
+        let downloads_dir = app_data_dir.join("downloads");
+        if !downloads_dir.exists() {
+            std::fs::create_dir_all(&downloads_dir)
+                .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create downloads directory: {}", e))))?;
+        }
+        DataStore::from_paths(data_dir, pods_dir, downloads_dir)?
+    } else {
+        // Desktop platforms use the default create method
+        DataStore::create()?
+    };
+
     let state = state.lock().unwrap();
     *state.datastore.lock().unwrap() = Some(datastore);
     info!("Datastore initialized");
@@ -2358,6 +2390,12 @@ fn stop_dweb_process(app_state: &Mutex<AppState>) -> Result<String, Error> {
 
 #[tauri::command]
 async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
+    // Android doesn't support dweb sidecar - return early
+    if cfg!(target_os = "android") {
+        info!("Android: dweb_stop command called but not supported on Android");
+        return Ok("dweb_stop not supported on Android".to_string());
+    }
+
     stop_dweb_process(&state)
 }
 
@@ -2378,6 +2416,12 @@ async fn dweb_serve(
     state: State<'_, Mutex<AppState>>,
     wallet_key: String,
 ) -> Result<String, Error> {
+    // Android doesn't support dweb sidecar - return early
+    if cfg!(target_os = "android") {
+        info!("Android: dweb_serve command called but not supported on Android");
+        return Ok("dweb_serve not supported on Android".to_string());
+    }
+
     // Check if user's dweb serve is already running
     let dweb_binary = determine_dweb_binary().await;
 
@@ -2476,6 +2520,12 @@ async fn dweb_open(
     _state: State<'_, Mutex<AppState>>,
     address: String,
 ) -> Result<String, Error> {
+    // Android doesn't support dweb sidecar - return early
+    if cfg!(target_os = "android") {
+        info!("Android: dweb_open command called but not supported on Android - address: {}", address);
+        return Ok("dweb_open not supported on Android".to_string());
+    }
+
     let dweb_binary = determine_dweb_binary().await;
 
     let (mut rx, mut _child) = match dweb_binary {
@@ -2556,8 +2606,20 @@ async fn dweb_open(
 // Tauri App
 ////////////////////////////////////////////////////////////////////
 
+// Mobile entry point - no parameters allowed
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run(network: &str) {
+pub fn run() {
+    run_with_network("main") // Default to main network for mobile
+}
+
+// Desktop entry point - accepts network parameter
+// Also available for mobile builds when called from main.rs
+pub fn run_with_network_param(network: &str) {
+    run_with_network(network)
+}
+
+// Internal function that does the actual work
+fn run_with_network(network: &str) {
     let app_state = AppState {
         client: Mutex::new(None),
         wallet: Mutex::new(None),
