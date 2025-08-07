@@ -24,10 +24,10 @@ fn fetch_binaries() {
 
     // Define the binaries we need
     let binaries = [
-        ("dweb-x86_64-unknown-linux-gnu", "dweb-linux-amd64"),
-        ("dweb-x86_64-pc-windows-msvc.exe", "dweb-amd64.exe"),
-        ("dweb-aarch64-apple-darwin", "dweb-darwin-arm64"),
-        ("dweb-x86_64-apple-darwin", "dweb-darwin-amd64"),
+        ("colony-dweb-x86_64-unknown-linux-gnu", "dweb-linux-amd64"),
+        ("colony-dweb-x86_64-pc-windows-msvc.exe", "dweb-amd64.exe"),
+        ("colony-dweb-aarch64-apple-darwin", "dweb-darwin-arm64"),
+        ("colony-dweb-x86_64-apple-darwin", "dweb-darwin-amd64"),
     ];
 
     // Check if all binaries already exist
@@ -37,6 +37,8 @@ fn fetch_binaries() {
 
     if all_exist {
         println!("cargo:info=Binaries already exist, skipping download");
+        // Still need to copy platform binary
+        copy_platform_binary(binaries_dir);
         return;
     }
 
@@ -53,11 +55,11 @@ fn fetch_binaries() {
 
     println!("cargo:info=Latest dweb release: {latest_tag}");
 
-    // Remove existing dweb binaries
+    // Remove existing colony-dweb binaries
     if let Ok(entries) = fs::read_dir(binaries_dir) {
         for entry in entries.flatten() {
             if let Some(name) = entry.file_name().to_str() {
-                if name.starts_with("dweb-") {
+                if name.starts_with("colony-dweb-") {
                     let _ = fs::remove_file(entry.path());
                 }
             }
@@ -103,10 +105,10 @@ fn copy_platform_binary(binaries_dir: &Path) {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
 
     let source_binary = match (target_os.as_str(), target_arch.as_str()) {
-        ("linux", "x86_64") => "dweb-x86_64-unknown-linux-gnu",
-        ("windows", "x86_64") => "dweb-x86_64-pc-windows-msvc.exe",
-        ("macos", "aarch64") => "dweb-aarch64-apple-darwin",
-        ("macos", "x86_64") => "dweb-x86_64-apple-darwin",
+        ("linux", "x86_64") => "colony-dweb-x86_64-unknown-linux-gnu",
+        ("windows", "x86_64") => "colony-dweb-x86_64-pc-windows-msvc.exe",
+        ("macos", "aarch64") => "colony-dweb-aarch64-apple-darwin",
+        ("macos", "x86_64") => "colony-dweb-x86_64-apple-darwin",
         _ => {
             println!("cargo:warning=Unsupported platform: {target_os}-{target_arch}");
             return;
@@ -114,7 +116,7 @@ fn copy_platform_binary(binaries_dir: &Path) {
     };
 
     let source_path = binaries_dir.join(source_binary);
-    let dest_path = binaries_dir.join("dweb");
+    let dest_path = binaries_dir.join("colony-dweb");
 
     if source_path.exists() {
         if let Err(e) = fs::copy(&source_path, &dest_path) {
@@ -124,7 +126,7 @@ fn copy_platform_binary(binaries_dir: &Path) {
                 dest_path.display()
             );
         } else {
-            println!("cargo:info=Copied {source_binary} to dweb");
+            println!("cargo:info=Copied {source_binary} to colony-dweb");
         }
     } else {
         println!(

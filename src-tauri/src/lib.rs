@@ -24,6 +24,54 @@ use tauri::{AppHandle, Emitter, RunEvent, State, WindowEvent};
 use tauri_plugin_shell::{process::CommandChild, Error as ShellError, ShellExt};
 use tracing::{debug, error, info, warn};
 
+// Dweb detection and management
+#[derive(Debug, Clone)]
+pub enum DwebBinary {
+    System,     // Use system-installed dweb
+    ColonyDweb, // Use colony-dweb sidecar
+}
+
+/// Check if a user-installed dweb serve is already running by querying the REST API
+async fn is_dweb_serve_running() -> bool {
+    let client = reqwest::Client::new();
+
+    // Try the default dweb port (5537)
+    match client
+        .get("http://localhost:5537/dweb-0/app-settings")
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                info!("Detected running dweb serve on port 5537");
+                true
+            } else {
+                debug!(
+                    "dweb serve not responding on port 5537: {}",
+                    response.status()
+                );
+                false
+            }
+        }
+        Err(e) => {
+            debug!("No dweb serve detected on port 5537: {}", e);
+            false
+        }
+    }
+}
+
+/// Determine which dweb binary to use based on system state
+async fn determine_dweb_binary() -> DwebBinary {
+    if is_dweb_serve_running().await {
+        info!("Using system dweb binary (serve already running)");
+        DwebBinary::System
+    } else {
+        info!("Using colony-dweb sidecar binary");
+        DwebBinary::ColonyDweb
+    }
+}
+
 #[tauri::command]
 fn get_file_size(path: String) -> Result<u64, String> {
     fs::metadata(path)
@@ -2330,6 +2378,19 @@ async fn dweb_serve(
     state: State<'_, Mutex<AppState>>,
     wallet_key: String,
 ) -> Result<String, Error> {
+    // Check if user's dweb serve is already running
+    let dweb_binary = determine_dweb_binary().await;
+
+    match dweb_binary {
+        DwebBinary::System => {
+            info!("Using existing dweb serve instance");
+            return Ok("Using existing dweb serve instance".to_string());
+        }
+        DwebBinary::ColonyDweb => {
+            info!("Starting colony-dweb serve");
+        }
+    }
+
     // Stop any existing dweb process first
     let _ = dweb_stop(state.clone()).await;
 
@@ -2347,7 +2408,7 @@ async fn dweb_serve(
         _ => {} // main network (default)
     }
 
-    let sidecar_command = app.shell().sidecar("dweb")?;
+    let sidecar_command = app.shell().sidecar("colony-dweb")?;
     let (mut rx, child) = sidecar_command
         .args(args)
         .env("SECRET_KEY", wallet_key)
@@ -2410,12 +2471,33 @@ async fn dweb_serve(
 /// its output for debugging purposes. All output is logged with the address
 /// included in the log message for easier tracking.
 #[tauri::command]
-async fn dweb_open(app: AppHandle, address: String) -> Result<String, Error> {
-    let sidecar_command = app.shell().sidecar("dweb")?;
-    let (mut rx, mut _child) = sidecar_command
-        .args(["open", &address])
-        .spawn()
-        .expect("Failed to open the address with dweb");
+async fn dweb_open(
+    app: AppHandle,
+    _state: State<'_, Mutex<AppState>>,
+    address: String,
+) -> Result<String, Error> {
+    let dweb_binary = determine_dweb_binary().await;
+
+    let (mut rx, mut _child) = match dweb_binary {
+        DwebBinary::System => {
+            info!("Using system dweb binary for open command");
+            // Use system dweb binary directly
+            app.shell()
+                .command("dweb")
+                .args(["open", &address])
+                .spawn()
+                .map_err(Error::Shell)?
+        }
+        DwebBinary::ColonyDweb => {
+            info!("Using colony-dweb sidecar for open command");
+            // Use colony-dweb sidecar
+            app.shell()
+                .sidecar("colony-dweb")?
+                .args(["open", &address])
+                .spawn()
+                .map_err(Error::Shell)?
+        }
+    };
 
     // Spawn a task to handle stdout/stderr logging for the open command
     let address_clone = address.clone();
