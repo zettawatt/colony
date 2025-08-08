@@ -11,6 +11,10 @@ license = "GPL-3.0-only"
 name = "colony-app"
 path = "src/main.rs"
 
+[lib]
+name = "colony_app"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
