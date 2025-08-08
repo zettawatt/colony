@@ -26,6 +26,9 @@
   let genesisPodAddress = "aaa518a2cf8260f6bebc769c16b8147ea215adf569696497b7fc1f250823d89a49990187e83fc0f9ae1cf3d44afb7dce";
   let runSync = true;
 
+  // Android detection
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
+
   // Modal reference
   let syncingInProgressModal: HTMLDialogElement;
 
@@ -33,6 +36,11 @@
     if (parentSeedWords.length == 12){
       isPhraseValid = validateSeedPhrase(parentSeedWords);
       showValidString = true;
+      // For Android, automatically copy to confirmSeedWords to skip confirmation step
+      if (isAndroid) {
+        confirmSeedWords = [...parentSeedWords];
+        isSeedPhraseMatching = true;
+      }
     } else {
       showValidString = false;
       isPhraseValid = false;
@@ -40,7 +48,7 @@
   }
 
   $: {
-    if (confirmSeedWords.length == 12){
+    if (!isAndroid && confirmSeedWords.length == 12){
       isSeedPhraseMatching = parentSeedWords.every((value, index) => value === confirmSeedWords[index]);
       console.log("confirm", confirmSeedWords)
       console.log("parent", parentSeedWords)
@@ -49,24 +57,41 @@
     }
   }
 
-  $: canGoNext =
-  (currentStep === 0 && isPasswordValid)
-  || (currentStep === 1 && isPhraseValid)
-  || (currentStep === 2 && isSeedPhraseMatching)
-  || (currentStep === 3 && walletPrivateKey) // Adjust this as needed
-  || (currentStep === 4); // Allow "Finish"
+  $: canGoNext = isAndroid ?
+    // Android: Skip confirmation step
+    (currentStep === 0 && isPasswordValid)
+    || (currentStep === 1 && isPhraseValid)
+    || (currentStep === 2 && walletPrivateKey) // Step 2 is now Wallet
+    || (currentStep === 3) // Step 3 is now Finish
+    :
+    // Desktop: Include confirmation step
+    (currentStep === 0 && isPasswordValid)
+    || (currentStep === 1 && isPhraseValid)
+    || (currentStep === 2 && isSeedPhraseMatching)
+    || (currentStep === 3 && walletPrivateKey)
+    || (currentStep === 4); // Allow "Finish"
 
   function onNext() {
-    if (currentStep === steps.length - 1) {
+    const maxStep = isAndroid ? 3 : 4; // Android has 4 steps (0-3), Desktop has 5 steps (0-4)
+    if (currentStep === maxStep) {
       finishSteps();
       return;
     }
     if (canGoNext) {
       currentStep++;
+      // For Android, skip the confirmation step (step 2)
+      if (isAndroid && currentStep === 2) {
+        currentStep = 2; // Go directly to Wallet step (which is now step 2 for Android)
+      }
     }
   }
 
-  const steps = [
+  const steps = isAndroid ? [
+    { title: "Welcome", component: StepWelcome, valid: false },
+    { title: "Seed Phrase", component: StepSeedPhraseInit, valid: false },
+    { title: "Wallet", component: StepWallet, valid: false},
+    { title: "Finish", component: StepFinish, valid: false }
+  ] : [
     { title: "Welcome", component: StepWelcome, valid: false },
     { title: "Seed Phrase", component: StepSeedPhraseInit, valid: false },
     { title: "Confirmation", component: StepSeedPhraseConfirm, valid: false},
@@ -131,7 +156,7 @@
       if (!pw) {
         console.error("password was null");
       }
-      await invoke("create_keystore_from_seed_phrase", {seedPhrase: confirmSeedWords.join(" ")})
+      await invoke("create_keystore_from_seed_phrase", {seedPhrase: (isAndroid ? parentSeedWords : confirmSeedWords).join(" ")})
       await invoke("add_wallet", {
         request: {
           name: initWalletName,
@@ -209,15 +234,25 @@
           bind:showValidString={showValidString}
         />
       {:else if currentStep === 2}
-        <StepSeedPhraseConfirm
-          bind:words={confirmSeedWords}
-          bind:showMatchingString={showMatchingString}
-          bind:isSeedPhraseMatching={isSeedPhraseMatching}
-        />
+        {#if isAndroid}
+          <StepWallet
+            bind:walletPrivateKey={walletPrivateKey}
+          />
+        {:else}
+          <StepSeedPhraseConfirm
+            bind:words={confirmSeedWords}
+            bind:showMatchingString={showMatchingString}
+            bind:isSeedPhraseMatching={isSeedPhraseMatching}
+          />
+        {/if}
       {:else if currentStep === 3}
-        <StepWallet
-          bind:walletPrivateKey={walletPrivateKey}
-        />
+        {#if isAndroid}
+          <StepFinish bind:runSync={runSync} />
+        {:else}
+          <StepWallet
+            bind:walletPrivateKey={walletPrivateKey}
+          />
+        {/if}
       {:else if currentStep === 4}
         <StepFinish bind:runSync={runSync} />
       {/if}

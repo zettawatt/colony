@@ -1,8 +1,11 @@
-<!-- src/components/StepWelcome.svelte -->
+<!-- src/components/StepWallet.svelte -->
 <script lang="ts">
-  
+
   export let walletPrivateKey: string = '';
   $: isValidPrivateKey = /^([a-fA-F0-9]{64})$/.test(walletPrivateKey || '');
+
+  // Android detection
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
 </script>
 
 <div>
@@ -14,16 +17,33 @@
     </p>    <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label" for="wallet-private-key">Wallet Private Key: </label>
-    <input
-      id="wallet-private-key"
-      bind:value={walletPrivateKey}
-      type="text"
-      class="input"
-      maxlength="64"
-      spellcheck="false"
-      autocomplete="off"
-      placeholder="wallet private key" />
+    {#if isAndroid}
+      <!-- Android: Label on separate row -->
+      <div class="android-wallet-container">
+        <label class="android-label" for="wallet-private-key">Wallet Private Key:</label>
+        <input
+          id="wallet-private-key"
+          bind:value={walletPrivateKey}
+          type="text"
+          class="input android-input"
+          maxlength="64"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="wallet private key" />
+      </div>
+    {:else}
+      <!-- Desktop: Label and input on same row -->
+      <label class="label" for="wallet-private-key">Wallet Private Key: </label>
+      <input
+        id="wallet-private-key"
+        bind:value={walletPrivateKey}
+        type="text"
+        class="input"
+        maxlength="64"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="wallet private key" />
+    {/if}
   </div>
   {#if walletPrivateKey && !isValidPrivateKey}
     <div class="row" style="color: red;">
@@ -42,6 +62,25 @@
   .row {
     display: flex;
     justify-content: center;
+  }
+
+  /* Android-specific styles */
+  .android-wallet-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .android-label {
+    font-weight: 500;
+    margin-bottom: 4px;
+    text-align: left;
+  }
+
+  .android-input {
+    width: 100%;
   }
 
 </style>

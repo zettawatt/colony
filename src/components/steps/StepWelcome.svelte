@@ -1,11 +1,38 @@
 <!-- src/components/StepWelcome.svelte -->
 <script lang="ts">
-  
+
   let newPassword = $state("");
   let confirmPassword = $state("");
   let passwordsMatch = $derived(newPassword && confirmPassword && newPassword === confirmPassword);
   let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
   let { validatePassword } = $props();
+
+  // Android detection
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
+
+  // Handle enter key navigation for Android
+  function handleNewPasswordKeydown(event: KeyboardEvent) {
+    if (isAndroid && event.key === 'Enter') {
+      event.preventDefault();
+      const confirmPasswordInput = document.getElementById('confirm-password-welcome') as HTMLInputElement;
+      if (confirmPasswordInput) {
+        confirmPasswordInput.focus();
+      }
+    }
+  }
+
+  function handleConfirmPasswordKeydown(event: KeyboardEvent) {
+    if (isAndroid && event.key === 'Enter') {
+      event.preventDefault();
+      // Auto-click the Next button if passwords match
+      if (passwordsMatch) {
+        const nextButton = document.querySelector('.btn-primary') as HTMLButtonElement;
+        if (nextButton && !nextButton.disabled) {
+          nextButton.click();
+        }
+      }
+    }
+  }
 
 </script>
 
@@ -20,17 +47,40 @@
     <!-- <button class="btn">Default</button> -->
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label" for="new-password-welcome">New Password: </label>
-    <input id="new-password-welcome" bind:value={newPassword} type="password" class="input" placeholder="Password" />
+    {#if isAndroid}
+      <input
+        id="new-password-welcome"
+        bind:value={newPassword}
+        type="password"
+        class="input"
+        placeholder="New Password"
+        onkeydown={handleNewPasswordKeydown}
+      />
+    {:else}
+      <label class="label" for="new-password-welcome">New Password: </label>
+      <input id="new-password-welcome" bind:value={newPassword} type="password" class="input" placeholder="Password" />
+    {/if}
   </div>
   <div class="row pt-3 pb-3">
-    <label class="label" for="confirm-password-welcome">Confirm Password:</label>
-    <input id="confirm-password-welcome" bind:value={confirmPassword}
-      type="password"
-      class="input {confirmClass}"
-      placeholder="Password"
-      oninput={()=>{validatePassword(newPassword, confirmPassword)}}
-    />
+    {#if isAndroid}
+      <input
+        id="confirm-password-welcome"
+        bind:value={confirmPassword}
+        type="password"
+        class="input {confirmClass}"
+        placeholder="Confirm Password"
+        oninput={()=>{validatePassword(newPassword, confirmPassword)}}
+        onkeydown={handleConfirmPasswordKeydown}
+      />
+    {:else}
+      <label class="label" for="confirm-password-welcome">Confirm Password:</label>
+      <input id="confirm-password-welcome" bind:value={confirmPassword}
+        type="password"
+        class="input {confirmClass}"
+        placeholder="Password"
+        oninput={()=>{validatePassword(newPassword, confirmPassword)}}
+      />
+    {/if}
   </div>
 </div>
 
