@@ -196,7 +196,7 @@ fn copy_platform_binary(binaries_dir: &Path) {
 }
 
 fn get_latest_release_tag() -> Result<String, Box<dyn std::error::Error>> {
-    const FALLBACK_VERSION: &str = "v0.10.8"; // Latest known working version as of 2025-07-15
+    const FALLBACK_VERSION: &str = "v0.10.9"; // Latest known working version as of 2025-07-15
     const MAX_RETRIES: u32 = 4;
     const RETRY_DELAY_SECONDS: u64 = 30;
 
