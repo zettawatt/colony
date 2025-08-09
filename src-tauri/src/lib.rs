@@ -3,6 +3,7 @@
 use autonomi::client::payment::PaymentOption;
 use autonomi::client::quote::CostError;
 use autonomi::client::ConnectError;
+use autonomi::client::config::ClientConfig;
 use autonomi::client::{GetError, PutError};
 use autonomi::data::DataAddress;
 use autonomi::{AddressParseError, Bytes, Client, Wallet};
@@ -342,8 +343,8 @@ fn initialize_datastore(app: AppHandle, state: State<'_, Mutex<AppState>>) -> Re
         }
 
         info!("Android: Using data_dir: {:?}, pods_dir: {:?}", data_dir, pods_dir);
-        // Try with downloads directory as third parameter (common pattern)
-        let downloads_dir = app_data_dir.join("downloads");
+        // Use standard Android Downloads directory
+        let downloads_dir = std::path::PathBuf::from("/storage/emulated/0/Download");
         if !downloads_dir.exists() {
             std::fs::create_dir_all(&downloads_dir)
                 .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create downloads directory: {}", e))))?;
@@ -1982,12 +1983,13 @@ async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Resul
 async fn initialize_autonomi_client(
     state: State<'_, Mutex<AppState>>,
     wallet_key: String,
+    app: tauri::AppHandle,
 ) -> Result<String, Error> {
     let environment = {
         let state = state.lock().unwrap();
         state.network.clone()
     };
-    let client = init_client(&environment).await?;
+    let client = init_client(app, &environment).await?;
     let evm_network = client.evm_network();
     info!("EVM network: {evm_network:?}");
     //FIXME: need to grap the wallet error and remove this unwrap()
@@ -2756,11 +2758,28 @@ fn cleanup_dweb_process(app: &AppHandle) {
     }
 }
 
-async fn init_client(environment: &str) -> Result<Client, Error> {
+async fn init_client(app: AppHandle, environment: &str) -> Result<Client, Error> {
     match environment {
         "local" => Ok(Client::init_local().await?),
         "alpha" => Ok(Client::init_alpha().await?),
-        _ => Ok(Client::init().await?), // main net
+        _ => {
+            let mut config:  ClientConfig = Default::default();
+            if cfg!(target_os = "android") {
+                // Android-specific chunk cache directory
+                let app_data_dir = app.path().app_data_dir()
+                    .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to get app data dir: {}", e))))?;
+        
+                let cache_dir = app_data_dir.join("chunk_cache");
+        
+                // Ensure the pods directory exists
+                if !cache_dir.exists() {
+                    std::fs::create_dir_all(&cache_dir)
+                        .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create chunk cache directory: {}", e))))?;
+                }
+                config.strategy.chunk_cache_dir = Some(cache_dir);
+            }
+            Ok(Client::init_with_config(config).await?) // main net
+        }
     }
 }
 
