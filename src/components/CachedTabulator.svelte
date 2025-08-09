@@ -10,6 +10,10 @@
   export let rowMenu: any[];
   export let initialSort: any[];
   export let cacheKey: string = 'default';
+  export let rowClick: ((e: any, row: any) => void) | undefined = undefined;
+
+  // Android detection for special handling
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
 
   let tableComponent: HTMLElement;
   let tabulatorInstance: any = null;
@@ -132,13 +136,16 @@
       console.log('🚀 Restoring tabulator from cached state instantly');
       isRestoringFromCache = true;
 
+      // Create new instance with live columns and data for instant display
+      // Use the incoming columns prop so any runtime handlers (e.g., cellClick) remain intact
       // Create new instance with cached data for instant display
       tabulatorInstance = new Tabulator(tableComponent, {
-        columns: cached.columns,
+        columns: isAndroid ? columns : cached.columns,
         height: cached.tableHeight || tableHeight,
         minHeight: 300,
         data: cached.data, // Use cached data for instant display
         rowContextMenu: rowMenu,
+        ...(isAndroid && rowClick && { rowClick: rowClick }),
         reactiveData: false,
         layout: 'fitDataStretch',
         initialSort: initialSort,
@@ -232,6 +239,15 @@
   function createNewTabulator() {
     console.log('🔧 Creating new tabulator instance');
 
+    // Android-specific safety checks
+    if (isAndroid) {
+      if (!tableComponent || !tableComponent.offsetParent) {
+        console.warn('Android: Table component not ready, delaying initialization');
+        setTimeout(() => createNewTabulator(), 100);
+        return;
+      }
+    }
+
     try {
       tabulatorInstance = new Tabulator(tableComponent, {
         columns,
@@ -239,6 +255,7 @@
         minHeight: 300,
         data,
         rowContextMenu: rowMenu,
+        ...(isAndroid && rowClick && { rowClick: rowClick }),
         reactiveData: false,
         layout: 'fitDataStretch',
         // @ts-ignore - dependencies is a valid Tabulator option
@@ -250,6 +267,13 @@
         renderVertical: "basic",
         // Disable features that can cause scroll jank
         movableRows: false,
+        // Android-specific optimizations
+        ...(isAndroid && {
+          renderHorizontal: "basic",
+          responsiveLayout: false,
+          autoResize: false,
+          resizableColumns: false,
+        }),
         persistence: {
           sort: true,
           filter: true,
@@ -259,6 +283,7 @@
         },
         persistenceMode: "local",
         persistenceID: `colony-${cacheKey}-table`,
+        // @ts-ignore - tableBuilt is a valid Tabulator option
         tableBuilt: function() {
           tableReady = true;
           setupScrollListener();
@@ -339,19 +364,23 @@
   $: if (tabulatorInstance && Array.isArray(data) && tableReady && !isRestoringFromCache) {
     console.log('🔄 Reactive update: replacing data with', data.length, 'items');
 
-    // Safety check to prevent excessive updates
-    const currentDataLength = tabulatorInstance.getData ? tabulatorInstance.getData().length : 0;
-    if (currentDataLength !== data.length) {
-      // Use replaceData instead of clearData + setData to prevent lockups
-      try {
-        tabulatorInstance.replaceData(data);
-        // Save updated state with delay
-        setTimeout(() => saveToCache(), 200);
-      } catch (error) {
-        console.warn('Error updating tabulator data:', error);
-      }
+    if (!isAndroid) {
+      console.warn('Android: Tabulator element not ready for data update');
     } else {
-      console.log('⏭️ Skipping update - same data length');
+      // Safety check to prevent excessive updates
+      const currentDataLength = tabulatorInstance.getData ? tabulatorInstance.getData().length : 0;
+      if (currentDataLength !== data.length) {
+        // Use replaceData instead of clearData + setData to prevent lockups
+        try {
+          tabulatorInstance.replaceData(data);
+          // Save updated state with delay
+          setTimeout(() => saveToCache(), 200);
+        } catch (error) {
+          console.warn('Error updating tabulator data:', error);
+        }
+      } else {
+        console.log('⏭️ Skipping update - same data length');
+      }
     }
   }
 

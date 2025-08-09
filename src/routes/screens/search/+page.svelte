@@ -4,7 +4,9 @@
   import { invoke } from "@tauri-apps/api/core";
   import { transferManager } from '../../../stores/transferManager';
   import { onMount, onDestroy } from 'svelte';
-  import { isMobile } from '../../../utils/responsive.js';
+
+  // Android detection
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
 
   import { getPassword } from "../../../utils/password/session";
   import LoginModal from '../../../components/login.svelte';
@@ -23,40 +25,26 @@
   }
 
   // Local variables that will be synced with the store
-  let searchInput = $state("");
-  let tableSearchResults = $state<SearchResult[]>([]);
-  let activeRow = $state<SearchResult | Record<string, never>>({});
-  let showLogin = $state(false);
-  let isSearching = $state(false);
+  let searchInput: string = "";
+  let tableSearchResults: SearchResult[] = [];
+  let activeRow: SearchResult | Record<string, never> = {};
+  let showLogin: boolean = false;
+  let isSearching: boolean = false;
   let fileMetadataModal: HTMLDialogElement;
-  let searchMetrics = $state({
+  let searchMetrics = {
     itemCount: 0,
     searchTime: 0,
     hasSearched: false
-  });
+  };
 
   // Store subscription to keep local state in sync
   let storeUnsubscribe: (() => void) | undefined;
 
-  let windowWidth = $state(0);
+  let windowWidth: number = 0;
   let tabulatorTable: any; // Reference to the TabulatorTable component
 
-  // Create mobile-specific columns (icon, Name, Type, Size only)
-  function createMobileColumns() {
-    return [
-      { ...importedSearchColumns[0] }, // Download icon
-      { ...importedSearchColumns[1] }, // Name
-      { ...importedSearchColumns[3] }, // Type
-      { ...importedSearchColumns[4] }, // Size
-    ];
-  }
-
-  function createDesktopColumns() {
-    return importedSearchColumns.map(col => ({ ...col }));
-  }
-
-  // Use mobile or desktop columns based on screen size
-  let searchColumns = $derived($isMobile ? createMobileColumns() : createDesktopColumns());
+  // Use the imported search columns
+  let searchColumns: any[] = importedSearchColumns;
 
   // Calculate optimal description column width based on window size
   function updateDescriptionColumnWidth() {
@@ -85,11 +73,9 @@
   }
 
   // Update column width when window resizes
-  $effect(() => {
-    if (windowWidth) {
-      updateDescriptionColumnWidth();
-    }
-  });
+  $: if (windowWidth) {
+    updateDescriptionColumnWidth();
+  }
 
   
   function shallowEqualArrays(a: any[], b: any[]): boolean {
@@ -104,14 +90,15 @@
 
   let transfers: any[] = [];
 
-  $effect(() => {
+  $: {
     const values = Object.values($transferManager);
     if (!shallowEqualArrays(transfers, values)) {
       transfers = values;
     }
-  });
+  }
 
-  let rowMenu = [
+  // For Android, disable rowMenu to allow direct row clicks
+  let rowMenu = isAndroid ? [] : [
     {
         label:"Download",
         action:function(_e: any, row: any){
@@ -127,6 +114,23 @@
       }
     }
   ];
+
+  // Android-specific row click handler to open metadata dialog directly
+  function handleRowClick(e: any, row: any) {
+    if (isAndroid) {
+      // Check if the click was on an image or svg (download icon)
+      const clickedElement = e.target as HTMLElement;
+      const isDownloadIcon = clickedElement.tagName === 'IMG' || clickedElement.tagName === 'svg' ||
+                            clickedElement.closest('img') || clickedElement.closest('svg');
+
+      // Don't open metadata dialog if clicking on download icon
+      if (!isDownloadIcon) {
+        activeRow = row.getData();
+        searchState.setActiveRow(activeRow);
+        fileMetadataModal.showModal();
+      }
+    }
+  }
 
 
 
@@ -385,17 +389,9 @@
   function setupColumnClickHandlers() {
     if (!searchColumns || searchColumns.length === 0) return;
 
-    // Find columns by field name instead of index to handle mobile/desktop differences
-    const downloadColumn = searchColumns.find(col => col.field === 'download');
-    const nameColumn = searchColumns.find(col => col.field === 'name');
-    const descriptionColumn = searchColumns.find(col => col.field === 'description');
-    const typeColumn = searchColumns.find(col => col.field === 'type');
-    const sizeColumn = searchColumns.find(col => col.field === 'size');
-    const addressColumn = searchColumns.find(col => col.field === 'address');
-
-    // set cellClick function for download column
-    if (downloadColumn) {
-      (downloadColumn as any).cellClick = function(_e: any, cell: any) {
+    // set cellClick function for download column (column 0)
+    if (searchColumns[0]) {
+      searchColumns[0].cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
 
         // Don't do anything if it's a pod or has no type (no icon shown)
@@ -425,45 +421,45 @@
       }
     }
 
-    // set cellClick function for name column (show modal)
-    if (nameColumn) {
-      (nameColumn as any).cellClick = function(_e: any, cell: any) {
+    // set cellClick function for name column (show modal) - column 1
+    if (searchColumns[1]) {
+      searchColumns[1].cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for description column (show modal) - only on desktop
-    if (descriptionColumn) {
-      (descriptionColumn as any).cellClick = function(_e: any, cell: any) {
+    // set cellClick function for description column (show modal) - column 2
+    if (searchColumns[2]) {
+      searchColumns[2].cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for type column (show modal)
-    if (typeColumn) {
-      (typeColumn as any).cellClick = function(_e: any, cell: any) {
+    // set cellClick function for type column (show modal) - column 3
+    if (searchColumns[3]) {
+      searchColumns[3].cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for size column (show modal)
-    if (sizeColumn) {
-      (sizeColumn as any).cellClick = function(_e: any, cell: any) {
+    // set cellClick function for size column (show modal) - column 4
+    if (searchColumns[4]) {
+      searchColumns[4].cellClick = function(_e: any, cell: any) {
         activeRow = cell.getRow().getData() as SearchResult;
         searchState.setActiveRow(activeRow);
         fileMetadataModal?.showModal()
       }
     }
 
-    // set cellClick function for address column (copy to clipboard) - only on desktop
-    if (addressColumn) {
-      (addressColumn as any).cellClick = function(_e: any, cell: any) {
+    // set cellClick function for address column (copy to clipboard) - column 5
+    if (searchColumns[5]) {
+      searchColumns[5].cellClick = function(_e: any, cell: any) {
         const rowData = cell.getRow().getData() as SearchResult;
         const fullAddress = rowData.address;
 
@@ -617,11 +613,9 @@
     checkTabulator();
   }
 
-  $effect(() => {
-    if (tableSearchResults.length > 0) {
-      setTimeout(waitForTabulatorAndSetup, 500);
-    }
-  });
+  $: if (tableSearchResults.length > 0) {
+    setTimeout(waitForTabulatorAndSetup, 500);
+  }
 
   onDestroy(() => {
     // Clean up store subscription
@@ -648,7 +642,7 @@
 {#if showLogin}
   <LoginModal/>
 {/if}
-<main class="search-container" class:mobile-search={$isMobile} style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px; overflow: hidden;">
+<main class="search-container" style="height: calc(100vh - 120px); display: flex; flex-direction: column; padding: 20px; overflow: hidden;">
   <div class="search-header" style="flex-shrink: 0; margin-bottom: 20px;">
     <div class="row mb-3">
       <label class="input mr-2">
@@ -688,7 +682,7 @@
   </div>
 
   <div class="search-table-container" style="flex: 1; min-height: 0;">
-    <CachedTabulator bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} initialSort={[]} cacheKey="search" />
+    <CachedTabulator bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} rowClick={isAndroid ? handleRowClick : undefined} initialSort={[]} cacheKey="search" />
   </div>
   <dialog id="fileMetadataModal" class="modal" bind:this={fileMetadataModal}>
     <div class="modal-box w-10/12 max-w-5xl max-h-[80vh]">
