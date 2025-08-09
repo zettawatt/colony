@@ -2,4 +2,10 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
   <external-path name="my_images" path="." />
   <cache-path name="my_cache_images" path="." />
+  <!-- Allow access to Downloads directory -->
+  <external-path name="downloads" path="Download" />
+  <!-- Allow access to all external storage -->
+  <external-path name="external_files" path="." />
+  <!-- Additional path for debugging - allow access to entire external storage -->
+  <external-path name="external_storage_root" path="" />
 </paths>

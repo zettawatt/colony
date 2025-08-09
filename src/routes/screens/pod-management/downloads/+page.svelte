@@ -9,8 +9,8 @@
   import { onMount } from "svelte";
   import AddressDisplay from "../../../../components/AddressDisplay.svelte";
   import { v4 as uuidv4 } from 'uuid';
-  import { openPath } from '@tauri-apps/plugin-opener';
   import { isMobile } from '../../../../utils/responsive.js';
+  import { openFileWithDefaultApp } from '../../../../utils/file/openFile';
 
   // $: downloads = Object.values($downloadManager);
 
@@ -62,15 +62,11 @@
   }
 
   async function openFile(file: FileObj) {
-    try {
-      // Construct the full file path
-      const fullPath = `${file.downloadPath}/${file.name}`;
-      await openPath(fullPath);
-      addToast(`Opened ${file.name}`, "info");
-    } catch (err) {
-      console.error("Failed to open file", err);
-      addToast(`Failed to open ${file.name}: ${String(err)}`, "error");
-    }
+    // Construct the full file path
+    const fullPath = `${file.downloadPath}/${file.name}`;
+
+    // Use the cross-platform utility function
+    await openFileWithDefaultApp(fullPath, file.name);
   }
 
   onMount(async () => {

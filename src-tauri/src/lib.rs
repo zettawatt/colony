@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
-use std::fs::write;
 use std::io::Error as IoError;
 use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
@@ -84,6 +83,49 @@ fn get_file_size(path: String) -> Result<u64, String> {
     fs::metadata(path)
         .map(|meta| meta.len())
         .map_err(|e| e.to_string())
+}
+
+// File opener command for Android
+#[tauri::command]
+async fn open_file_with_default_app(file_path: String, app: tauri::AppHandle) -> Result<String, String> {
+    if cfg!(target_os = "android") {
+        open_file_via_socket_communication(&file_path, &app).await
+    } else {
+        Err("This command is only available on Android".to_string())
+    }
+}
+
+#[cfg(target_os = "android")]
+async fn open_file_via_socket_communication(file_path: &str, _app: &tauri::AppHandle) -> Result<String, String> {
+    use tokio::net::TcpStream;
+    use tokio::io::{AsyncWriteExt, AsyncReadExt};
+    use tokio::time::{timeout, Duration};
+
+    let address = "127.0.0.1:8765";
+
+    let mut stream = timeout(Duration::from_secs(5), TcpStream::connect(address))
+        .await
+        .map_err(|_| "Timeout connecting to socket".to_string())?
+        .map_err(|e| format!("Failed to connect to socket: {}", e))?;
+
+    stream.write_all(file_path.as_bytes()).await
+        .map_err(|e| format!("Failed to write to socket: {}", e))?;
+
+    stream.shutdown().await
+        .map_err(|e| format!("Failed to shutdown write: {}", e))?;
+
+    let mut response = String::new();
+    timeout(Duration::from_secs(5), stream.read_to_string(&mut response))
+        .await
+        .map_err(|_| "Timeout reading response".to_string())?
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    Ok(response.trim().to_string())
+}
+
+#[cfg(not(target_os = "android"))]
+async fn open_file_via_socket_communication(_file_path: &str, _app: &tauri::AppHandle) -> Result<String, String> {
+    Err("Not available on non-Android platforms".to_string())
 }
 
 pub struct Session {
@@ -2267,23 +2309,61 @@ async fn download_data(
         }
     };
 
-    // Write the bytes of the dog picture to a file
-    if let Err(e) = write(request.destination_path.clone(), &bytes) {
-        error!("Failed to write file: {e}");
-        // --- Emit download-error event ---
-        let _ = app.emit(
-            "download-error",
-            serde_json::json!({
-                "id": request.id,
-                "address": request.address,
-                "path": request.destination_path,
-                "error": format!("Failed to write file: {e}"),
-            }),
-        );
-        // ----------------------------------
-        return Err(Error::from(e));
-    } else {
-        debug!("File written successfully: {}", request.destination_path);
+    // Write the bytes to a file, overwriting if it exists
+    match std::fs::write(request.destination_path.clone(), &bytes) {
+        Ok(_) => {
+            debug!("File written successfully: {}", request.destination_path);
+        }
+        Err(e) => {
+            // If write fails, try to remove the existing file first and then write
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                debug!("Permission denied, attempting to remove existing file and retry");
+                if let Ok(_) = std::fs::remove_file(&request.destination_path) {
+                    match std::fs::write(request.destination_path.clone(), &bytes) {
+                        Ok(_) => {
+                            debug!("File written successfully after removing existing file: {}", request.destination_path);
+                        }
+                        Err(e2) => {
+                            error!("Failed to write file after removing existing: {e2}");
+                            let _ = app.emit(
+                                "download-error",
+                                serde_json::json!({
+                                    "id": request.id,
+                                    "address": request.address,
+                                    "path": request.destination_path,
+                                    "error": format!("Failed to write file: {e2}"),
+                                }),
+                            );
+                            return Err(Error::from(e2));
+                        }
+                    }
+                } else {
+                    error!("Failed to write file and couldn't remove existing: {e}");
+                    let _ = app.emit(
+                        "download-error",
+                        serde_json::json!({
+                            "id": request.id,
+                            "address": request.address,
+                            "path": request.destination_path,
+                            "error": format!("Failed to write file: {e}"),
+                        }),
+                    );
+                    return Err(Error::from(e));
+                }
+            } else {
+                error!("Failed to write file: {e}");
+                let _ = app.emit(
+                    "download-error",
+                    serde_json::json!({
+                        "id": request.id,
+                        "address": request.address,
+                        "path": request.destination_path,
+                        "error": format!("Failed to write file: {e}"),
+                    }),
+                );
+                return Err(Error::from(e));
+            }
+        }
     }
     // TODO: Implement proper file download once we understand the API
     app.emit(
@@ -2716,6 +2796,7 @@ fn run_with_network(network: &str) {
             dweb_serve,
             dweb_stop,
             dweb_open,
+            open_file_with_default_app,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
