@@ -51,7 +51,11 @@
         <li>
           <a href="/screens/wallet" class="btn btn-ghost">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5h12a1 1 0 011 1" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 11h8M6 13h6" />
+              <circle cx="17" cy="13" r="2" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 12.5h1" />
             </svg>
             <span class="xl:inline hidden">Wallet</span>
           </a>
