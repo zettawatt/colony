@@ -146,9 +146,9 @@
       </div>
     </div>
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
-      <li><a href="/screens/pod-management/your-pods">Your Pods</a></li>
-      <li><a href="/screens/pod-management/uploads">Uploads</a></li>
       <li><a href="/screens/pod-management/downloads" class="menu-active">Downloads</a></li>
+      <li><a href="/screens/pod-management/uploads">Uploads</a></li>
+      <li><a href="/screens/pod-management/your-pods">My Pods</a></li>
     </ul>
   </Drawer>
 </main>

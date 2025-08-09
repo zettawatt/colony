@@ -810,7 +810,7 @@
     <div slot="main" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
       <div class="row" class:mobile-row={$isMobile} style="display: flex; flex-direction: row; justify-content: space-between; padding: 20px; flex-shrink: 0;">
         {#if !$isMobile}
-          <h2 class="h2">Your Pods</h2>
+          <h2 class="h2">My Pods</h2>
         {/if}
         <div class="utility-bar" class:mobile-utility-bar={$isMobile} style="display: flex;">
           <button class="btn btn-neutral btn-soft dark:bg-primary" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>
@@ -892,9 +892,9 @@
       </div>
     </div>
     <ul slot="sidebar" class="menu bg-base-100 text-base-content min-h-full w-40 p-5">
-      <li><a href="/screens/pod-management/your-pods" class="menu-active">Your Pods</a></li>
-      <li><a href="/screens/pod-management/uploads">Uploads</a></li>
       <li><a href="/screens/pod-management/downloads">Downloads</a></li>
+      <li><a href="/screens/pod-management/uploads">Uploads</a></li>
+      <li><a href="/screens/pod-management/your-pods" class="menu-active">My Pods</a></li>
     </ul>
   </Drawer>
   <dialog id="createNewPodModal" class="modal" bind:this={createNewPodModal}>

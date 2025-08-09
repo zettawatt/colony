@@ -59,6 +59,30 @@
   {#if isOpen}
     <div class="menu-dropdown" class:android-menu={isAndroid}>
       <a
+        href="/screens/pod-management/downloads"
+        class="menu-item"
+        class:active={isActive('downloads')}
+        onclick={closeMenu}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4" />
+        </svg>
+        Downloads
+      </a>
+
+      <a
+        href="/screens/pod-management/uploads"
+        class="menu-item"
+        class:active={isActive('uploads')}
+        onclick={closeMenu}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        Uploads
+      </a>
+
+      <a
         href="/screens/pod-management/your-pods"
         class="menu-item"
         class:active={isActive('your-pods')}
@@ -68,31 +92,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
         </svg>
-        Your Pods
-      </a>
-      
-      <a 
-        href="/screens/pod-management/uploads" 
-        class="menu-item" 
-        class:active={isActive('uploads')}
-        onclick={closeMenu}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-        Uploads
-      </a>
-      
-      <a 
-        href="/screens/pod-management/downloads" 
-        class="menu-item" 
-        class:active={isActive('downloads')}
-        onclick={closeMenu}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4" />
-        </svg>
-        Downloads
+        My Pods
       </a>
     </div>
   {/if}

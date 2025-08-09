@@ -269,7 +269,7 @@
                 <th></th>
               {/if}
               <th>Wallet Name</th>
-              <th>Wallet Key</th>
+              <th>Address</th>
               {#if !$isMobile}
                 <th>ETH Balance</th>
                 <th>AUTONOMI Balance</th>

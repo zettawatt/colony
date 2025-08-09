@@ -35,9 +35,9 @@
     </svg>
   </a>
 
-  <a 
-    href="/screens/pod-management/your-pods" 
-    class="nav-item" 
+  <a
+    href="/screens/pod-management/downloads"
+    class="nav-item"
     class:active={isActive('/screens/pod-management')}
     aria-label="File Management"
   >
