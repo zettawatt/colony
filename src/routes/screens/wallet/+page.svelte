@@ -8,6 +8,9 @@
   import AddressDisplay from "../../../components/AddressDisplay.svelte";
   import { isMobile } from '../../../utils/responsive.js';
 
+  // Android detection
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
+
   let primaryWalletName = $state("");
   let storedWallets = $state<WalletInfo[]>([]);
   let walletBalances = $state<Record<string, { ant_balance?: number; gas_balance?: number; loading: boolean }>>({});
@@ -281,8 +284,10 @@
                     {#if !$isMobile}
                       <th>{idx + 1}</th>
                     {/if}
-                    <td>
-                      {wallet.name}
+                    <td class:android-wallet-name={isAndroid}>
+                      <span class="wallet-name-text" class:truncated={isAndroid}>
+                        {wallet.name}
+                      </span>
                       {#if wallet.name === primaryWalletName}
                         <span title="Primary Wallet" style="margin-left:4px; color: #ffc940; font-size: 1.1rem;">💰</span>
                       {/if}
@@ -311,20 +316,22 @@
                       </td>
                     {/if}
                     <td>
-                      <button 
-                        class="btn btn-warning btn-square"
-                        onclick={() => { 
-                          activeWallet = JSON.parse(JSON.stringify(wallet));
-                          referenceWallet = JSON.parse(JSON.stringify(wallet));
-                          editWalletModal.showModal(); 
-                        }}>
-                        <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
-                      </button>
-                      <button
-                        class="btn btn-error btn-square"
-                        onclick={() => { activeWallet = wallet; deleteWalletModal.showModal(); }}>
-                        <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
-                      </button>
+                      <div class="operations-buttons" class:android-operations={isAndroid}>
+                        <button
+                          class="btn btn-warning btn-square"
+                          onclick={() => {
+                            activeWallet = JSON.parse(JSON.stringify(wallet));
+                            referenceWallet = JSON.parse(JSON.stringify(wallet));
+                            editWalletModal.showModal();
+                          }}>
+                          <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="19" height="19" />
+                        </button>
+                        <button
+                          class="btn btn-error btn-square"
+                          onclick={() => { activeWallet = wallet; deleteWalletModal.showModal(); }}>
+                          <img src="/app-icons/trash-icon.svg" alt="trash icon" width="16" height="16" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 {/each}
@@ -504,6 +511,36 @@
 
 .mobile-add-wallet .btn {
   width: 200px;
+}
+
+/* Android-specific styles */
+.android-wallet-name {
+  max-width: 80px;
+}
+
+.wallet-name-text.truncated {
+  display: block;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operations-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.operations-buttons.android-operations {
+  flex-direction: row;
+  gap: 8px;
+  justify-content: center;
+}
+
+.operations-buttons.android-operations .btn {
+  min-width: 40px;
+  padding: 8px;
 }
 
 @media (max-width: 767px) {
