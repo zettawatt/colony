@@ -18,7 +18,7 @@ Colony is a cross-platform GUI application that makes it easy to upload, downloa
 - 🔍 **Metadata Search** - Client-side search using RDF/SPARQL for rich data discovery
 - 🌐 **Pod Management** - Create and manage metadata pods for organizing and sharing content
 - 🔗 **Decentralized Sharing** - Share files and metadata without central servers
-- 🖥️ **Cross-Platform** - Native applications for Linux, Windows, and macOS
+- 🖥️ **Cross-Platform** - Native applications for Linux, Windows, and macOS. Experimental Android app.
 
 ## 📦 Installation
 
@@ -39,6 +39,9 @@ Download the latest release for your platform from the [Releases page](https://g
 #### 🍎 macOS
 - **DMG Installer**: `Colony_x.x.x_aarch64.dmg` - For Apple silicon macOS systems
 - **DMG Installer**: `Colony_x.x.x_x86_64.dmg` - For Intel-based macOS systems
+
+#### 🤖 Android (Experimental, may be unstable)
+- **APK**: `colony_x.x.x.apk` - For Android devices. Note that Colony is not available on Google Play due to cost and bureaucratic hurdles.
 
 ### Network Options
 

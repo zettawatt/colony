@@ -244,6 +244,9 @@ jobs:
             **Windows:**
             - Download the `.msi` file and run the installer
 
+            **Android (EXPERIMENTAL, may be unstable):**
+            - Download the `.apk` file and install it on your device
+
             ### Changes
             See the commit history for detailed changes in this release.
           releaseDraft: false
