@@ -3,6 +3,9 @@
 
   let isOpen = $state(false);
 
+  // Android detection
+  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
+
   // Get current route to highlight active item
   let currentRoute = $derived(page.url.pathname);
   
@@ -54,10 +57,10 @@
   </button>
   
   {#if isOpen}
-    <div class="menu-dropdown">
-      <a 
-        href="/screens/pod-management/your-pods" 
-        class="menu-item" 
+    <div class="menu-dropdown" class:android-menu={isAndroid}>
+      <a
+        href="/screens/pod-management/your-pods"
+        class="menu-item"
         class:active={isActive('your-pods')}
         onclick={closeMenu}
       >
@@ -139,6 +142,60 @@
     z-index: 1000;
     min-width: 160px;
     overflow: hidden;
+  }
+
+  /* Android-specific styles for better visibility */
+  .menu-dropdown.android-menu {
+    z-index: 99999 !important;
+    background: #ffffff !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8) !important;
+    border: 3px solid #333333 !important;
+    position: fixed !important;
+    top: 60px !important;
+    left: 10px !important;
+  }
+
+  /* Ensure menu items are also opaque on Android */
+  .menu-dropdown.android-menu .menu-item {
+    background: #ffffff !important;
+    color: #000000 !important;
+    opacity: 1 !important;
+  }
+
+  .menu-dropdown.android-menu .menu-item:hover {
+    background: #f0f0f0 !important;
+    color: #000000 !important;
+  }
+
+  .menu-dropdown.android-menu .menu-item.active {
+    background: #e0e0e0 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+  }
+
+  /* Dark mode support for Android menu */
+  @media (prefers-color-scheme: dark) {
+    .menu-dropdown.android-menu {
+      background: #2a2a2a !important;
+      border: 3px solid #cccccc !important;
+    }
+
+    .menu-dropdown.android-menu .menu-item {
+      background: #2a2a2a !important;
+      color: #ffffff !important;
+    }
+
+    .menu-dropdown.android-menu .menu-item:hover {
+      background: #3a3a3a !important;
+      color: #ffffff !important;
+    }
+
+    .menu-dropdown.android-menu .menu-item.active {
+      background: #4a4a4a !important;
+      color: #ffffff !important;
+    }
   }
 
   .menu-item {
