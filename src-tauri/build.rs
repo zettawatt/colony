@@ -115,7 +115,7 @@ fn create_android_dummy_binaries(binaries_dir: &Path) {
     ];
 
     for target in &android_targets {
-        let binary_name = format!("colony-dweb-{}", target);
+        let binary_name = format!("colony-dweb-{target}");
         let binary_path = binaries_dir.join(&binary_name);
 
         // Skip if already exists
@@ -132,7 +132,7 @@ exit 0
 "#;
 
         if let Err(e) = fs::write(&binary_path, dummy_content) {
-            println!("cargo:warning=Failed to create Android dummy binary {}: {}", binary_name, e);
+            println!("cargo:warning=Failed to create Android dummy binary {binary_name}: {e}");
             continue;
         }
 
@@ -147,7 +147,7 @@ exit 0
             }
         }
 
-        println!("cargo:info=Created Android dummy binary: {}", binary_name);
+        println!("cargo:info=Created Android dummy binary: {binary_name}");
     }
 
     println!("cargo:info=Android dummy binaries creation completed");
@@ -158,7 +158,11 @@ fn copy_platform_binary(binaries_dir: &Path) {
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
     let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
 
-    let source_binary = match (target_os.as_str(), target_arch.as_str(), target_env.as_str()) {
+    let source_binary = match (
+        target_os.as_str(),
+        target_arch.as_str(),
+        target_env.as_str(),
+    ) {
         ("linux", "x86_64", "gnu") => "colony-dweb-x86_64-unknown-linux-gnu",
         ("windows", "x86_64", _) => "colony-dweb-x86_64-pc-windows-msvc.exe",
         ("macos", "aarch64", _) => "colony-dweb-aarch64-apple-darwin",

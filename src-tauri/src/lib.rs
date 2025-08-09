@@ -1,9 +1,9 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //use colony::config::generate_seed_phrase;
+use autonomi::client::config::ClientConfig;
 use autonomi::client::payment::PaymentOption;
 use autonomi::client::quote::CostError;
 use autonomi::client::ConnectError;
-use autonomi::client::config::ClientConfig;
 use autonomi::client::{GetError, PutError};
 use autonomi::data::DataAddress;
 use autonomi::{AddressParseError, Bytes, Client, Wallet};
@@ -87,7 +87,10 @@ fn get_file_size(path: String) -> Result<u64, String> {
 
 // File opener command for Android
 #[tauri::command]
-async fn open_file_with_default_app(file_path: String, app: tauri::AppHandle) -> Result<String, String> {
+async fn open_file_with_default_app(
+    file_path: String,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
     if cfg!(target_os = "android") {
         open_file_via_socket_communication(&file_path, &app).await
     } else {
@@ -96,9 +99,12 @@ async fn open_file_with_default_app(file_path: String, app: tauri::AppHandle) ->
 }
 
 #[cfg(target_os = "android")]
-async fn open_file_via_socket_communication(file_path: &str, _app: &tauri::AppHandle) -> Result<String, String> {
+async fn open_file_via_socket_communication(
+    file_path: &str,
+    _app: &tauri::AppHandle,
+) -> Result<String, String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;
-    use tokio::io::{AsyncWriteExt, AsyncReadExt};
     use tokio::time::{timeout, Duration};
 
     let address = "127.0.0.1:8765";
@@ -108,10 +114,14 @@ async fn open_file_via_socket_communication(file_path: &str, _app: &tauri::AppHa
         .map_err(|_| "Timeout connecting to socket".to_string())?
         .map_err(|e| format!("Failed to connect to socket: {}", e))?;
 
-    stream.write_all(file_path.as_bytes()).await
+    stream
+        .write_all(file_path.as_bytes())
+        .await
         .map_err(|e| format!("Failed to write to socket: {}", e))?;
 
-    stream.shutdown().await
+    stream
+        .shutdown()
+        .await
         .map_err(|e| format!("Failed to shutdown write: {}", e))?;
 
     let mut response = String::new();
@@ -124,7 +134,10 @@ async fn open_file_via_socket_communication(file_path: &str, _app: &tauri::AppHa
 }
 
 #[cfg(not(target_os = "android"))]
-async fn open_file_via_socket_communication(_file_path: &str, _app: &tauri::AppHandle) -> Result<String, String> {
+async fn open_file_via_socket_communication(
+    _file_path: &str,
+    _app: &tauri::AppHandle,
+) -> Result<String, String> {
     Err("Not available on non-Android platforms".to_string())
 }
 
@@ -369,27 +382,41 @@ fn get_new_seed_phrase() -> Result<String, String> {
 ////////////////////////////////////////////////////////////////////
 
 #[tauri::command]
-fn initialize_datastore(app: AppHandle, state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
+fn initialize_datastore(
+    app: AppHandle,
+    state: State<'_, Mutex<AppState>>,
+) -> Result<String, Error> {
     let datastore = if cfg!(target_os = "android") {
         // Android-specific initialization using from_paths
-        let app_data_dir = app.path().app_data_dir()
-            .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to get app data dir: {}", e))))?;
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|e| Error::Io(IoError::other(format!("Failed to get app data dir: {e}"))))?;
 
         let data_dir = app_data_dir.clone();
         let pods_dir = app_data_dir.join("pods");
 
         // Ensure the pods directory exists
         if !pods_dir.exists() {
-            std::fs::create_dir_all(&pods_dir)
-                .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create pods directory: {}", e))))?;
+            std::fs::create_dir_all(&pods_dir).map_err(|e| {
+                Error::Io(IoError::other(format!(
+                    "Failed to create pods directory: {e}"
+                )))
+            })?;
         }
 
-        info!("Android: Using data_dir: {:?}, pods_dir: {:?}", data_dir, pods_dir);
+        info!(
+            "Android: Using data_dir: {:?}, pods_dir: {:?}",
+            data_dir, pods_dir
+        );
         // Use standard Android Downloads directory
         let downloads_dir = std::path::PathBuf::from("/storage/emulated/0/Download");
         if !downloads_dir.exists() {
-            std::fs::create_dir_all(&downloads_dir)
-                .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create downloads directory: {}", e))))?;
+            std::fs::create_dir_all(&downloads_dir).map_err(|e| {
+                Error::Io(IoError::other(format!(
+                    "Failed to create downloads directory: {e}"
+                )))
+            })?;
         }
         DataStore::from_paths(data_dir, pods_dir, downloads_dir)?
     } else {
@@ -2318,10 +2345,13 @@ async fn download_data(
             // If write fails, try to remove the existing file first and then write
             if e.kind() == std::io::ErrorKind::PermissionDenied {
                 debug!("Permission denied, attempting to remove existing file and retry");
-                if let Ok(_) = std::fs::remove_file(&request.destination_path) {
+                if std::fs::remove_file(&request.destination_path).is_ok() {
                     match std::fs::write(request.destination_path.clone(), &bytes) {
                         Ok(_) => {
-                            debug!("File written successfully after removing existing file: {}", request.destination_path);
+                            debug!(
+                                "File written successfully after removing existing file: {}",
+                                request.destination_path
+                            );
                         }
                         Err(e2) => {
                             error!("Failed to write file after removing existing: {e2}");
@@ -2604,7 +2634,10 @@ async fn dweb_open(
 ) -> Result<String, Error> {
     // Android doesn't support dweb sidecar - return early
     if cfg!(target_os = "android") {
-        info!("Android: dweb_open command called but not supported on Android - address: {}", address);
+        info!(
+            "Android: dweb_open command called but not supported on Android - address: {}",
+            address
+        );
         return Ok("dweb_open not supported on Android".to_string());
     }
 
@@ -2844,18 +2877,22 @@ async fn init_client(app: AppHandle, environment: &str) -> Result<Client, Error>
         "local" => Ok(Client::init_local().await?),
         "alpha" => Ok(Client::init_alpha().await?),
         _ => {
-            let mut config:  ClientConfig = Default::default();
+            let mut config: ClientConfig = Default::default();
             if cfg!(target_os = "android") {
                 // Android-specific chunk cache directory
-                let app_data_dir = app.path().app_data_dir()
-                    .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to get app data dir: {}", e))))?;
-        
+                let app_data_dir = app.path().app_data_dir().map_err(|e| {
+                    Error::Io(IoError::other(format!("Failed to get app data dir: {e}")))
+                })?;
+
                 let cache_dir = app_data_dir.join("chunk_cache");
-        
+
                 // Ensure the pods directory exists
                 if !cache_dir.exists() {
-                    std::fs::create_dir_all(&cache_dir)
-                        .map_err(|e| Error::Io(IoError::new(std::io::ErrorKind::Other, format!("Failed to create chunk cache directory: {}", e))))?;
+                    std::fs::create_dir_all(&cache_dir).map_err(|e| {
+                        Error::Io(IoError::other(format!(
+                            "Failed to create chunk cache directory: {e}"
+                        )))
+                    })?;
                 }
                 config.strategy.chunk_cache_dir = Some(cache_dir);
             }
