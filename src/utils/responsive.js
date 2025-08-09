@@ -35,14 +35,19 @@ export function initMobileDetection() {
   return () => {};
 }
 
-// Utility function to get mobile-specific column configurations
+/**
+ * Utility function to get mobile-specific column configurations
+ * @param {any[]} allColumns - Array of all available columns
+ * @param {string[]} mobileColumnKeys - Array of column keys to show on mobile
+ * @returns {any[]} Filtered columns for mobile or all columns for desktop
+ */
 export function getMobileColumns(allColumns, mobileColumnKeys) {
   if (!checkIsMobile()) {
     return allColumns;
   }
-  
-  return allColumns.filter(column => 
-    mobileColumnKeys.includes(column.field) || 
+
+  return allColumns.filter(column =>
+    mobileColumnKeys.includes(column.field) ||
     mobileColumnKeys.includes(column.title)
   );
 }

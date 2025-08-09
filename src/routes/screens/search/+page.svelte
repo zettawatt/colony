@@ -754,32 +754,7 @@
   justify-content: center;
 }
 
-/* Mobile-specific styles */
-.mobile-search {
-  padding: 10px !important;
-  height: calc(100vh - 116px) !important; /* Account for mobile header + bottom nav */
-}
 
-.mobile-search .search-header {
-  margin-bottom: 10px !important;
-}
-
-.mobile-search .input {
-  width: 100% !important;
-  max-width: none !important;
-  font-size: 16px; /* Prevent zoom on iOS */
-}
-
-.mobile-search .row {
-  flex-direction: column;
-  gap: 10px;
-}
-
-.mobile-search .row.mb-3 {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
 
 /* Mobile table adjustments */
 @media (max-width: 767px) {
