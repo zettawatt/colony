@@ -19,14 +19,24 @@ export async function initStore() {
     const dir = await appDataDir();
     let defaultDownloadDir: string;
 
-    try {
-      defaultDownloadDir = await downloadDir();
-      if (!defaultDownloadDir) {
+    // Android detection
+    const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
+
+    if (isAndroid) {
+      // For Android, use standard Android Downloads directory to match Rust backend
+      defaultDownloadDir = "/storage/emulated/0/Download";
+      console.log("Android: Using standard Downloads directory:", defaultDownloadDir);
+    } else {
+      // For desktop, try to use system download directory
+      try {
+        defaultDownloadDir = await downloadDir();
+        if (!defaultDownloadDir) {
+          defaultDownloadDir = dir;
+        }
+      } catch (error) {
+        console.warn("Failed to get download directory, using app data directory as fallback:", error);
         defaultDownloadDir = dir;
       }
-    } catch (error) {
-      console.warn("Failed to get download directory, using app data directory as fallback:", error);
-      defaultDownloadDir = dir;
     }
 
     store = new LazyStore(`${dir}/${STORE_NAME}`, { autoSave: true });
