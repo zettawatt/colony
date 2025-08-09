@@ -43,6 +43,22 @@ export async function downloadFile(downloadReq: DownloadRequest, type: "file" | 
     await ps.addDownloadedFile(newFileObj);
   } catch (err) {
     console.error("Download failed", err);
-    addToast("Failed to download files, see logs", "error");
+
+    // Try to extract more detailed error information
+    let errorMessage = "Failed to download files, see logs";
+    if (err && typeof err === 'object') {
+      if ('message' in err) {
+        errorMessage = `Download failed: ${err.message}`;
+      } else if ('error' in err) {
+        errorMessage = `Download failed: ${err.error}`;
+      } else {
+        errorMessage = `Download failed: ${JSON.stringify(err)}`;
+      }
+    } else if (typeof err === 'string') {
+      errorMessage = `Download failed: ${err}`;
+    }
+
+    console.error("Detailed error:", errorMessage);
+    addToast(errorMessage, "error");
   }
 }

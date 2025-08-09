@@ -99,6 +99,13 @@ function connectListeners() {
   // On download error: mark status, add error message
   listen('download-error', event => {
     const { id, message } = event.payload as { id: string; message: string };
+    console.error("Download error received:", { id, message });
+
+    // Show error toast to user
+    import('../stores/toast').then(({ addToast }) => {
+      addToast(`Download failed: ${message}`, "error");
+    });
+
     update(transfers => {
       const t = transfers[id];
       return {
