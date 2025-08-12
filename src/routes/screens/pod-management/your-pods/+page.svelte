@@ -340,6 +340,16 @@
 
     if (activePod.fileObjs.length > 0 || deletedPodItems.length > 0) {
       for (const file of activePod.fileObjs) {
+        console.log("Processing file in savePod:", file);
+        console.log("File properties:", {
+          type: file.type,
+          modified: file.modified,
+          isAutonomiOnly: file.isAutonomiOnly,
+          hasAutonomiAddress: "autonomiAddress" in file,
+          autonomiAddress: file.autonomiAddress,
+          name: file.name
+        });
+
         if (file.type === 'file' && file.modified === true){
           if (("metadata" in file) && Object.keys(file.metadata).length === 0){
             file.metadata = JSON.parse(JSON.stringify(templates["Simple"]));
@@ -348,11 +358,18 @@
               file.metadata["schema:name"] = file.name;
             }
           }
-          if ("autonomiAddress" in file) {
+
+          // Check if file has autonomiAddress property and it's not empty
+          if (file.autonomiAddress && file.autonomiAddress.trim() !== "") {
             file.metadata["@id"] = `ant://${file.autonomiAddress}`;
-          } else {
+            console.log("Successfully set @id for file:", file.autonomiAddress);
+          } else if (!file.isAutonomiOnly) {
+            console.error("Regular file missing autonomiAddress:", file);
             addToast("File couldn't be added to pod because it's never been uploaded to the network before.", "error");
-            console.error("file doesn't have an Autonomi address for some reason");
+            continue;
+          } else {
+            console.error("Autonomi-only file missing autonomiAddress:", file);
+            addToast("Autonomi-only file is missing its address.", "error");
             continue;
           }
           console.log(file.metadata)
@@ -497,10 +514,27 @@
   async function fetchPods() {
     try {
       const results = await invoke('list_my_pods') as any[];
-      const regularPods = results.filter((pod: any) => pod.name !== "User Configuration");
+
+      // Debug: Log all pods with their depth values
+      console.log('All pods with depth values:', results.map(pod => ({
+        name: pod.name,
+        depth: pod.depth,
+        depthType: typeof pod.depth
+      })));
+
+      // Filter out User Configuration pod and only show depth 0 pods (user-owned pods)
+      const regularPods = results.filter((pod: any) => {
+        const isUserConfig = pod.name === "User Configuration";
+        const isDepthZero = pod.depth === "0" || pod.depth === 0 || pod.depth === null || pod.depth === undefined;
+
+        console.log(`Pod ${pod.name}: isUserConfig=${isUserConfig}, depth=${pod.depth}, isDepthZero=${isDepthZero}`);
+
+        return !isUserConfig && isDepthZero;
+      });
+
       userConfigPod = results.find((pod: any) => pod.name === "User Configuration");
-      // result will likely be { addresses: [ ..pod addresses.. ] }
-      console.log('Pods:', results);
+
+      console.log('Filtered pods:', regularPods);
       console.log('user config pod', userConfigPod)
       return regularPods
     } catch (e) {
@@ -650,6 +684,8 @@
           metadata: {},
           type: 'file',
           modified: true,
+          // Preserve important properties from the original item
+          isAutonomiOnly: item.isAutonomiOnly || false,
         }))
       ]
     };
@@ -690,6 +726,31 @@
 
     // Reset the address field
     autonomiFileAddress = "";
+  }
+
+  function getDisplayName(item: any): string {
+    // Priority: schema:name > schema:alternateName > schema:description > fallback
+    if (item.metadata && item.metadata["schema:name"]) {
+      return item.metadata["schema:name"];
+    }
+    if (item.metadata && item.metadata["schema:alternateName"]) {
+      return item.metadata["schema:alternateName"];
+    }
+    if (item.metadata && item.metadata["schema:description"]) {
+      return item.metadata["schema:description"];
+    }
+
+    // Fallback to the same format as Available Files table
+    if (item.name) {
+      return item.name;
+    }
+
+    // If no name at all, use the autonomi address format
+    if (item.autonomiAddress) {
+      return `Autonomi File (${item.autonomiAddress.slice(0, 8)}...)`;
+    }
+
+    return "Unknown File";
   }
 
 
@@ -1003,7 +1064,7 @@
                     }
                   }}
                 >
-                  <span class="truncate">{item.name}</span>
+                  <span class="truncate">{getDisplayName(item)}</span>
                   <button
                     class="edit-button btn btn-sm"
                     onclick={(e) => {
@@ -1326,6 +1387,8 @@
   background-color: #f9c7c8 !important;
   border: solid red 1px !important;
   z-index: 1 !important;
+  min-height: 32px !important;
+  height: auto !important;
 }
 
 .item-container {
@@ -1388,6 +1451,8 @@
     color: black;
     border: solid red 1px !important;
     z-index: 1 !important;
+    min-height: 32px !important;
+    height: auto !important;
   }
 }
 
