@@ -93,7 +93,7 @@
       await ps.setPrimaryWallet(name);
       await setActiveWallet(name);
       console.log(response); // "Wallet switched"
-      addToast("Primary wallet has been switched! Please restart the app", "success");
+      addToast("Primary wallet has been switched!", "success");
       return response;
     } catch (error) {
       console.error('Error switching wallet:', error);
