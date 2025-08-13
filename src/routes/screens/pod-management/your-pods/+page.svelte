@@ -98,9 +98,9 @@
   });
 
 
-  $effect(()=> {
-    console.log('activepod', activePod)
-  })
+  // $effect(()=> {
+  //   console.log('activepod', $state.snapshot(activePod))
+  // })
 
   $effect(()=> {
     // Whenever podsSyncing changes, show/hide the syncing dialog
@@ -336,19 +336,19 @@
   }
 
   async function savePod() {
-    console.log("savePod", activePod)
+    // console.log("savePod", $state.snapshot(activePod))
 
     if (activePod.fileObjs.length > 0 || deletedPodItems.length > 0) {
       for (const file of activePod.fileObjs) {
-        console.log("Processing file in savePod:", file);
-        console.log("File properties:", {
-          type: file.type,
-          modified: file.modified,
-          isAutonomiOnly: file.isAutonomiOnly,
-          hasAutonomiAddress: "autonomiAddress" in file,
-          autonomiAddress: file.autonomiAddress,
-          name: file.name
-        });
+        // console.log("Processing file in savePod:", $state.snapshot(file));
+        // console.log("File properties:", {
+        //   type: file.type,
+        //   modified: file.modified,
+        //   isAutonomiOnly: file.isAutonomiOnly,
+        //   hasAutonomiAddress: "autonomiAddress" in file,
+        //   autonomiAddress: file.autonomiAddress,
+        //   name: file.name
+        // });
 
         if (file.type === 'file' && file.modified === true){
           if (("metadata" in file) && Object.keys(file.metadata).length === 0){
@@ -387,9 +387,11 @@
           // }});
           await putSubjectData(activePod.address, file.autonomiAddress, file.metadata)
           addToast(`Successfilly added ${file.name} to pod!`, "success")
-        } else if (file.type === 'pod-ref'){
+        } else if (file.type === 'pod-ref' && file.modified === true){
+          console.log("About to add pod ref with address:", file.autonomiAddress);
+          console.log("Pod address:", activePod.address);
           await addPodRef(activePod.address, file.autonomiAddress)
-          // console.log(result);
+          addToast(`Successfully added pod reference to pod!`, "success")
         }
       }
 
@@ -403,6 +405,9 @@
           // do something else to add pod reference
         }
       }
+
+      // Clear deleted items after processing them
+      deletedPodItems = [];
     }
   }
 
@@ -700,16 +705,52 @@
   function addPodReference() {
     if (!podRefAddress) return;
     if (!activePod.fileObjs) activePod.fileObjs = [];
-    activePod.fileObjs.push({
+
+    console.log("Adding pod reference with address:", podRefAddress);
+
+    // Check if this pod reference already exists in active items
+    const existingPodRef = activePod.fileObjs.find(
+      (item: any) => item.type === 'pod-ref' && item.autonomiAddress === podRefAddress
+    );
+
+    if (existingPodRef) {
+      addToast("This pod reference already exists in the pod", "warning");
+      return;
+    }
+
+    // Remove any matching items from deletedPodItems (in case we're re-adding something we just removed)
+    deletedPodItems = deletedPodItems.filter(
+      (item: any) => !(item.type === 'pod-ref' && item.autonomiAddress === podRefAddress)
+    );
+
+    const newPodRef = {
       autonomiAddress: podRefAddress,
       type: "pod-ref",
       uuid: uuidv4(),
-    })
+      modified: true, // Mark as modified so it gets processed in savePod
+      selected: false,
+    };
+
+    console.log("Created new pod ref object:", newPodRef);
+    activePod.fileObjs.push(newPodRef);
+
+    // Clear the input field
+    podRefAddress = "";
   }
 
   function addAutonomiFile() {
     if (!autonomiFileAddress) return;
     if (!uploadedFiles) uploadedFiles = [];
+
+    // Check if this autonomi file already exists
+    const existingFile = uploadedFiles.find(
+      (file: any) => file.autonomiAddress === autonomiFileAddress
+    );
+
+    if (existingFile) {
+      addToast("This Autonomi file already exists in the available files", "warning");
+      return;
+    }
 
     // Create a new file object for the Autonomi file
     const newFileObj = new FileObj({
@@ -788,7 +829,7 @@
         }
         addToast('Metadata saved!', 'success');
       }
-      console.log(editingPodItem)
+      console.log($state.snapshot(editingPodItem))
       editFileMetadataModal.close();
     } catch (error) {
       console.error(error);
@@ -1047,7 +1088,7 @@
                     onclick={(e) => {
                       editingPodItem = item;
                       podRefAddress = item.autonomiAddress;
-                      console.log("editingPodItem", editingPodItem)
+                      console.log("editingPodItem", $state.snapshot(editingPodItem))
                       e.stopPropagation();
                       editFileMetadataModal.showModal();
                     }}
