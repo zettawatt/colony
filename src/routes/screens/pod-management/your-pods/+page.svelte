@@ -362,14 +362,12 @@
           // Check if file has autonomiAddress property and it's not empty
           if (file.autonomiAddress && file.autonomiAddress.trim() !== "") {
             file.metadata["@id"] = `ant://${file.autonomiAddress}`;
-            console.log("Successfully set @id for file:", file.autonomiAddress);
           } else if (!file.isAutonomiOnly) {
-            console.error("Regular file missing autonomiAddress:", file);
             addToast("File couldn't be added to pod because it's never been uploaded to the network before.", "error");
+            console.error("file doesn't have an Autonomi address for some reason");
             continue;
           } else {
-            console.error("Autonomi-only file missing autonomiAddress:", file);
-            addToast("Autonomi-only file is missing its address.", "error");
+            console.error("Autonomi-only file missing autonomiAddress");
             continue;
           }
           console.log(file.metadata)
@@ -520,27 +518,15 @@
     try {
       const results = await invoke('list_my_pods') as any[];
 
-      // Debug: Log all pods with their depth values
-      console.log('All pods with depth values:', results.map(pod => ({
-        name: pod.name,
-        depth: pod.depth,
-        depthType: typeof pod.depth
-      })));
-
       // Filter out User Configuration pod and only show depth 0 pods (user-owned pods)
       const regularPods = results.filter((pod: any) => {
         const isUserConfig = pod.name === "User Configuration";
         const isDepthZero = pod.depth === "0" || pod.depth === 0 || pod.depth === null || pod.depth === undefined;
 
-        console.log(`Pod ${pod.name}: isUserConfig=${isUserConfig}, depth=${pod.depth}, isDepthZero=${isDepthZero}`);
-
         return !isUserConfig && isDepthZero;
       });
 
       userConfigPod = results.find((pod: any) => pod.name === "User Configuration");
-
-      console.log('Filtered pods:', regularPods);
-      console.log('user config pod', userConfigPod)
       return regularPods
     } catch (e) {
       console.error('Failed to fetch pods:', e);
@@ -653,7 +639,6 @@
   async function loadTable() {
     // createdPods = await ps.getPodCache() as [];
     createdPods = (await fetchPods()) || [];
-    console.log("createdPods", createdPods)
   }
 
   function makeDateReadable(date: string | undefined) {
@@ -683,15 +668,24 @@
       newFrom: from.map((item: any) => ({ ...item, selected: false })),
       newTo: [
         ...to,
-        ...newItems.map((item: any) => ({
-          ...item,
-          selected: false,
-          metadata: {},
-          type: 'file',
-          modified: true,
-          // Preserve important properties from the original item
-          isAutonomiOnly: item.isAutonomiOnly || false,
-        }))
+        ...newItems.map((item: any) => {
+          // Create a new object with proper public properties
+          return {
+            // Copy all enumerable properties
+            ...item,
+            // Override specific properties
+            selected: false,
+            metadata: {},
+            type: 'file',
+            modified: true,
+            // Explicitly set public properties from FileObj getters or private properties
+            autonomiAddress: item.autonomiAddress || item._autonomiAddress,
+            isAutonomiOnly: item.isAutonomiOnly !== undefined ? item.isAutonomiOnly : (item._isAutonomiOnly || false),
+            name: item.name || item._name,
+            fileSize: item.fileSize || item._fileSize,
+            uuid: item.uuid || item._uuid,
+          };
+        })
       ]
     };
   }
