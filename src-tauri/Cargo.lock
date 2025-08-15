@@ -2191,9 +2191,9 @@ dependencies = [
 
 [[package]]
 name = "colonylib"
-version = "0.5.13"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7baf1d29a78a31fc20d9623223aa1a2419bcbfb6f07228cd11dc71b5b74d072e"
+checksum = "615fc87971ed6ac774cefb91d3c96008703f061851bb08daa4a09558d862ce50"
 dependencies = [
  "autonomi",
  "bip39",
