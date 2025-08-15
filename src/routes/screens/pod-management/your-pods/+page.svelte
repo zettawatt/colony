@@ -486,6 +486,9 @@
         return;
       }
 
+      // Write keystore to file before uploading
+      const pw = await getPassword();
+      await invoke("write_keystore_to_file", {password: pw})
       addToast("Uploading all pods to the network...", "info", 8000);
       allPodsUploading.set(true);
       const result = await invoke<string>('upload_all');
@@ -1077,18 +1080,20 @@
                   }}
                 >
                   <span class="truncate">{item.autonomiAddress}</span>
-                  <button
-                    class="edit-button btn btn-sm"
-                    onclick={(e) => {
-                      editingPodItem = item;
-                      podRefAddress = item.autonomiAddress;
-                      console.log("editingPodItem", $state.snapshot(editingPodItem))
-                      e.stopPropagation();
-                      editFileMetadataModal.showModal();
-                    }}
-                  >
-                    Edit
-                  </button>
+                  {#if item.selected}
+                    <button
+                      class="btn btn-warning btn-square btn-sm"
+                      onclick={(e) => {
+                        editingPodItem = item;
+                        podRefAddress = item.autonomiAddress;
+                        console.log("editingPodItem", $state.snapshot(editingPodItem))
+                        e.stopPropagation();
+                        editFileMetadataModal.showModal();
+                      }}
+                    >
+                      <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="16" height="16" />
+                    </button>
+                  {/if}
                 </li>
               {:else}
                 <li
@@ -1100,19 +1105,17 @@
                   }}
                 >
                   <span class="truncate">{getDisplayName(item)}</span>
-                  <button
-                    class="edit-button btn btn-sm"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      openEditMetadata(item);
-                      // editingPodItem = item;
-                      // console.log("editingPodItem", editingPodItem)
-                      // event.stopPropagation();
-                      // editFileMetadataModal.showModal();
-                    }}
-                  >
-                    Edit
-                  </button>
+                  {#if item.selected}
+                    <button
+                      class="btn btn-warning btn-square btn-sm"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        openEditMetadata(item);
+                      }}
+                    >
+                      <img src="/app-icons/pencil-icon.svg" alt="edit icon" width="16" height="16" />
+                    </button>
+                  {/if}
                 </li>
               {/if}
             {/each}
@@ -1419,11 +1422,14 @@
 }
 
 .item-selected {
-  background-color: #f9c7c8 !important;
-  border: solid red 1px !important;
+  background-color: #f0f0f0 !important;
+  border: solid #ccc 1px !important;
   z-index: 1 !important;
-  min-height: 32px !important;
-  height: auto !important;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .item-container {
@@ -1482,12 +1488,14 @@
   }
 
   .item-selected {
-    background-color: #e0282b !important;
-    color: black;
-    border: solid red 1px !important;
+    background-color: #444 !important;
+    border: solid #777 1px !important;
     z-index: 1 !important;
-    min-height: 32px !important;
-    height: auto !important;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
