@@ -75,11 +75,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
+          - platform: 'macos-14'
             args: '--target aarch64-apple-darwin'
             target: 'aarch64-apple-darwin'
             arch: 'aarch64'
-          - platform: 'macos-latest'
+          - platform: 'macos-14'
             args: '--target x86_64-apple-darwin'
             target: 'x86_64-apple-darwin'
             arch: 'x86_64'
@@ -132,14 +132,19 @@ jobs:
         shell: bash
 
       - name: Set SDKROOT and CPLUS_INCLUDE_PATH for macOS
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         run: |
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
           echo "CPLUS_INCLUDE_PATH=$SDKROOT/usr/include/c++/v1" >> $GITHUB_ENV
+          # Set deployment target to ensure compatibility
+          echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+          # Additional C++ flags for compatibility
+          echo "CXXFLAGS=-stdlib=libc++ -mmacosx-version-min=10.15" >> $GITHUB_ENV
+          echo "LDFLAGS=-mmacosx-version-min=10.15" >> $GITHUB_ENV
 
       - name: Import Apple Certificates
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         run: |
           # Create a temporary keychain
           KEYCHAIN_PATH="$HOME/Library/Keychains/signing_temp.keychain"
@@ -177,14 +182,14 @@ jobs:
           echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
 
       - name: Download Apple Provisioning Profile
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         run: |
           echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > embedded.provisionprofile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp embedded.provisionprofile ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Prepare macOS Icons
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         run: |
           # Create iconset directory
           mkdir -p Colony.iconset
@@ -256,7 +261,7 @@ jobs:
           bundleIdentifier: 'com.colony.gui'
 
       - name: Debug App Bundle Structure
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         run: |
           # Find the built .app bundle
           APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" | head -1)
@@ -285,7 +290,7 @@ jobs:
           fi
 
       - name: Notarize DMG for Distribution
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         run: |
           # Find the built .app bundle
           APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle/macos -name "*.app" | head -1)
@@ -374,7 +379,7 @@ jobs:
           fi
 
       - name: Upload macOS artifacts for App Store build
-        if: matrix.platform == 'macos-latest'
+        if: startsWith(matrix.platform, 'macos-')
         uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}-artifacts
@@ -399,14 +404,14 @@ jobs:
             find . -name "*.AppImage" -exec ls -lh {} \;
             echo "Linux DEB files:"
             find . -name "*.deb" -exec ls -lh {} \;
-          elif [ "${{ matrix.platform }}" = "macos-latest" ]; then
+          elif [[ "${{ matrix.platform }}" == macos-* ]]; then
             echo "macOS DMG files:"
             find . -name "*.dmg" -exec ls -lh {} \;
           fi
         shell: bash
 
       - name: Cleanup Keychain
-        if: matrix.platform == 'macos-latest' && always()
+        if: startsWith(matrix.platform, 'macos-') && always()
         run: |
           # Remove the temporary keychain
           security delete-keychain signing_temp.keychain || true
