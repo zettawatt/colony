@@ -20,8 +20,8 @@
   // Helper function to check if a key represents an address
   function isAddressField(key: string, value: string): boolean {
     return (key === 'address' || key === 'pod') &&
-           typeof value === 'string' &&
-           value.length > 13;
+      typeof value === 'string' &&
+      value.length > 13;
   }
 
   // Local variables that will be synced with the store
@@ -682,7 +682,7 @@
   </div>
 
   <div class="search-table-container" style="flex: 1; min-height: 0;">
-    <CachedTabulator bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={rowMenu} rowClick={isAndroid ? handleRowClick : undefined} initialSort={[]} cacheKey="search" />
+    <CachedTabulator bind:this={tabulatorTable} data={tableSearchResults} columns={searchColumns} rowMenu={[]} rowClick={isAndroid ? handleRowClick : undefined} initialSort={[]} cacheKey="search" />
   </div>
   <dialog id="fileMetadataModal" class="modal" bind:this={fileMetadataModal}>
     <div class="modal-box w-10/12 max-w-5xl max-h-[80vh]">
