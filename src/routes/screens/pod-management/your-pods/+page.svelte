@@ -653,11 +653,32 @@
   }
 
   function toggleSelection(list: any[], id: string) {
-    console.log('here maxx');
-    
-    return list.map((item: any) =>
-      item.uuid === id ? {...item, selected: !item.selected} : item
-    );
+    console.log('toggleSelection called for id:', id);
+
+    const result = list.map((item: any) => {
+      if (item.uuid === id) {
+        // Create a new object but explicitly preserve all necessary properties
+        const newItem = {
+          ...item,
+          uuid: item.uuid,
+          name: item.name,
+          autonomiAddress: item.autonomiAddress,
+          fileSize: item.fileSize,
+          uploadedDate: item.uploadedDate,
+          path: item.path,
+          extension: item.extension,
+          isAutonomiOnly: item.isAutonomiOnly,
+          selected: !item.selected
+        };
+        console.log('Toggling item:', item.name, 'from', item.selected, 'to', newItem.selected);
+        console.log('Original item uuid:', item.uuid, 'New item uuid:', newItem.uuid);
+        return newItem;
+      }
+      return item;
+    });
+
+    console.log('Result after toggle:', result.map(item => ({name: item.name, selected: item.selected, uuid: item.uuid})));
+    return result;
   }
 
   function transferItems(from: any[], to: any[]) {
@@ -1422,8 +1443,8 @@
 }
 
 .item-selected {
-  background-color: #f0f0f0 !important;
-  border: solid #ccc 1px !important;
+  background-color: #e8e8e8 !important;
+  border: solid #999 1px !important;
   z-index: 1 !important;
 }
 
@@ -1488,8 +1509,8 @@
   }
 
   .item-selected {
-    background-color: #444 !important;
-    border: solid #777 1px !important;
+    background-color: #555 !important;
+    border: solid #888 1px !important;
     z-index: 1 !important;
   }
 
