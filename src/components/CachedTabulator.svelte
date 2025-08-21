@@ -137,10 +137,10 @@
       isRestoringFromCache = true;
 
       // Create new instance with live columns and data for instant display
-      // Use the incoming columns prop so any runtime handlers (e.g., cellClick) remain intact
-      // Create new instance with cached data for instant display
+      // ALWAYS use the incoming columns prop so any runtime handlers (e.g., cellClick) remain intact
+      // This is critical to prevent the race condition where cached columns lose their handlers
       tabulatorInstance = new Tabulator(tableComponent, {
-        columns: isAndroid ? columns : cached.columns,
+        columns: columns, // Always use live columns to preserve handlers
         height: cached.tableHeight || tableHeight,
         minHeight: 300,
         data: cached.data, // Use cached data for instant display
@@ -169,10 +169,9 @@
           // Restore additional state after table is built
           setTimeout(() => {
             try {
-              // Restore column layout if available
-              if (cached.columnLayout && tabulatorInstance.setColumnLayout) {
-                tabulatorInstance.setColumnLayout(cached.columnLayout);
-              }
+              // Skip column layout restoration to preserve live column handlers
+              // Column layout restoration can override cellClick handlers
+              console.log('⚠️ Skipping column layout restoration to preserve handlers');
 
               // Restore filters
               if (cached.filters && cached.filters.length > 0 && tabulatorInstance.setFilter) {

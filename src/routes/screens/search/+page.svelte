@@ -235,6 +235,8 @@
           setTimeout(() => {
             if (instance && parsedResults.length > 0) {
               instance.setData(parsedResults);
+              // Ensure column handlers are properly attached after new search
+              ensureColumnHandlersAttached();
             }
           }, 10);
         }
@@ -324,6 +326,8 @@
           setTimeout(() => {
             if (instance && parsedResults.length > 0) {
               instance.setData(parsedResults);
+              // Ensure column handlers are properly attached after new browse
+              ensureColumnHandlersAttached();
             }
           }, 10);
         }
@@ -388,6 +392,8 @@
   // Function to setup column click handlers
   function setupColumnClickHandlers() {
     if (!searchColumns || searchColumns.length === 0) return;
+
+    console.log('🔧 Setting up column click handlers');
 
     // set cellClick function for download column (column 0)
     if (searchColumns[0]) {
@@ -474,6 +480,36 @@
     }
   }
 
+  // Function to ensure column handlers are properly attached to tabulator instance
+  function ensureColumnHandlersAttached() {
+    const instance = tabulatorTable?.getTabulatorInstance?.() || tabulatorTable?.tabulatorInstance;
+    if (instance && instance.getColumns) {
+      console.log('🔧 Ensuring column handlers are attached to tabulator instance');
+
+      // Check if handlers are actually present
+      const currentColumns = instance.getColumns();
+      const hasHandlers = currentColumns.some((col: any) => col.getDefinition().cellClick);
+      console.log('🔍 Current columns have cellClick handlers:', hasHandlers);
+
+      // Force column update to ensure handlers are attached
+      setTimeout(() => {
+        if (instance && instance.setColumns) {
+          instance.setColumns(searchColumns);
+          console.log('✅ Column handlers re-attached to tabulator instance');
+
+          // Verify handlers are now present
+          const updatedColumns = instance.getColumns();
+          const hasUpdatedHandlers = updatedColumns.some((col: any) => col.getDefinition().cellClick);
+          console.log('🔍 After update, columns have cellClick handlers:', hasUpdatedHandlers);
+        }
+      }, 100);
+    } else {
+      console.warn('⚠️ Cannot ensure column handlers - tabulator instance not ready');
+    }
+  }
+
+
+
   onMount(async () => {
     try {
       await transferManager.init();
@@ -524,6 +560,8 @@
               setTimeout(() => {
                 if (instance && state.tableSearchResults.length > 0) {
                   instance.setData(state.tableSearchResults);
+                  // Ensure column handlers are properly attached after data update
+                  ensureColumnHandlersAttached();
                 }
               }, 10);
             }
@@ -574,7 +612,8 @@
 
       if (tableRows.length > 0) {
         // Scroll position is now handled automatically by CachedTabulator's built-in persistence
-        // No manual setup needed
+        // Ensure column handlers are properly attached
+        ensureColumnHandlersAttached();
         console.log('✅ Table setup complete');
       } else {
         console.log('⏳ Table not yet rendered, will retry...');
@@ -622,8 +661,6 @@
     if (storeUnsubscribe) {
       storeUnsubscribe();
     }
-
-
 
     if (handleTabulatorResize) {
       window.removeEventListener('tabulator-resize-start', handleTabulatorResize);
