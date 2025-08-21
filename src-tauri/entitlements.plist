@@ -10,6 +10,10 @@
     <key>com.apple.security.network.client</key>
     <true/>
     
+    <!-- Network access for Autonomi network communication -->
+    <key>com.apple.security.network.server</key>
+    <true/>
+    
     <!-- File system access for downloads and file management -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
