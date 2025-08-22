@@ -82,6 +82,8 @@ After installing and opening the application for the first time, you'll start at
 ### Tab Layout
 Colony uses tab navigation with each tab showing a different page.
 
+**NOTE**: the screen captures below are a little dated, the UI is evolving very quickly. When in doubt, trust the text!
+
 #### Colony App Info and Donation Addresses
 Clicking on the Colony logo in the top left corner will display libraries used, application information, and crypto donation addresses to support Colony. If you like Colony, please donate BTC, ETH, USDC, or AUTONOMI tokens. Colony doesn't track you, does not display ads, does not censor, and isn't manipulating your search results like big tech companies do. Show your support and help develop the internet we all deserve!
 
@@ -93,25 +95,28 @@ Donation addresses:
 The icon in the top right will select the theme. By default this is set to 'Auto' which will attempt to follow the system theme. However, depending on the OS, this is very error prone due to limitations of the underlying GUI toolkit. Clicking on this icon will cycle the color theme between Light, Dark, and Auto.
 
 #### Searching for and downloading content
-After entering your password, the search tab will open by default. If you hit enter without typing anything in or if you hit 'Browse', it will pull up available files on the network. Typing some text in the search bar will search the metadata for any objects that match your query, similar to your standard search engine on the WWW.
+After entering your password, the search tab will open by default. If you hit enter without typing anything in or if you click the 'Browse' button, it will pull up available files on the network. Typing some text in the search bar will search the metadata for any objects that match your query, similar to your standard search engine on the WWW.
 
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/search_screen.gif" height="480" />
 </p>
 
-To display more information about an object, click on the description or name. This will pull up a dialog displaying all metadata. If the size field is filled out, it is almost certainly a file you can download. There 'Unknown' types are typically one of 2 things:
+To display more information about an object, click on the description or name. This will pull up a dialog displaying all metadata with an option to download the file. Clicking on the address will copy it to the clipboard. There are 3 types of objects:
 
-- **pods** - these are either your pods or pods that the search mechanism encountered. These can be ignored, but you can use the info icon to get their address.
-- **dweb sites** - clicking on the download link for a dweb site will automatically open the page in a web browser. These are web applications and sites that are hosted entirely on Autonomi. Very cool stuff. Be on the lookout for more of these as they come online!
+- **files** - these have a down arrow icon on the far left of the row. Clicking on the arrow icon will automatically start downloading the file.
+- **pods** - there will be no icon on the far left of the row for these. They are either your pods or pods that the search mechanism encountered. These can be ignored for now (functionality planned!).
+- **dweb sites** - these will have a globe icon on the far left of the row. Clicking on the download link for a dweb site will automatically open the page in a web browser. These are web applications and sites that are hosted entirely on Autonomi. Very cool stuff. Be on the lookout for more of these as they come online!
 
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/status_page.gif" height="480" />
 </p>
 
-Downloads can take some time depending on your network connection.
+Downloads can take some time depending on your network connection and file size.
 
 #### Transfer Status Screen
 The status tab shows the upload and download progress. While a file is being uploaded or downloaded, a spinner will show on the left side. On completion it will display a green checkmark while on fail, it will show a red 'X' icon.
+
+**NOTE**: the v1.1.5 release of Colony and older does not show upload status in the status screen. It will run in the background and display a toast when complete. This issue is being fixed. After uploading files the status screen may lock up and no longer update. Downloads and uploads will still work properly. This issue is fixed in the main branch, but the release has not yet been made due to inadequate testing.
 
 #### Wallet management
 In the wallet tab, you can add, rename, remove, and switch wallets. The active wallet is what is used to pay for uploads to Autonomi and also as the key for dweb sites that you may interact with.
@@ -121,7 +126,7 @@ In the wallet tab, you can add, rename, remove, and switch wallets. The active w
 </p>
 
 #### Application configuration
-In the configuration tab, you can change your download directory, password, and also the theme:
+In the configuration tab, you can change your download directory, password, and also the theme. Note that using auto dark/light mode can cause some bizarre behavior when switching between themes. It is much more reliable to select either Light or Dark and stick with it.
 
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/configuration.gif" height="480" />
@@ -134,12 +139,14 @@ This tab is used to manage downloads, uploads, and pods. This tab is split into 
 - **My Pods** - add, modify, and remove pods
 
 ##### Downloads
-Just as you would think, this page lists all of the files that have been downloaded. Clicking on these will open the file with the default system application.
+Just as you would think, this page lists all of the files that have been downloaded. Clicking on these will open the file with the default system application. Depending on the binary and OS, the application being opened may be different. Older files uploaded to Autonomi are directories (i.e. archives). This can cause issues with the automatic file type detection. If auto file opening fails, go to the downloads directory as specified in the configuration screen to open them from your file browser application.
 
 ##### Uploads
 See uploaded files and upload new files to the network. Check the status tab to see the progress of uploading files.
 
-Clicking on the 'Upload New File' button will pull up a file picker window where you can select a file. If you've got the ETH and ANT tokens available in your active wallet, the file will upload to the network. After it completes, you'll see a notification at the bottom of the screen.
+Clicking on the 'Upload New File' button will pull up a file picker window where you can select a file. If you've got the ETH and AUTONOMI tokens available in your active wallet, the file will upload to the network. After it completes, you'll see a notification at the bottom of the screen.
+
+**NOTE**: the v1.1.5 release of Colony and older does not show upload status in the status screen. It will run in the background and display a toast when complete. This issue is being fixed.
 
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/upload_file.gif" height="480" />
@@ -148,31 +155,43 @@ Clicking on the 'Upload New File' button will pull up a file picker window where
 ##### My Pods
 The My Pods page enables managing your pods, pod references, and attaching metadata to files in your pods.
 
-###### Add pod reference
-After the setup step, Colony will leave you with a 'default' pod and a pod reference to the 'Genesis Pod' which contains the initial files uploaded to the Autonomi network. When you find other users' pod addresses, you can add these to the 'default' pod or create a new pod.
-
-You can add as many pod references to your pod as you wish. If you want to share your pod with a friend, simply sent them the address and they will get everything that you have.
-
 ###### Syncing from the Autonomi network
-The 'Sync' button will pull pods from the Autonomi network. This will lock up the window for a few moments while it fetches all of the metadata from the network. Note it will throw a warning at this phase warning you about potential corruption if you haven't uploaded. If you have never uploaded to the network, there is no concern here. If you have, make sure you always click 'Upload All Pods' before you hit sync if you want to keep your changes. During the 'sync' operation, it will pull down all of your pods from the Autonomi network, so if you have local modifications, they could be lost.
+The 'Sync' button will pull pods from the Autonomi network. This will lock up the window while it fetches all of the metadata from the network. Run Sync any time you want to fetch the latest metadata from the network. Depending on the size of the pods, how many pod references you have, and your network speed, this operation will take some time.
+
+Note it will throw a warning at this phase warning you about potential corruption if you haven't uploaded. If you have never uploaded to the network, there is no concern here. If you have, make sure you always click 'Upload All Pods' before you hit sync if you want to keep your changes. During the 'sync' operation, it will pull down all of your pods from the Autonomi network, so if you have local modifications, they could be lost.
+
+**Tip** - sync operations are much faster if you have uploaded your pods to the network. This is because the first step is to pull your pods from the network and it takes much longer to search the network for non-existant data than to download existing data.
+
+###### Add pod reference
+After the setup step, Colony will leave you with a 'default' pod and a pod reference to the 'Genesis Pod' which contains the initial files uploaded to the Autonomi network. When you find other users' pod addresses, you can add these to the 'default' pod or create a new pod by clicking the 'Create New Pod' button. Click the pod's pen icon to edit. In the edit dialog, click on the and clicking on the 'Add Pod Ref' button to enter the pod reference address. When done editing the pod, click 'Save Pod'. Saving the pod will write it to your local disk and be uploaded to the network once you click the "Upload All Pods" button.
+
+You can add as many pod references to your pod as you wish. If you want to share your pod with a friend, simply send them the address and they will perform the same steps.
 
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/pod_management.gif" height="480" />
 </p>
 
 ###### Adding metadata and syncing to Autonomi
-To share this newly uploaded file and add metadata to it, go back to the Pod Management tab on the left side of the screen, click the modify button on the selected pod, and click the transfer button to add this file to the pod. Then click the pencil icon to edit the metadata. There is a drop down at the top providing templates for various file types. Then enter in the relevant information in the fields.
+To share uploaded files and add metadata to them, click the pencil icon on the selected pod, and click the transfer button to add this file to the pod. Then click the pencil icon to edit the metadata. There is a drop down at the top providing templates for various file types. Then enter in the relevant information in the fields.
 
-The text looks rather complicated, but it isn't too hard once you've done a few. In simplified terms, the left side `"schema:blah"` statement specifies what type of information you should enter in the right hand text entry box. For example, if you are uploading a book and the left side says `"schema:Author"`, the left hand side, you'd put the author's name in the text entry box.
+You can also add files that were uploaded to Autonomi using the ant CLI or other application by clicking on the 'Add Autonomi File' button in the Editing Pod dialog. This will bring up a dialog where you can paste the Autonomi address of the object you want to describe.
 
-Note that there is some magic that happens under the hood here. Several fields will be filled in automatically when you hit 'save', so you don't have to worry about them:
+**NOTE**: on Colony v1.1.5 and older the initial template will be for a 'Book' and be blank. Click the drop down to select another option to populate the fields. If you want to describe a book, reselect the 'Book' type and the fields will be populated. This is being fixed.
+
+The text looks rather complicated, but it isn't too hard once you've done a few. In simplified terms, the left side `"schema:blah"` statement specifies what type of information you should enter in the right hand text entry box. For example, if you are uploading a book and the left side says `"schema:author"`, in the right hand side you'd put the author's name in the text entry box.
+
+Note that there is some magic that happens under the hood here. Several fields will be filled in automatically for files that you uploaded when you hit 'save', so you don't have to worry about them:
 - `schema:contentSize`
 - `schema:name`
 - `schema:encodingFormat`
 
-Any fields that are left with the default values will not be included in the final result.
+For files being added using the 'Add Autonomi File' button, these fields will need to be filled in manually as Colony has no direct information about these files. The `schema:contentSize` is the size of the file in bytes.
+
+Any fields that are left with the default values from the template will not be included in the final result.
 
 The entries that are the least self explanatory are `"schema:alternateName"` and `"schema:name"`. The rule here is that "name" is always the name of the file you're uploading, while "alternateName" is an optional human readable name. So if you upload a book with a filename "wizrdOz.pdf", set the "alternateName" to "The Wizard of Oz".
+
+You can also edit metadata for items by selecting them and clicking the pencil icon that appears.
 
 Although tempting, do not skip this step! Your file is only as valuable as the metadata that you put in here. If its wrong or lacking information, no one will be able to find your stuff! We will soon be improving the data entry mechanism here, we just ran out of time for the initial release!
 
@@ -183,6 +202,17 @@ Once you're happy, save the entry. You can make as many pods and upload as many 
 </p>
 
 This process is ok for individual file uploads, but becomes very tedious if you're doing more than a few of these. If you want to upload a bunch of stuff at once, check out the bulk uploader and downloader commands in [colony-utils](https://github.com/zettawatt/colony-utils). This automates the download, metadata curation, and Autonomi upload process for you.
+
+###### Uploading Pods
+After adding pod references or metadata for uploaded files, clicking the "Upload All Pods" button will push your pods to the Autonomi network. This step _is_ optional. Colony can run in download only mode with the pods saved to your local disk, requiring no ETH or AUTONOMI tokens to use. However, uploading your pods has several benefits:
+- **Recovery** - With your seed phrase, you can recover all of your pods and access all files you've uploaded to the network. If your computer breaks or is lost reentering your seed phrase on boot enables you to recover everything you've had
+- **Portability** - If you want to run Colony on another machine and have a common setup, uploading to Autonomi allows you to synchronize between multiple devices
+- **Sync Speed** - one of the longest operations in sync is fetching your pods. Fetching non-existant data is very time consuming vs fetching data that exists
+- **Sharing** - You are unable to share your pods if you have not uploaded them to the network.
+
+The cost to upload several pods is very minimal (typically several US cents per pod) and once created can be updated for free.
+
+If you have uploaded your pods in the past, ensure that you upload them every time before you run a Sync. This is because Sync will fetch your pods from the network and overwrite whatever you have done locally.
 
 ## 🏗️ Architecture
 
@@ -326,5 +356,6 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) 
 ## 💝 Support
 
 Support Colony development by donating:
-- **ETH/ANT**: `0xc6e3a7a770656B8473DedCc3d4565b6D507afACE`
+- **BTC**: `bc1qp005au38ktl2zmhetsv223gld0sn3w456lkavw`
+- **ETH/AUTONOMI/USDC**: `0xc6e3a7a770656B8473DedCc3d4565b6D507afACE`
 
