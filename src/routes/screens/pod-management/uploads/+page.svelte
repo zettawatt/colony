@@ -87,7 +87,7 @@
 
       addToast(`Uploaded ${fileObj.name} to ${fileObj.autonomiAddress}`, "success");
       await loadTable();
-    } catch (e) {
+    } catch (e: any) {
       console.error(`Upload error for ${fileObj.name}:`, e);
       addToast(`Failed to upload ${fileObj.name}`, "error");
     }

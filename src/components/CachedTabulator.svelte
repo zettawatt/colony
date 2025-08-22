@@ -363,23 +363,19 @@
   $: if (tabulatorInstance && Array.isArray(data) && tableReady && !isRestoringFromCache) {
     console.log('🔄 Reactive update: replacing data with', data.length, 'items');
 
-    if (!isAndroid) {
-      console.warn('Android: Tabulator element not ready for data update');
-    } else {
-      // Safety check to prevent excessive updates
-      const currentDataLength = tabulatorInstance.getData ? tabulatorInstance.getData().length : 0;
-      if (currentDataLength !== data.length) {
-        // Use replaceData instead of clearData + setData to prevent lockups
-        try {
-          tabulatorInstance.replaceData(data);
-          // Save updated state with delay
-          setTimeout(() => saveToCache(), 200);
-        } catch (error) {
-          console.warn('Error updating tabulator data:', error);
-        }
-      } else {
-        console.log('⏭️ Skipping update - same data length');
+    // Safety check to prevent excessive updates
+    const currentDataLength = tabulatorInstance.getData ? tabulatorInstance.getData().length : 0;
+    if (currentDataLength !== data.length) {
+      // Use replaceData instead of clearData + setData to prevent lockups
+      try {
+        tabulatorInstance.replaceData(data);
+        // Save updated state with delay
+        setTimeout(() => saveToCache(), 200);
+      } catch (error) {
+        console.warn('Error updating tabulator data:', error);
       }
+    } else {
+      console.log('⏭️ Skipping update - same data length');
     }
   }
 

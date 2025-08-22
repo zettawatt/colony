@@ -1,6 +1,8 @@
 <script lang="ts">
   import "../app.css";
   import Toast from '../components/toast.svelte';
+  import { transferManager } from '../stores/transferManager';
+  import { onMount } from 'svelte';
 
   import { trace, debug, info, warn, error } from '@tauri-apps/plugin-log';
 
@@ -36,6 +38,15 @@
   forwardConsole('info', info);
   forwardConsole('warn', warn);
   forwardConsole('error', error);
+
+  // Initialize transferManager globally when app starts
+  onMount(async () => {
+    try {
+      await transferManager.init();
+    } catch (error) {
+      console.error("Failed to initialize global transferManager:", error);
+    }
+  });
 </script>
 
 <div class="bg-base-200 dark:bg-base-300">

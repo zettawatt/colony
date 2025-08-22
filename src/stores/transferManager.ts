@@ -49,11 +49,19 @@ const { subscribe, update, set } = writable<Record<string, InternalTransferInfo>
 // Internal state to prevent double-init and cleanup logic
 let initialized = false;
 let unsubStore: (() => void) | null = null;
+let listenersConnected = false;
 
 
 
 // Set up Tauri event listeners to respond to transfer progress from backend
 function connectListeners() {
+  if (listenersConnected) {
+    console.log("transfermanager - event listeners already connected, skipping");
+    return;
+  }
+
+  console.log("transfermanager - setting up event listeners");
+
   // Download events
 
   // On download start: add to store, status is "Downloading"
@@ -124,7 +132,6 @@ function connectListeners() {
 
   // On upload start: initialize new entry
   listen('upload-started', event => {
-    console.log("upload-started");
     const { id, path, size } = event.payload as { id: string; path: string; size?: number };
     const name = fileNameFromPath(path);
     update(transfers => {
@@ -180,11 +187,16 @@ function connectListeners() {
       };
     });
   });
+
+  listenersConnected = true;
 }
 
 // Initialize persistent store, restore prior transfers, set up listeners
 async function init() {
-  if (initialized) return;
+  if (initialized) {
+    return;
+  }
+
   store = await ps.getStore();
 
   // Load persisted transfer info from storage (if available)
@@ -228,7 +240,6 @@ async function init() {
 
   connectListeners();  // Begin receiving backend events
   initialized = true;
-  console.log("transfermanager - init");
 }
 
 // Clean up: unsubscribe from store and reset state

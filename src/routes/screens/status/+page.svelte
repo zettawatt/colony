@@ -92,21 +92,11 @@
   }
 
   onMount(async () => {
-    try {
-      await transferManager.init();
-    } catch (error) {
-      addToast("Failed to init transfer manager, see logs...", "error");
-      console.error(error);
-    }
     const pw = await getPassword();
     if (pw === null) {
       console.error("password was null");
       showLogin = true;
     }
-
-    // Clear any existing column persistence data for status table to prevent column switching
-    localStorage.removeItem('tabulator-colony-status-table-columns');
-    localStorage.removeItem('tabulator-colony-search-table-columns'); // Also clear search table data that might interfere
   })
 </script>
 

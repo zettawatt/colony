@@ -302,7 +302,7 @@ pub struct CreatePodRefRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UploadFileRequest {
     pub file_path: String,
-    pub id: Option<String>,
+    pub id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

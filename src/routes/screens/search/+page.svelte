@@ -511,13 +511,6 @@
 
 
   onMount(async () => {
-    try {
-      await transferManager.init();
-    } catch (error) {
-      addToast("Failed to init transfer manager, see logs...", "error");
-      console.error(error);
-    }
-
     // Set up column click handlers
     setupColumnClickHandlers();
     const pw = await getPassword();
