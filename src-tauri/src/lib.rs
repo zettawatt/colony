@@ -78,11 +78,85 @@ async fn determine_dweb_binary() -> DwebBinary {
     }
 }
 
+/// Windows-specific debugging helper to check sidecar binary existence
+#[cfg(target_os = "windows")]
+fn check_windows_sidecar_binary(app: &AppHandle) -> Result<String, String> {
+    use std::path::PathBuf;
+
+    // Try to get the sidecar path
+    let sidecar_result = app.shell().sidecar("colony-dweb");
+    match sidecar_result {
+        Ok(_) => {
+            info!("Windows: colony-dweb sidecar command created successfully");
+            Ok("Sidecar command created".to_string())
+        }
+        Err(e) => {
+            error!("Windows: Failed to create colony-dweb sidecar command: {}", e);
+
+            // Try to find the binary manually
+            let app_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let possible_paths = vec![
+                app_dir.join("colony-dweb.exe"),
+                app_dir.join("binaries").join("colony-dweb.exe"),
+                PathBuf::from("colony-dweb.exe"),
+                PathBuf::from("./colony-dweb.exe"),
+                PathBuf::from("../target/binaries/colony-dweb.exe"),
+            ];
+
+            for path in &possible_paths {
+                if path.exists() {
+                    info!("Windows: Found colony-dweb binary at: {:?}", path);
+                } else {
+                    warn!("Windows: colony-dweb binary not found at: {:?}", path);
+                }
+            }
+
+            Err(format!("Sidecar creation failed: {}", e))
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn check_windows_sidecar_binary(_app: &AppHandle) -> Result<String, String> {
+    Ok("Not Windows".to_string())
+}
+
 #[tauri::command]
 fn get_file_size(path: String) -> Result<u64, String> {
     fs::metadata(path)
         .map(|meta| meta.len())
         .map_err(|e| e.to_string())
+}
+
+/// Debug command to check sidecar binary status on Windows
+#[tauri::command]
+async fn debug_sidecar_status(app: AppHandle) -> Result<String, Error> {
+    info!("Debug: Checking sidecar status");
+
+    let mut debug_info = Vec::new();
+    debug_info.push(format!("Platform: {}", std::env::consts::OS));
+    debug_info.push(format!("Architecture: {}", std::env::consts::ARCH));
+
+    // Check if we're on Windows
+    if cfg!(target_os = "windows") {
+        debug_info.push("Windows-specific checks:".to_string());
+        match check_windows_sidecar_binary(&app) {
+            Ok(msg) => debug_info.push(format!("✓ {}", msg)),
+            Err(err) => debug_info.push(format!("✗ {}", err)),
+        }
+    }
+
+    // Check dweb binary determination
+    let dweb_binary = determine_dweb_binary().await;
+    debug_info.push(format!("Determined binary type: {:?}", dweb_binary));
+
+    // Check if dweb serve is running
+    let serve_running = is_dweb_serve_running().await;
+    debug_info.push(format!("Dweb serve running: {}", serve_running));
+
+    let result = debug_info.join("\n");
+    info!("Debug info: {}", result);
+    Ok(result)
 }
 
 // File opener command for Android
@@ -2641,9 +2715,12 @@ async fn dweb_open(
         return Ok("dweb_open not supported on Android".to_string());
     }
 
-    let dweb_binary = determine_dweb_binary().await;
+    info!("dweb_open called with address: {}", address);
 
-    let (mut rx, mut _child) = match dweb_binary {
+    let dweb_binary = determine_dweb_binary().await;
+    info!("Determined dweb binary type: {:?}", dweb_binary);
+
+    let spawn_result = match dweb_binary {
         DwebBinary::System => {
             info!("Using system dweb binary for open command");
             // Use system dweb binary directly
@@ -2651,16 +2728,46 @@ async fn dweb_open(
                 .command("dweb")
                 .args(["open", &address])
                 .spawn()
-                .map_err(Error::Shell)?
         }
         DwebBinary::ColonyDweb => {
             info!("Using colony-dweb sidecar for open command");
-            // Use colony-dweb sidecar
-            app.shell()
-                .sidecar("colony-dweb")?
-                .args(["open", &address])
-                .spawn()
-                .map_err(Error::Shell)?
+
+            // On Windows, let's verify the sidecar exists first
+            if cfg!(target_os = "windows") {
+                info!("Windows: Checking sidecar binary status before execution");
+                if let Err(check_err) = check_windows_sidecar_binary(&app) {
+                    error!("Windows: Sidecar check failed: {}", check_err);
+                    // Continue anyway, but log the issue
+                }
+
+                match app.shell().sidecar("colony-dweb") {
+                    Ok(cmd) => {
+                        info!("Windows: colony-dweb sidecar command created successfully");
+                        cmd.args(["open", &address]).spawn()
+                    }
+                    Err(e) => {
+                        error!("Windows: Failed to create colony-dweb sidecar command: {}", e);
+                        return Err(Error::Shell(e));
+                    }
+                }
+            } else {
+                // Use colony-dweb sidecar on non-Windows platforms
+                app.shell()
+                    .sidecar("colony-dweb")?
+                    .args(["open", &address])
+                    .spawn()
+            }
+        }
+    };
+
+    let (mut rx, mut _child) = match spawn_result {
+        Ok(result) => {
+            info!("Successfully spawned dweb process for address: {}", address);
+            result
+        }
+        Err(e) => {
+            error!("Failed to spawn dweb process for address {}: {}", address, e);
+            return Err(Error::Shell(e));
         }
     };
 
@@ -2829,6 +2936,7 @@ fn run_with_network(network: &str) {
             dweb_serve,
             dweb_stop,
             dweb_open,
+            debug_sidecar_status,
             open_file_with_default_app,
         ])
         .build(tauri::generate_context!())

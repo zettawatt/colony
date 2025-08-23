@@ -7,6 +7,10 @@ edition = "2021"
 homepage = "https://github.com/zettawatt/colony"
 license = "GPL-3.0-only"
 
+[features]
+default = []
+console = []  # Enable console output on Windows for debugging
+
 [[bin]]
 name = "colony-app"
 path = "src/main.rs"

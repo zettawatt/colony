@@ -12,6 +12,8 @@
     "dialog:default",
     "store:default",
     "shell:default",
+    "shell:allow-execute",
+    "shell:allow-spawn",
     "core:app:allow-set-app-theme",
     "log:default",
     {
@@ -34,6 +36,18 @@
         },
         {
           "path": "/tmp/**"
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "colony-dweb",
+          "sidecar": true
+        },
+        {
+          "name": "dweb"
         }
       ]
     }

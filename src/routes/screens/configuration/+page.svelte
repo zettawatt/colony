@@ -9,6 +9,7 @@
   import { setPassword, getPassword } from "../../../utils/password/session";
   import { lightDaisyThemes, darkDaisyThemes } from "../../../utils/theme/daisyUIThemes";
   import { isMobile } from '../../../utils/responsive.js';
+  import { debugSidecarStatus } from "../../../utils/dweb/dwebCommands";
 
   let name = $state("");
   let greetMsg = $state("");
@@ -21,6 +22,8 @@
   let confirmClass = $derived(passwordsMatch ? 'input-success' : 'input-error');
   let preferredLightTheme = $state("light");
   let preferredDarkTheme = $state("dark");
+  let debugInfo = $state("");
+  let debugLoading = $state(false);
 
   function previewTheme(theme: string) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -61,6 +64,21 @@
     } catch (error) {
       console.error(error)
       addToast("Could not update password. Check console for error....", "error");
+    }
+  }
+
+  async function runSidecarDebug() {
+    debugLoading = true;
+    try {
+      const result = await debugSidecarStatus();
+      debugInfo = (result as string) || "No debug information available";
+      addToast("Debug information retrieved", "success");
+    } catch (error) {
+      console.error("Debug error:", error);
+      debugInfo = `Error: ${error}`;
+      addToast("Failed to get debug information", "error");
+    } finally {
+      debugLoading = false;
     }
   }
 
@@ -151,6 +169,36 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug Section for Windows Sidecar Issues -->
+  <div class="row mt-4">
+    <div class="card bg-base-100 w-96 shadow-lg card-xl" style="width: auto;">
+      <div class="card-body p-4">
+        <h3 class="text-lg font-bold mb-4">Debug Information (Windows Sidecar)</h3>
+        <div class="row">
+          <button
+            class="btn btn-secondary"
+            class:loading={debugLoading}
+            onclick={runSidecarDebug}
+            disabled={debugLoading}
+          >
+            {debugLoading ? 'Running Debug...' : 'Check Sidecar Status'}
+          </button>
+        </div>
+        {#if debugInfo}
+          <div class="row mt-4">
+            <label class="label" for="debug-output">Debug Output:</label>
+            <textarea
+              id="debug-output"
+              class="textarea textarea-bordered w-full h-32"
+              readonly
+              value={debugInfo}
+            ></textarea>
+          </div>
+        {/if}
       </div>
     </div>
   </div>

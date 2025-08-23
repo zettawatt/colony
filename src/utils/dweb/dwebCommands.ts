@@ -20,3 +20,15 @@ export async function openDweb(address: string) {
     console.error('Could not open address with dweb:', error);
   }
 }
+
+// Debug function to check sidecar status (especially useful on Windows)
+export async function debugSidecarStatus() {
+  try {
+    const debugInfo = await invoke('debug_sidecar_status');
+    console.log('Sidecar Debug Info:', debugInfo);
+    return debugInfo;
+  } catch (error) {
+    console.error('Could not get sidecar debug info:', error);
+    return null;
+  }
+}
