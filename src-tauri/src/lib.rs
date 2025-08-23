@@ -91,10 +91,16 @@ fn check_windows_sidecar_binary(app: &AppHandle) -> Result<String, String> {
             Ok("Sidecar command created".to_string())
         }
         Err(e) => {
-            error!("Windows: Failed to create colony-dweb sidecar command: {}", e);
+            error!(
+                "Windows: Failed to create colony-dweb sidecar command: {}",
+                e
+            );
 
             // Try to find the binary manually
-            let app_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let app_dir = app
+                .path()
+                .app_data_dir()
+                .unwrap_or_else(|_| PathBuf::from("."));
             let possible_paths = vec![
                 app_dir.join("colony-dweb.exe"),
                 app_dir.join("binaries").join("colony-dweb.exe"),
@@ -2724,10 +2730,7 @@ async fn dweb_open(
         DwebBinary::System => {
             info!("Using system dweb binary for open command");
             // Use system dweb binary directly
-            app.shell()
-                .command("dweb")
-                .args(["open", &address])
-                .spawn()
+            app.shell().command("dweb").args(["open", &address]).spawn()
         }
         DwebBinary::ColonyDweb => {
             info!("Using colony-dweb sidecar for open command");
@@ -2746,7 +2749,10 @@ async fn dweb_open(
                         cmd.args(["open", &address]).spawn()
                     }
                     Err(e) => {
-                        error!("Windows: Failed to create colony-dweb sidecar command: {}", e);
+                        error!(
+                            "Windows: Failed to create colony-dweb sidecar command: {}",
+                            e
+                        );
                         return Err(Error::Shell(e));
                     }
                 }
@@ -2766,7 +2772,10 @@ async fn dweb_open(
             result
         }
         Err(e) => {
-            error!("Failed to spawn dweb process for address {}: {}", address, e);
+            error!(
+                "Failed to spawn dweb process for address {}: {}",
+                address, e
+            );
             return Err(Error::Shell(e));
         }
     };

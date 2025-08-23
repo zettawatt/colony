@@ -1,6 +1,9 @@
 // Prevents additional console window on Windows in release, but allow console for debugging
 // Comment out the line below to enable console output on Windows for debugging
-#![cfg_attr(all(not(debug_assertions), not(feature = "console")), windows_subsystem = "windows")]
+#![cfg_attr(
+    all(not(debug_assertions), not(feature = "console")),
+    windows_subsystem = "windows"
+)]
 
 use clap::{Arg, Command};
 use tracing::Level;
