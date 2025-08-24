@@ -691,7 +691,6 @@
     return {
       newFrom: from.map((item: any) => ({ ...item, selected: false })),
       newTo: [
-        ...to,
         ...newItems.map((item: any) => {
           // Create a new object with proper public properties
           return {
@@ -709,7 +708,8 @@
             fileSize: item.fileSize || item._fileSize,
             uuid: item.uuid || item._uuid,
           };
-        })
+        }),
+        ...to
       ]
     };
   }
@@ -857,6 +857,9 @@
 
   function openEditMetadata(item: any) {
     try {
+      // Set editingPodItem first so loadTemplate can access it
+      editingPodItem = item;
+
       isUpdatingFromMode = true;
 
       // Reset mode to simple by default
@@ -864,7 +867,9 @@
       originalTemplate = null;
 
       if (Object.keys(item.metadata).length === 0) {
-        loadTemplate("Book")
+        // Set the selectedType to "Book" and load the template
+        selectedType = "Book";
+        loadTemplate("Book");
       } else {
         jsonInputText = JSON.stringify(item.metadata, null, 2);
         // Initialize simple table data
@@ -879,7 +884,6 @@
       simpleTableData = [];
       isUpdatingFromMode = false;
     }
-    editingPodItem = item;
     editFileMetadataModal.showModal();
   }
 
