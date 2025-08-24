@@ -24,16 +24,16 @@ Colony is a cross-platform GUI application that makes it easy to upload, downloa
 
 ### Download Pre-built Binaries
 
-Download the latest release for your platform from the [Releases page](https://github.com/zettawatt/colony/releases):
+Download the latest release for your platform from the [Releases page](https://github.com/zettawatt/colony/releases) or search for and download the latest image from Colony!:
 
 #### 🐧 Linux
-- **AppImage**: `colony-app_x.x.x_amd64.AppImage` - Portable application, no installation required. Mark it as executable, double click, and go.
-- **DEB Package**: `colony-app_x.x.x_amd64.deb` - For Debian/Ubuntu systems
-- **RPM Package**: `colony-app-x.x.x-1.x86_64.rpm` - For Red Hat/Fedora systems
+- **AppImage**: `Colony_x.x.x_amd64.AppImage` - Portable application, no installation required. Mark it as executable, double click, and go.
+- **DEB Package**: `Colony_x.x.x_amd64.deb` - For Debian/Ubuntu systems
+- **RPM Package**: `Colony-x.x.x-1.x86_64.rpm` - For Red Hat/Fedora systems
 - ⚠️ **Tauri Issues**: Some systems such as Arch linux and/or those running the Wayland compositor may have issues with the AppImage. If you encounter issues, buidling from source is recommended.
 
 #### 🪟 Windows
-- **MSI Installer**: `colony-app_x.x.x_x64_en-US.msi` - Standard Windows installer
+- **MSI Installer**: `Colony_x.x.x_x64_en-US.msi` - Standard Windows installer
 - ⚠️ **Security Notice**: The app is not signed with a Microsoft certificate. Windows will show a security warning. Click "More info" and then "Run anyway" to proceed.
 
 #### 🍎 macOS
@@ -116,8 +116,6 @@ Downloads can take some time depending on your network connection and file size.
 #### Transfer Status Screen
 The status tab shows the upload and download progress. While a file is being uploaded or downloaded, a spinner will show on the left side. On completion it will display a green checkmark while on fail, it will show a red 'X' icon.
 
-**NOTE**: the v1.1.5 release of Colony and older does not show upload status in the status screen. It will run in the background and display a toast when complete. This issue is being fixed. After uploading files the status screen may lock up and no longer update. Downloads and uploads will still work properly. This issue is fixed in the main branch, but the release has not yet been made due to inadequate testing.
-
 #### Wallet management
 In the wallet tab, you can add, rename, remove, and switch wallets. The active wallet is what is used to pay for uploads to Autonomi and also as the key for dweb sites that you may interact with.
 
@@ -146,8 +144,6 @@ See uploaded files and upload new files to the network. Check the status tab to 
 
 Clicking on the 'Upload New File' button will pull up a file picker window where you can select a file. If you've got the ETH and AUTONOMI tokens available in your active wallet, the file will upload to the network. After it completes, you'll see a notification at the bottom of the screen.
 
-**NOTE**: the v1.1.5 release of Colony and older does not show upload status in the status screen. It will run in the background and display a toast when complete. This issue is being fixed.
-
 <p align="center">
  <img align="center" src="https://raw.githubusercontent.com/zettawatt/colony/main/screenshots/upload_file.gif" height="480" />
 </p>
@@ -175,8 +171,6 @@ You can add as many pod references to your pod as you wish. If you want to share
 To share uploaded files and add metadata to them, click the pencil icon on the selected pod, and click the transfer button to add this file to the pod. Then click the pencil icon to edit the metadata. There is a drop down at the top providing templates for various file types. Then enter in the relevant information in the fields.
 
 You can also add files that were uploaded to Autonomi using the ant CLI or other application by clicking on the 'Add Autonomi File' button in the Editing Pod dialog. This will bring up a dialog where you can paste the Autonomi address of the object you want to describe.
-
-**NOTE**: on Colony v1.1.5 and older the initial template will be for a 'Book' and be blank. Click the drop down to select another option to populate the fields. If you want to describe a book, reselect the 'Book' type and the fields will be populated. This is being fixed.
 
 The text looks rather complicated, but it isn't too hard once you've done a few. In simplified terms, the left side `"schema:blah"` statement specifies what type of information you should enter in the right hand text entry box. For example, if you are uploading a book and the left side says `"schema:author"`, in the right hand side you'd put the author's name in the text entry box.
 
