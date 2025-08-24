@@ -2626,10 +2626,13 @@ async fn dweb_serve(
 /// This function spawns the dweb sidecar to open a specific address and captures
 /// its output for debugging purposes. All output is logged with the address
 /// included in the log message for easier tracking.
+///
+/// Note: This function always uses the colony-dweb sidecar when dweb serve is running
+/// from our sidecar, rather than re-determining which binary to use.
 #[tauri::command]
 async fn dweb_open(
     app: AppHandle,
-    _state: State<'_, Mutex<AppState>>,
+    state: State<'_, Mutex<AppState>>,
     address: String,
 ) -> Result<String, Error> {
     // Android doesn't support dweb sidecar - return early
@@ -2641,21 +2644,36 @@ async fn dweb_open(
         return Ok("dweb_open not supported on Android".to_string());
     }
 
-    let dweb_binary = determine_dweb_binary().await;
+    info!("Opening address with dweb: {}", address);
 
-    let (mut rx, mut _child) = match dweb_binary {
-        DwebBinary::System => {
-            info!("Using system dweb binary for open command");
+    // Check if we have a running dweb process from our sidecar
+    let has_sidecar_process = {
+        let state_guard = state.lock().unwrap();
+        let process_guard = state_guard.dweb_process.lock().unwrap();
+        process_guard.is_some()
+    };
+
+    let (mut rx, mut _child) = if has_sidecar_process {
+        info!("Using colony-dweb sidecar for open command (sidecar process running)");
+        // Use colony-dweb sidecar since we started it
+        app.shell()
+            .sidecar("colony-dweb")?
+            .args(["open", &address])
+            .spawn()
+            .map_err(Error::Shell)?
+    } else {
+        // Check if system dweb is running
+        if is_dweb_serve_running().await {
+            info!("Using system dweb binary for open command (system dweb detected)");
             // Use system dweb binary directly
             app.shell()
                 .command("dweb")
                 .args(["open", &address])
                 .spawn()
                 .map_err(Error::Shell)?
-        }
-        DwebBinary::ColonyDweb => {
-            info!("Using colony-dweb sidecar for open command");
-            // Use colony-dweb sidecar
+        } else {
+            info!("No dweb serve detected, using colony-dweb sidecar for open command");
+            // Use colony-dweb sidecar as fallback
             app.shell()
                 .sidecar("colony-dweb")?
                 .args(["open", &address])
