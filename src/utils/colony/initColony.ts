@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { setPassword } from "../password/session";
 import { getPrimaryWallet } from "../wallet/getPrimaryWallet";
 import { startDweb } from "../dweb/dwebCommands";
+import { startAnttp } from "../anttp/anttpCommands";
 import { addToast } from "../../stores/toast";
 
 export async function initColony(password: string) {
@@ -15,7 +16,8 @@ export async function initColony(password: string) {
     }
     await invoke("initialize_autonomi_client", { walletKey });
     await invoke("initialize_pod_manager");
-    await startDweb(walletKey)
+    await startDweb(walletKey);
+    await startAnttp(walletKey);
     addToast("Connected to Autonomi Network!", "success");
   } catch (error) {
     addToast("Encounted an error on start up, see logs...", "error");

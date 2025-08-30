@@ -41,6 +41,7 @@ tauri-plugin-shell = "2"
 clap = "4.5.40"
 tauri-plugin-log = "2"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+anttp = "0.12.0"
 
 [profile.dev]
 opt-level = 0

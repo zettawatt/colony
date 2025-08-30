@@ -92,6 +92,23 @@
       await invoke("write_keystore_to_file", {password: pw})
       await ps.setPrimaryWallet(name);
       await setActiveWallet(name);
+
+      // Restart servers with new wallet key
+      const { getPrimaryWallet } = await import('../../../utils/wallet/getPrimaryWallet');
+      const primaryWallet = await getPrimaryWallet();
+      if (primaryWallet?.privateKey) {
+        // Import the server restart functions
+        const { startDweb } = await import('../../../utils/dweb/dwebCommands');
+        const { startAnttp, stopAnttp } = await import('../../../utils/anttp/anttpCommands');
+
+        // Restart anttp server with new wallet key
+        await stopAnttp();
+        await startAnttp(primaryWallet.privateKey);
+
+        // Restart dweb server with new wallet key (if not on Android)
+        await startDweb(primaryWallet.privateKey);
+      }
+
       console.log(response); // "Wallet switched"
       addToast("Primary wallet has been switched!", "success");
       return response;

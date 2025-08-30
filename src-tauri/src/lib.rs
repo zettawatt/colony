@@ -1,5 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //use colony::config::generate_seed_phrase;
+use anttp;
+use anttp::config::anttp_config::AntTpConfig;
 use autonomi::client::config::ClientConfig;
 use autonomi::client::payment::PaymentOption;
 use autonomi::client::quote::CostError;
@@ -22,6 +24,7 @@ use std::sync::{MutexGuard, PoisonError};
 use tauri::Manager;
 use tauri::{AppHandle, Emitter, RunEvent, State, WindowEvent};
 use tauri_plugin_shell::{process::CommandChild, Error as ShellError, ShellExt};
+use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
 
 // Dweb detection and management
@@ -29,6 +32,36 @@ use tracing::{debug, error, info, warn};
 pub enum DwebBinary {
     System,     // Use system-installed dweb
     ColonyDweb, // Use colony-dweb sidecar
+}
+
+/// Check if anttp server is already running by querying the REST API
+async fn is_anttp_running() -> bool {
+    let client = reqwest::Client::new();
+
+    // Try the default anttp port (18888)
+    match client
+        .get("http://127.0.0.1:18888/")
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                info!("Detected running anttp server on port 18888");
+                true
+            } else {
+                debug!(
+                    "anttp server not responding on port 18888: {}",
+                    response.status()
+                );
+                false
+            }
+        }
+        Err(e) => {
+            debug!("No anttp server detected on port 18888: {}", e);
+            false
+        }
+    }
 }
 
 /// Check if a user-installed dweb serve is already running by querying the REST API
@@ -269,6 +302,7 @@ pub struct AppState {
     pub network: String,
     pub session: Session,
     pub dweb_process: Mutex<Option<CommandChild>>,
+    pub anttp_handle: Mutex<Option<JoinHandle<std::io::Result<()>>>>,
 }
 
 // Data structures for Tauri commands
@@ -1974,7 +2008,11 @@ async fn set_active_wallet(
 }
 
 #[tauri::command]
-async fn switch_wallet(state: State<'_, Mutex<AppState>>, name: String) -> Result<String, Error> {
+async fn switch_wallet(
+    _app: AppHandle,
+    state: State<'_, Mutex<AppState>>,
+    name: String,
+) -> Result<String, Error> {
     // Extract all data we need and drop all locks before any await
     let (client, wallet_key, evm_network) = {
         let state = state.lock().unwrap();
@@ -2511,6 +2549,110 @@ async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
     stop_dweb_process(&state)
 }
 
+/// Helper function to stop the anttp server - can be called from commands or event handlers.
+///
+/// This function safely terminates the anttp server if it's running.
+/// It's designed to be called both from the anttp_stop command and from application
+/// exit event handlers to ensure the server is properly cleaned up.
+fn stop_anttp_server(app_state: &Mutex<AppState>) -> Result<String, Error> {
+    let handle = app_state
+        .lock()
+        .unwrap()
+        .anttp_handle
+        .lock()
+        .unwrap()
+        .take();
+
+    if let Some(join_handle) = handle {
+        // Abort the tokio task
+        join_handle.abort();
+
+        // Call anttp's stop_server function to gracefully shutdown
+        tokio::spawn(async {
+            if let Err(e) = anttp::stop_server().await {
+                error!("Failed to gracefully stop anttp server: {}", e);
+            }
+        });
+
+        info!("Successfully stopped anttp server");
+        Ok("Stopped anttp server".to_string())
+    } else {
+        info!("No anttp server running");
+        Ok("No anttp server running".to_string())
+    }
+}
+
+#[tauri::command]
+async fn anttp_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
+    stop_anttp_server(&state)
+}
+
+#[tauri::command]
+async fn anttp_start(
+    _app: AppHandle,
+    state: State<'_, Mutex<AppState>>,
+    wallet_key: String,
+) -> Result<String, Error> {
+    // Check if anttp is already running on the system
+    if is_anttp_running().await {
+        info!("anttp server already running on port 18888");
+        return Ok("anttp server already running on port 18888".to_string());
+    }
+
+    // Stop any existing anttp server first
+    let _ = anttp_stop(state.clone()).await;
+
+    // Get the network setting from state
+    let network = {
+        let state_guard = state.lock().unwrap();
+        state_guard.network.clone()
+    };
+
+    // Create anttp configuration
+    //FIXME: wait to hear back from Traktion on what to do with these default arguments
+    let anttp_config = AntTpConfig {
+        listen_address: "127.0.0.1:18888".parse().unwrap(),
+        static_file_directory: String::new(),
+        wallet_private_key: wallet_key,
+        download_threads: 8,
+        app_private_key: String::new(),
+        bookmarks: vec![
+            "traktion-blog=8e16406561d0c460f3dbe37fef129582d6410ec7cb9d5aebdf9cbb051676624c543a315f7e857103cd71088a927c9085".to_string(),
+            "imim=959c2ba5b84e1a68fedc14caaae96e97cfff19ff381127844586b2e0cdd2afdfb1687086a5668bced9f3dc35c03c9bd7".to_string(),
+            "gimim=82fb48d691a65e771e2279ff56d8c5f7bc007fa386c9de95d64be52e081f01b1fdfb248095238b93db820836cc88c67a".to_string(),
+            "index=b970cf40a1ba880ecc27d5495f543af387fcb014863d0286dd2b1518920df38ac311d854013de5d50b9b04b84a6da021".to_string(),
+            "gindex=879d061580e6200a3f1dbfc5c87c13544fcd391dfec772033f1138a9469df35c98429ecd3acb4a9ab631ea7d5f6fae0f".to_string(),
+            "cinema=953ff297c689723a59e20d6f80b67233b0c0fe17ff4cb37a2c8cfb46e276ce0e45d59c17e006e4990deaa634141e4c77".to_string(),
+        ],
+        uploads_disabled: false,
+        cached_mutable_ttl: 5,
+        peers: vec![],
+        map_cache_directory: String::new(),
+        evm_network: "main".to_string(),
+        immutable_disk_cache_size: 1024,
+        immutable_memory_cache_size: 32,
+        idle_disconnect: 30,
+    };
+
+    // Clone network for logging after the spawn
+    let network_clone = network.clone();
+
+    // Spawn anttp server in a tokio task
+    let handle = tokio::spawn(async move {
+        info!("Starting anttp server on 127.0.0.1:18888 with network: {}", network);
+        anttp::run_server(anttp_config).await
+    });
+
+    // Store the handle for later termination
+    {
+        let state_guard = state.lock().unwrap();
+        *state_guard.anttp_handle.lock().unwrap() = Some(handle);
+    }
+
+    info!("Started anttp server with network: {}", network_clone);
+    Ok(format!("Started anttp server with network: {network_clone}"))
+}
+
 /// Starts the dweb sidecar process with logging support.
 ///
 /// This function spawns the dweb sidecar binary and captures its stdout/stderr output,
@@ -2764,6 +2906,7 @@ fn run_with_network(network: &str) {
             password: Mutex::new(None),
         },
         dweb_process: Mutex::new(None),
+        anttp_handle: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -2847,27 +2990,32 @@ fn run_with_network(network: &str) {
             dweb_serve,
             dweb_stop,
             dweb_open,
+            anttp_start,
+            anttp_stop,
             open_file_with_default_app,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| match event {
             RunEvent::ExitRequested { .. } => {
-                info!("Application exit requested - stopping dweb process");
+                info!("Application exit requested - stopping servers");
+                cleanup_anttp_server(app);
                 cleanup_dweb_process(app);
             }
             RunEvent::WindowEvent {
                 event: WindowEvent::CloseRequested { .. },
                 ..
             } => {
-                info!("Window close requested - stopping dweb process");
+                info!("Window close requested - stopping servers");
+                cleanup_anttp_server(app);
                 cleanup_dweb_process(app);
             }
             RunEvent::WindowEvent {
                 event: WindowEvent::Destroyed,
                 ..
             } => {
-                info!("Window destroyed - ensuring dweb process cleanup");
+                info!("Window destroyed - ensuring server cleanup");
+                cleanup_anttp_server(app);
                 cleanup_dweb_process(app);
             }
             _ => {}
@@ -2875,6 +3023,20 @@ fn run_with_network(network: &str) {
 }
 
 // Helper functions that aren't tauri commands
+
+/// Helper function to cleanup anttp server during application shutdown.
+/// This function is called from various exit event handlers to ensure
+/// the anttp server is properly terminated.
+fn cleanup_anttp_server(app: &AppHandle) {
+    if let Some(app_state) = app.try_state::<Mutex<AppState>>() {
+        match stop_anttp_server(&app_state) {
+            Ok(msg) => info!("Cleanup: {}", msg),
+            Err(e) => error!("Failed to stop anttp server during cleanup: {}", e),
+        }
+    } else {
+        warn!("Could not access app state during anttp cleanup");
+    }
+}
 
 /// Helper function to cleanup dweb process during application shutdown.
 /// This function is called from various exit event handlers to ensure
@@ -2938,6 +3100,7 @@ mod tests {
                 password: Mutex::new(None),
             },
             dweb_process: Mutex::new(None),
+            anttp_handle: Mutex::new(None),
         })
     }
 
