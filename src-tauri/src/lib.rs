@@ -1,6 +1,5 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 //use colony::config::generate_seed_phrase;
-use anttp;
 use anttp::config::anttp_config::AntTpConfig;
 use autonomi::client::config::ClientConfig;
 use autonomi::client::payment::PaymentOption;
@@ -2639,7 +2638,10 @@ async fn anttp_start(
 
     // Spawn anttp server in a tokio task
     let handle = tokio::spawn(async move {
-        info!("Starting anttp server on 127.0.0.1:18888 with network: {}", network);
+        info!(
+            "Starting anttp server on 127.0.0.1:18888 with network: {}",
+            network
+        );
         anttp::run_server(anttp_config).await
     });
 
@@ -2650,7 +2652,9 @@ async fn anttp_start(
     }
 
     info!("Started anttp server with network: {}", network_clone);
-    Ok(format!("Started anttp server with network: {network_clone}"))
+    Ok(format!(
+        "Started anttp server with network: {network_clone}"
+    ))
 }
 
 /// Starts the dweb sidecar process with logging support.
