@@ -152,7 +152,7 @@ Clicking on the 'Upload New File' button will pull up a file picker window where
 The My Pods page enables managing your pods, pod references, and attaching metadata to files in your pods.
 
 ###### Syncing from the Autonomi network
-The 'Sync' button will pull pods from the Autonomi network. This will lock up the window while it fetches all of the metadata from the network. Run Sync any time you want to fetch the latest metadata from the network. Depending on the size of the pods, how many pod references you have, and your network speed, this operation will take some time.
+The 'Sync' button will pull pods from the Autonomi network. This will lock up the window while it fetches all of the metadata from the network. Run Sync any time you want to fetch the latest metadata from the network. Depending on the size of the pods, how many pod references you have, and your network speed, this operation will take some time. One note here is that a couple of the low level datatypes in Autonomi are still not rock solid. If you perform a Sync and do not see changes that you expect or if you don't see anything after the initial install, hit the Sync button again, possibly several times, until the data populates. This is not a Colony issue, but rather an Autonomi issue that will be resolved in the future.
 
 Note it will throw a warning at this phase warning you about potential corruption if you haven't uploaded. If you have never uploaded to the network, there is no concern here. If you have, make sure you always click 'Upload All Pods' before you hit sync if you want to keep your changes. During the 'sync' operation, it will pull down all of your pods from the Autonomi network, so if you have local modifications, they could be lost.
 
