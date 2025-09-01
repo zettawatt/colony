@@ -16,6 +16,7 @@
   import { addToast } from '../../../stores/toast';
   import { searchState } from '../../../stores/searchState';
   import AddressDisplay from '../../../components/AddressDisplay.svelte';
+  import { podsSyncing } from '../../../stores/globals';
 
   // Helper function to check if a key represents an address
   function isAddressField(key: string, value: string): boolean {
@@ -31,6 +32,8 @@
   let showLogin: boolean = false;
   let isSearching: boolean = false;
   let fileMetadataModal: HTMLDialogElement;
+  let syncPodsModal: HTMLDialogElement;
+  let syncingInProgressModal: HTMLDialogElement;
   let searchMetrics = {
     itemCount: 0,
     searchTime: 0,
@@ -75,6 +78,22 @@
   // Update column width when window resizes
   $: if (windowWidth) {
     updateDescriptionColumnWidth();
+  }
+
+  // Handle syncing modal display
+  $: {
+    // Whenever podsSyncing changes, show/hide the syncing dialog
+    if ($podsSyncing) {
+      syncingInProgressModal?.showModal?.();
+      // Prevent closing via Escape key
+      if (syncingInProgressModal) {
+        syncingInProgressModal.addEventListener('cancel', (e) => {
+          e.preventDefault();
+        });
+      }
+    } else {
+      syncingInProgressModal?.close?.();
+    }
   }
 
   
@@ -370,6 +389,25 @@
       await browseSearch();
     } else {
       await simpleSearch();
+    }
+  }
+
+  async function syncPods() {
+    try {
+      podsSyncing.set(true);
+      addToast("Syncing pods....", "info", 30000);
+      const response = await invoke('refresh_ref', {
+        request: {
+          depth: "0",
+        }
+      });
+      console.log('Success:', response);
+      podsSyncing.set(false);
+      addToast("Pods have been synced", "info", 30000);
+    } catch (e) {
+      console.error('Failed to sync:', e);
+      addToast("Failed to sync pods", "error");
+      podsSyncing.set(false);
     }
   }
 
@@ -699,6 +737,13 @@
           Search
         {/if}
       </button>
+      <button class="btn btn-neutral btn-soft" onclick={() => syncPodsModal.show()} disabled={$podsSyncing}>
+        {#if $podsSyncing}
+          <span class="loading loading-spinner"></span>
+        {:else}
+          Sync
+        {/if}
+      </button>
     </div>
 
     <!-- Search Metrics -->
@@ -753,6 +798,33 @@
     <form method="dialog" class="modal-backdrop">
       <button>close</button>
     </form>
+  </dialog>
+
+  <!-- Sync Pods Warning Modal -->
+  <dialog id="syncPodsModal" class="modal" bind:this={syncPodsModal}>
+    <div class="modal-box w-5/12 max-w-xl">
+      <h3 class="text-lg font-bold">Warning</h3>
+      <div class="py-4" style="justify-content: center;">
+        <p>Syncing pods attempts to sync your local pods with any pods you have uploaded on the Autonomi Network. This may overwrite your local pods. If you have made any changes to your local pods that you want saved, you should upload your pods first!</p>
+      </div>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-neutral" onclick={() => {syncPods()}}>Sync Pods</button>
+          <button class="btn btn-soft btn-error">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Syncing In Progress Modal -->
+  <dialog id="syncingInProgressModal" class="modal" bind:this={syncingInProgressModal}>
+    <div class="modal-box flex flex-col items-center">
+      <h3 class="text-lg font-bold mb-2">Syncing is in Progress</h3>
+      <div class="my-4">
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+      <p class="mb-2 text-center">Pods are syncing. Please do not close or leave this page until syncing is complete.</p>
+    </div>
   </dialog>
 </main>
 
