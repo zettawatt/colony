@@ -145,7 +145,7 @@
     </a>
   </div>
 
-  <p>Version: 1.1.6</p>
+  <p>Version: 1.1.7</p>
   <p>Like Colony? Donate to support future development:</p>
 
   <!-- Crypto donation section -->
