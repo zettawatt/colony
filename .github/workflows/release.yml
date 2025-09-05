@@ -114,14 +114,24 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path ~/.ssh
-          # Use PowerShell to avoid SSH client issues on Windows
+          # Create SSH directory in multiple locations to ensure Git finds it
+          $sshDirs = @("$env:USERPROFILE\.ssh", "$env:HOME\.ssh")
+          foreach ($dir in $sshDirs) {
+            New-Item -ItemType Directory -Force -Path $dir -ErrorAction SilentlyContinue
+          }
+
+          # Host keys for Codeberg
           $hostKeys = @(
             "codeberg.org ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8hZi7K1/2E2uBX8gwPRJAHvRAob+3Sn+y2hxiEhN0buv1igjYFTgFO2qQD8vLfU/HT/P/rqvEeTvaDfY1y/vcvQ8+YuUYyTwE2UaVU5aJv89y6PEZBYycaJCPdGIfZlLMmjilh/Sk8IWSEK6dQr+g686lu5cSWrFW60ixWpHpEVB26eRWin3lKYWSQGMwwKv4LwmW3ouqqs4Z4vsqRFqXJ/eCi3yhpT+nOjljXvZKiYTpYajqUC48IHAxTWugrKe1vXWOPxVXXMQEPsaIRc2hpK+v1LmfB7GnEGvF1UAKnEZbUuiD9PBEeD5a1MZQIzcoPWCrTxipEpuXQ5Tni4mN",
             "codeberg.org ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBL2pDxWr18SoiDJCGZ5LmxPygTlPu+cCKSkpqkvCyQzl5xmIMeKNdfdBpfbCGDPoZQghePzFZkKJNR/v9Win3Sc=",
             "codeberg.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIVIC02vnjFyL+I4RHfvIGNtOgJMe769VTF1VR4EB3ZB"
           )
-          $hostKeys | Out-File -FilePath ~/.ssh/known_hosts -Encoding utf8 -Append
+
+          # Write to multiple locations to ensure Git finds the known_hosts file
+          foreach ($dir in $sshDirs) {
+            $knownHostsPath = Join-Path $dir "known_hosts"
+            $hostKeys | Out-File -FilePath $knownHostsPath -Encoding utf8 -Append -ErrorAction SilentlyContinue
+          }
 
       - name: Setup SSH key for submodules
         uses: webfactory/ssh-agent@v0.9.0
