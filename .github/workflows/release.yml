@@ -104,10 +104,17 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Add Codeberg to known hosts
+      - name: Add Codeberg to known hosts (Unix)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H codeberg.org >> ~/.ssh/known_hosts
+
+      - name: Add Codeberg to known hosts (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t rsa,ecdsa,ed25519 -H codeberg.org >> ~/.ssh/known_hosts
 
       - name: Setup SSH key for submodules
         uses: webfactory/ssh-agent@v0.9.0
