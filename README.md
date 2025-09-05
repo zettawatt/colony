@@ -9,7 +9,7 @@
 
 **A user-friendly desktop application for the [Autonomi](https://autonomi.com) network**
 
-Colony is a cross-platform GUI application that makes it easy to upload, download, share, and search for files on the decentralized Autonomi network. Powered by the [colonylib](https://crates.io/crates/colonylib) Rust crate, Colony provides an intuitive interface for managing your data on a censorship-resistant, permanent storage network.
+Colony is a cross-platform GUI application that makes it easy to upload, download, share, and search for files on the decentralized Autonomi network. Powered by the [colonylib](https://crates.io/crates/colonylib) Rust crate, Colony provides an intuitive interface for managing your data on a censorship-resistant, permanent storage network. 
 
 ## ✨ Features
 
