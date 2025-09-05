@@ -68,3 +68,7 @@ CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/in
 [target.x86_64-apple-darwin.env]
 SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
 CPLUS_INCLUDE_PATH = "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+
+# Android-specific configuration to ensure rustls usage and avoid OpenSSL
+[target.'cfg(target_os = "android")'.dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
