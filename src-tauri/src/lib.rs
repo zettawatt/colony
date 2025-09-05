@@ -1950,30 +1950,58 @@ async fn set_active_wallet(
     state: State<'_, Mutex<AppState>>,
     name: String,
 ) -> Result<(String, String), Error> {
-    let state = state.lock().unwrap();
+    // First, set the active wallet
+    let wallet_result: Result<(String, String), Error> = {
+        let state_guard = state.lock().unwrap();
 
-    let mut keystore = state
-        .keystore
-        .lock()
-        .unwrap()
-        .as_ref()
-        .ok_or("KeyStore not initialized")?
-        .clone();
+        let mut keystore = state_guard
+            .keystore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("KeyStore not initialized")?
+            .clone();
 
-    let datastore = state
-        .datastore
-        .lock()
-        .unwrap()
-        .as_ref()
-        .ok_or("DataStore not initialized")?
-        .clone();
+        let datastore = state_guard
+            .datastore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("DataStore not initialized")?
+            .clone();
 
-    // Set the active wallet
-    let (name, address) = keystore.set_active_wallet(&name)?;
-    datastore.set_active_wallet(&name, &address)?;
+        // Set the active wallet
+        let (name, address) = keystore.set_active_wallet(&name)?;
+        datastore.set_active_wallet(&name, &address)?;
 
-    info!("Active wallet retrieved: {name}");
-    Ok((name, address))
+        Ok((name, address))
+    }; // Release all locks
+
+    // Handle the result
+    let (wallet_name, wallet_address) = wallet_result?;
+    info!("Active wallet set to: {wallet_name}");
+
+    // Check if DwebService needs to be restarted (no locks held)
+    let is_running = is_dweb_serve_running().await;
+    if is_running {
+        info!("Restarting DwebService with new active wallet");
+        match initialize_dweb_service_with_wallet(&state) {
+            Ok(_) => {
+                // Restart the service on port 5537
+                let state_guard = state.lock().unwrap();
+                let mut dweb_service_guard = state_guard.dweb_service.lock().unwrap();
+                if let Some(dweb_service) = dweb_service_guard.as_mut() {
+                    dweb_service.start(5537, None);
+                    info!("DwebService restarted with new active wallet");
+                }
+            }
+            Err(e) => {
+                warn!("Failed to restart DwebService with new wallet: {}", e);
+            }
+        }
+    }
+
+    Ok((wallet_name, wallet_address))
 }
 
 #[tauri::command]
@@ -2023,36 +2051,49 @@ async fn switch_wallet(
     }; // All MutexGuards are dropped here
 
     // Perform operations and ensure components are always restored
-    let result = async {
-        info!("EVM network: {evm_network:?}");
+    info!("EVM network: {evm_network:?}");
 
-        // Create new wallet with the specified key
-        let wallet = Wallet::new_from_private_key(evm_network.clone(), &wallet_key)
-            .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
-
-        info!("Wallet switched to: {}", name);
-        Ok((wallet, wallet_key))
-    }
-    .await;
-
-    // Always put the components back, regardless of success or failure
-    match result {
-        Ok((wallet, _wallet_key)) => {
-            {
-                let state_guard = state.lock().unwrap();
-                *state_guard.client.lock().unwrap() = Some(client);
-                *state_guard.wallet.lock().unwrap() = Some(wallet);
-            } // Release the lock
-
-            Ok(format!("Successfully switched to wallet: {name}"))
-        }
+    // Create new wallet with the specified key
+    let wallet = match Wallet::new_from_private_key(evm_network.clone(), &wallet_key) {
+        Ok(wallet) => wallet,
         Err(e) => {
-            // Restore the client even on failure
-            let state = state.lock().unwrap();
-            *state.client.lock().unwrap() = Some(client);
-            Err(e)
+            // Restore the client on failure
+            let state_guard = state.lock().unwrap();
+            *state_guard.client.lock().unwrap() = Some(client);
+            return Err(Error::Message(format!("Failed to create wallet: {e}")));
+        }
+    };
+
+    // Store the wallet and client back in state
+    {
+        let state_guard = state.lock().unwrap();
+        *state_guard.client.lock().unwrap() = Some(client);
+        *state_guard.wallet.lock().unwrap() = Some(wallet);
+    } // Release the lock
+
+    info!("Wallet switched to: {}", name);
+
+    // Check if DwebService needs to be restarted (no locks held)
+    let is_running = is_dweb_serve_running().await;
+    if is_running {
+        info!("Restarting DwebService with switched wallet");
+        match initialize_dweb_service_with_wallet(&state) {
+            Ok(_) => {
+                // Restart the service on port 5537
+                let state_guard = state.lock().unwrap();
+                let mut dweb_service_guard = state_guard.dweb_service.lock().unwrap();
+                if let Some(dweb_service) = dweb_service_guard.as_mut() {
+                    dweb_service.start(5537, None);
+                    info!("DwebService restarted with switched wallet");
+                }
+            }
+            Err(e) => {
+                warn!("Failed to restart DwebService with switched wallet: {}", e);
+            }
         }
     }
+
+    Ok(format!("Successfully switched to wallet: {name}"))
 }
 
 #[tauri::command]
@@ -2495,6 +2536,83 @@ fn stop_dweb_service(app_state: &Mutex<AppState>) -> Result<String, Error> {
     }
 }
 
+/// Helper function to initialize or restart the DwebService with Colony's active wallet.
+///
+/// This function creates a new DwebService configured with the active wallet from Colony's
+/// keystore and datastore. It should be called when:
+/// - Colony initializes and connects to the Autonomi network
+/// - The active wallet changes
+/// - The dweb service needs to be restarted with updated wallet configuration
+fn initialize_dweb_service_with_wallet(app_state: &Mutex<AppState>) -> Result<String, Error> {
+    let (wallet_key, network) = {
+        let state_guard = app_state.lock().unwrap();
+
+        // Get the keystore and datastore
+        let keystore = state_guard
+            .keystore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("KeyStore not initialized")?
+            .clone();
+
+        let datastore = state_guard
+            .datastore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("DataStore not initialized")?
+            .clone();
+
+        let network = state_guard.network.clone();
+
+        // Get the active wallet
+        let (wallet_name, _wallet_address) = datastore.get_active_wallet()
+            .map_err(|e| Error::Message(format!("Failed to get active wallet: {e}")))?;
+
+        // Get the wallet private key
+        let wallet_key = keystore.get_wallet_key(&wallet_name)
+            .map_err(|e| Error::Message(format!("Failed to get wallet key: {e}")))?;
+
+        (wallet_key, network)
+    }; // Release all locks
+
+    // Create the wallet for the DwebClientConfig
+    // For local networks, we'll use ArbitrumSepoliaTest as the EVM network since
+    // local networks typically use test configurations
+    let evm_network = match network.as_str() {
+        "local" => autonomi::Network::ArbitrumSepoliaTest, // Local uses test network
+        "alpha" => autonomi::Network::ArbitrumSepoliaTest,
+        _ => autonomi::Network::ArbitrumOne, // main network
+    };
+
+    let wallet = Wallet::new_from_private_key(evm_network.clone(), &wallet_key)
+        .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
+
+    // Create DwebClientConfig with the wallet
+    let mut dweb_config = DwebClientConfig::default();
+    dweb_config.wallet = Some(wallet);
+    dweb_config.local_network = network == "local";
+    dweb_config.alpha_network = network == "alpha";
+
+    // Stop any existing service and create a new one with the wallet
+    {
+        let state_guard = app_state.lock().unwrap();
+        let mut dweb_service_guard = state_guard.dweb_service.lock().unwrap();
+
+        // Stop existing service if running
+        if let Some(existing_service) = dweb_service_guard.as_mut() {
+            existing_service.start(0, None); // Stop the service
+        }
+
+        // Create new service with wallet configuration
+        *dweb_service_guard = Some(DwebService::new(dweb_config));
+    }
+
+    info!("DwebService initialized with active wallet");
+    Ok("DwebService initialized with active wallet".to_string())
+}
+
 #[tauri::command]
 async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
     stop_dweb_service(&state)
@@ -2670,13 +2788,13 @@ async fn anttp_start(
 ///
 /// This function manages the lifecycle of the dweb serve, including:
 /// - Checking if dweb serve is already running
+/// - Initializing DwebService with Colony's active wallet
 /// - Starting the DwebService with appropriate port (5537)
-/// - Using the wallet key for authentication
 ///
 /// # Arguments
 /// * `app` - The Tauri application handle (unused but kept for compatibility)
 /// * `state` - The application state containing the dweb service
-/// * `wallet_key` - The wallet secret key (unused in current implementation but kept for compatibility)
+/// * `wallet_key` - The wallet secret key (unused - we get it from Colony's active wallet)
 ///
 /// # Returns
 /// * `Ok(String)` - Success message indicating the serve was started or already running
@@ -2684,6 +2802,7 @@ async fn anttp_start(
 ///
 /// # Behavior
 /// - If dweb serve is already running, it returns early without starting another instance
+/// - Initializes DwebService with Colony's active wallet configuration
 /// - Uses DwebService.start() to start the service on port 5537
 /// - The service runs in the background and handles requests
 #[tauri::command]
@@ -2698,14 +2817,17 @@ async fn dweb_serve(
         return Ok("dweb serve is already running".to_string());
     }
 
-    // Get the DwebService from state and start it
+    // Initialize DwebService with Colony's active wallet
+    initialize_dweb_service_with_wallet(&state)?;
+
+    // Start the DwebService
     {
         let state_guard = state.lock().unwrap();
         let mut dweb_service_guard = state_guard.dweb_service.lock().unwrap();
         if let Some(dweb_service) = dweb_service_guard.as_mut() {
             dweb_service.start(5537, None);
-            info!("Started dweb serve on port 5537");
-            Ok("Started dweb serve on port 5537".to_string())
+            info!("Started dweb serve on port 5537 with active wallet");
+            Ok("Started dweb serve on port 5537 with active wallet".to_string())
         } else {
             Err(Error::Message("DwebService not initialized".to_string()))
         }
@@ -2874,7 +2996,8 @@ fn run_with_network(network: &str) {
             // Make builtin names such as 'awesome' available (in addition to opening xor addresses)
             dweb::web::name::register_builtin_names(false);
 
-            // Initialize DwebService in the app state
+            // Initialize DwebService in the app state with default config
+            // The wallet will be set later when Colony initializes
             if let Some(app_state) = app.try_state::<Mutex<AppState>>() {
                 let state_guard = app_state.lock().unwrap();
                 *state_guard.dweb_service.lock().unwrap() =

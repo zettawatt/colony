@@ -36,6 +36,23 @@
           "path": "/tmp/**"
         }
       ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "http://127.0.0.1:5537/*"
+        },
+        {
+          "url": "http://127.0.0.1:18888/*"
+        },
+        {
+          "url": "https://*"
+        },
+        {
+          "url": "http://*"
+        }
+      ]
     }
   ]
 }
