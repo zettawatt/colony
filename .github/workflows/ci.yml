@@ -14,6 +14,11 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
+      - name: Add Codeberg to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H codeberg.org >> ~/.ssh/known_hosts
+
       - name: Setup SSH key for submodules
         uses: webfactory/ssh-agent@v0.9.0
         with:
