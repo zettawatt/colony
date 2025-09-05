@@ -39,19 +39,23 @@ export async function initStore() {
       }
     }
 
-    store = new LazyStore(`${dir}/${STORE_NAME}`, { autoSave: true });
-    await store.set('__version', STORE_VERSION);
-    await store.set('uploadedFiles', {});
-    await store.set('downloadedFiles', {});
-    await store.set('podCache', []);
-    await store.set('hasUserCompletedIntro', false);
-    await store.set('userConfig', {
-      "downloadsDirectory": defaultDownloadDir,
-      "theme": "auto", // undefined is default for automatic switching
-      "preferredLightTheme": "bumblebee",
-      "preferredDarkTheme": "halloween"
+    store = new LazyStore(`${dir}/${STORE_NAME}`, {
+      autoSave: true,
+      defaults: {
+        '__version': STORE_VERSION,
+        'uploadedFiles': {},
+        'downloadedFiles': {},
+        'podCache': [],
+        'hasUserCompletedIntro': false,
+        'userConfig': {
+          "downloadsDirectory": defaultDownloadDir,
+          "theme": "auto",
+          "preferredLightTheme": "bumblebee",
+          "preferredDarkTheme": "halloween"
+        },
+        'primaryWallet': ""
+      }
     });
-    await store.set('primaryWallet', "");
     return store;
   } catch (err) {
     console.error("Error initializing persistent store:", err);
@@ -62,7 +66,42 @@ export async function initStore() {
 export async function getStore() {
   if (!store) {
     const dir = await appDataDir();
-    store = new LazyStore(`${dir}/${STORE_NAME}`, { autoSave: true });
+
+    // Android detection for default download directory
+    const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
+    let defaultDownloadDir: string;
+
+    if (isAndroid) {
+      defaultDownloadDir = "/storage/emulated/0/Download";
+    } else {
+      try {
+        defaultDownloadDir = await downloadDir();
+        if (!defaultDownloadDir) {
+          defaultDownloadDir = dir;
+        }
+      } catch (error) {
+        console.warn("Failed to get download directory, using app data directory as fallback:", error);
+        defaultDownloadDir = dir;
+      }
+    }
+
+    store = new LazyStore(`${dir}/${STORE_NAME}`, {
+      autoSave: true,
+      defaults: {
+        '__version': STORE_VERSION,
+        'uploadedFiles': {},
+        'downloadedFiles': {},
+        'podCache': [],
+        'hasUserCompletedIntro': false,
+        'userConfig': {
+          "downloadsDirectory": defaultDownloadDir,
+          "theme": "auto",
+          "preferredLightTheme": "bumblebee",
+          "preferredDarkTheme": "halloween"
+        },
+        'primaryWallet': ""
+      }
+    });
   }
   return store;
 }
