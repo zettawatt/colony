@@ -13,6 +13,7 @@
   import { downloadFile } from '../../../utils/file/download';
   import { parseBrowseSparqlResults, parseTextSparqlResults } from '../../../utils/search/parseSparql';
   import { openDweb } from '../../../utils/dweb/dwebCommands';
+  import { openAnttp } from '../../../utils/anttp/anttpCommands';
   import { addToast } from '../../../stores/toast';
   import { searchState } from '../../../stores/searchState';
   import AddressDisplay from '../../../components/AddressDisplay.svelte';
@@ -121,7 +122,8 @@
     {
         label:"Download",
         action:function(_e: any, row: any){
-            row.update({name:"Steve Bobberson"});
+            const rowData = row.getData();
+            handleModalDownload(rowData);
         }
     },
     {
@@ -173,6 +175,10 @@
       return 'Open Site';
     }
 
+    if (row.type === 'ant://anttp/v1/WebSite') {
+      return 'Open Site';
+    }
+
     return 'Download';
   }
 
@@ -182,6 +188,9 @@
     if (row.type === 'ant://dweb/v1/WebSite') {
       // Open website using dweb
       openDweb(row.address);
+    } else if (row.type === 'ant://anttp/v1/WebSite') {
+      // Open website using anttp
+      openAnttp(row.address);
     } else if (row.type && row.type.includes('directory')) {
       // Download directory
       const request = {
@@ -445,6 +454,8 @@
 
         if (activeRow.type === 'ant://dweb/v1/WebSite') {
           openDweb(activeRow.address)
+        } else if (activeRow.type === 'ant://anttp/v1/WebSite') {
+          openAnttp(activeRow.address)
         } else if(activeRow.type && activeRow.type.includes("directory")) {
           const request = {
             name: activeRow.name,

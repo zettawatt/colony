@@ -386,7 +386,6 @@ jobs:
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
             src-tauri/target/${{ matrix.target }}/release/colony-app
-            src-tauri/binaries/dweb-${{ matrix.target }}
           retention-days: 1
 
       - name: Verify build artifacts

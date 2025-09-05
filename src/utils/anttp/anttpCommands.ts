@@ -21,3 +21,13 @@ export async function stopAnttp() {
     console.error(error);
   }
 }
+
+// To open an address with anttp
+export async function openAnttp(address: string) {
+  try {
+    const message = await invoke('anttp_open', { address });
+    console.log(message); // "Opened anttp address in browser: ..."
+  } catch (error) {
+    console.error('Could not open address with anttp:', error);
+  }
+}

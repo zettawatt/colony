@@ -13,6 +13,8 @@ use colonylib::graph::Error as GraphError;
 use colonylib::key::Error as KeyStoreError;
 use colonylib::pod::Error as PodError;
 use colonylib::{DataStore, Graph, KeyStore, PodManager};
+use dweb::client::DwebClientConfig;
+use dweb_server::DwebService;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -22,16 +24,8 @@ use std::sync::Mutex;
 use std::sync::{MutexGuard, PoisonError};
 use tauri::Manager;
 use tauri::{AppHandle, Emitter, RunEvent, State, WindowEvent};
-use tauri_plugin_shell::{process::CommandChild, Error as ShellError, ShellExt};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
-
-// Dweb detection and management
-#[derive(Debug, Clone)]
-pub enum DwebBinary {
-    System,     // Use system-installed dweb
-    ColonyDweb, // Use colony-dweb sidecar
-}
 
 /// Check if anttp server is already running by querying the REST API
 async fn is_anttp_running() -> bool {
@@ -45,16 +39,13 @@ async fn is_anttp_running() -> bool {
         .await
     {
         Ok(response) => {
-            if response.status().is_success() {
-                info!("Detected running anttp server on port 18888");
-                true
-            } else {
-                debug!(
-                    "anttp server not responding on port 18888: {}",
-                    response.status()
-                );
-                false
-            }
+            // Any HTTP response (including 404) means the server is running
+            // We just care that we can connect to the port
+            info!(
+                "Detected running anttp server on port 18888 (status: {})",
+                response.status()
+            );
+            true
         }
         Err(e) => {
             debug!("No anttp server detected on port 18888: {}", e);
@@ -90,23 +81,6 @@ async fn is_dweb_serve_running() -> bool {
             debug!("No dweb serve detected on port 5537: {}", e);
             false
         }
-    }
-}
-
-/// Determine which dweb binary to use based on system state
-async fn determine_dweb_binary() -> DwebBinary {
-    // Android doesn't support dweb sidecar
-    if cfg!(target_os = "android") {
-        info!("Android: dweb sidecar not supported, using system binary");
-        return DwebBinary::System;
-    }
-
-    if is_dweb_serve_running().await {
-        info!("Using system dweb binary (serve already running)");
-        DwebBinary::System
-    } else {
-        info!("Using colony-dweb sidecar binary");
-        DwebBinary::ColonyDweb
     }
 }
 
@@ -223,8 +197,6 @@ pub enum Error {
     Cost(#[from] CostError),
     #[error(transparent)]
     Io(#[from] IoError),
-    #[error(transparent)]
-    Shell(#[from] ShellError),
     #[error("{0}")]
     Message(String),
 }
@@ -262,7 +234,6 @@ pub enum ErrorKind {
     Put(String),
     Cost(String),
     Io(String),
-    Shell(String),
     Message(String),
 }
 
@@ -284,7 +255,6 @@ impl serde::Serialize for Error {
             Self::Put(_) => ErrorKind::Put(error_message),
             Self::Cost(_) => ErrorKind::Cost(error_message),
             Self::Io(_) => ErrorKind::Io(error_message),
-            Self::Shell(_) => ErrorKind::Shell(error_message),
             Self::Message(_) => ErrorKind::Message(error_message),
         };
         error_kind.serialize(serializer)
@@ -300,7 +270,7 @@ pub struct AppState {
     pub graph: Mutex<Option<Graph>>,
     pub network: String,
     pub session: Session,
-    pub dweb_process: Mutex<Option<CommandChild>>,
+    pub dweb_service: Mutex<Option<DwebService>>,
     pub anttp_handle: Mutex<Option<JoinHandle<std::io::Result<()>>>>,
 }
 
@@ -2506,46 +2476,28 @@ async fn download_directory(
     ))
 }
 
-/// Helper function to stop the dweb process - can be called from commands or event handlers.
+/// Helper function to stop the dweb service - can be called from commands or event handlers.
 ///
-/// This function safely terminates the dweb sidecar process if it's running.
+/// This function safely stops the DwebService if it's running.
 /// It's designed to be called both from the dweb_stop command and from application
-/// exit event handlers to ensure the process is properly cleaned up.
-fn stop_dweb_process(app_state: &Mutex<AppState>) -> Result<String, Error> {
-    let process = app_state
-        .lock()
-        .unwrap()
-        .dweb_process
-        .lock()
-        .unwrap()
-        .take();
-
-    if let Some(child) = process {
-        match child.kill() {
-            Ok(_) => {
-                info!("Successfully stopped dweb process");
-                Ok("Stopped dweb process".to_string())
-            }
-            Err(e) => {
-                error!("Failed to stop dweb process: {}", e);
-                Err(Error::Message(format!("Failed to stop dweb process: {e}")))
-            }
-        }
+/// exit event handlers to ensure the service is properly cleaned up.
+fn stop_dweb_service(app_state: &Mutex<AppState>) -> Result<String, Error> {
+    let state_guard = app_state.lock().unwrap();
+    let mut dweb_service_guard = state_guard.dweb_service.lock().unwrap();
+    if let Some(dweb_service) = dweb_service_guard.as_mut() {
+        // Stop the service by starting it on port 0 (which disables it)
+        dweb_service.start(0, None);
+        info!("Successfully stopped dweb service");
+        Ok("Stopped dweb service".to_string())
     } else {
-        info!("No dweb process running");
-        Ok("No dweb process running".to_string())
+        info!("No dweb service running");
+        Ok("No dweb service running".to_string())
     }
 }
 
 #[tauri::command]
 async fn dweb_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> {
-    // Android doesn't support dweb sidecar - return early
-    if cfg!(target_os = "android") {
-        info!("Android: dweb_stop command called but not supported on Android");
-        return Ok("dweb_stop not supported on Android".to_string());
-    }
-
-    stop_dweb_process(&state)
+    stop_dweb_service(&state)
 }
 
 /// Helper function to stop the anttp server - can be called from commands or event handlers.
@@ -2588,7 +2540,7 @@ async fn anttp_stop(state: State<'_, Mutex<AppState>>) -> Result<String, Error> 
 
 #[tauri::command]
 async fn anttp_start(
-    _app: AppHandle,
+    app: AppHandle,
     state: State<'_, Mutex<AppState>>,
     wallet_key: String,
 ) -> Result<String, Error> {
@@ -2601,20 +2553,77 @@ async fn anttp_start(
     // Stop any existing anttp server first
     let _ = anttp_stop(state.clone()).await;
 
-    // Get the network setting from state
-    let network = {
+    // Get the network setting from state and extract keystore and datastore
+    let (network, keystore, datastore) = {
         let state_guard = state.lock().unwrap();
-        state_guard.network.clone()
+        let network = state_guard.network.clone();
+        let keystore = state_guard
+            .keystore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("KeyStore not initialized")?
+            .clone();
+        let datastore = state_guard
+            .datastore
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or("DataStore not initialized")?
+            .clone();
+        (network, keystore, datastore)
     };
 
+    // FIXME: using the first wallet key as the app_private_key. Unsure if anttp needs a specific key
+    let app_private_key = {
+        let wallet_keys = keystore.get_wallet_keys();
+        if let Some((_, key)) = wallet_keys.iter().next() {
+            key.clone()
+        } else {
+            // If no wallet keys exist, use empty string (will need to be set later)
+            String::new()
+        }
+    };
+
+    // Get data directory and create anttp directories
+    let data_dir = if cfg!(target_os = "android") {
+        app.path()
+            .app_data_dir()
+            .map_err(|e| Error::Io(IoError::other(format!("Failed to get app data dir: {e}"))))?
+    } else {
+        // For desktop, we need to get the data directory from DataStore
+        // Since we don't have a direct method, we'll derive it from keystore path
+        let keystore_path = datastore.get_keystore_path();
+        keystore_path
+            .parent()
+            .ok_or("Failed to get parent directory of keystore")?
+            .to_path_buf()
+    };
+
+    // Create anttp directory structure
+    let anttp_dir = data_dir.join("anttp");
+    let static_files_dir = anttp_dir.join("static_files");
+    let map_cache_dir = anttp_dir.join("map_cache");
+
+    // Ensure directories exist
+    std::fs::create_dir_all(&static_files_dir).map_err(|e| {
+        Error::Io(IoError::other(format!(
+            "Failed to create static files directory: {e}"
+        )))
+    })?;
+    std::fs::create_dir_all(&map_cache_dir).map_err(|e| {
+        Error::Io(IoError::other(format!(
+            "Failed to create map cache directory: {e}"
+        )))
+    })?;
+
     // Create anttp configuration
-    //FIXME: wait to hear back from Traktion on what to do with these default arguments
     let anttp_config = AntTpConfig {
         listen_address: "127.0.0.1:18888".parse().unwrap(),
-        static_file_directory: String::new(),
+        static_file_directory: static_files_dir.to_string_lossy().to_string(),
         wallet_private_key: wallet_key,
         download_threads: 8,
-        app_private_key: String::new(),
+        app_private_key,
         bookmarks: vec![
             "traktion-blog=8e16406561d0c460f3dbe37fef129582d6410ec7cb9d5aebdf9cbb051676624c543a315f7e857103cd71088a927c9085".to_string(),
             "imim=959c2ba5b84e1a68fedc14caaae96e97cfff19ff381127844586b2e0cdd2afdfb1687086a5668bced9f3dc35c03c9bd7".to_string(),
@@ -2626,7 +2635,7 @@ async fn anttp_start(
         uploads_disabled: false,
         cached_mutable_ttl: 5,
         peers: vec![],
-        map_cache_directory: String::new(),
+        map_cache_directory: map_cache_dir.to_string_lossy().to_string(),
         evm_network: "main".to_string(),
         immutable_disk_cache_size: 1024,
         immutable_memory_cache_size: 32,
@@ -2657,228 +2666,151 @@ async fn anttp_start(
     ))
 }
 
-/// Starts the dweb sidecar process with logging support.
+/// Starts the dweb serve using the DwebService library.
 ///
-/// This function spawns the dweb sidecar binary and captures its stdout/stderr output,
-/// forwarding it to the application's logging system. This allows debugging of dweb
-/// issues through the existing logging infrastructure.
+/// This function manages the lifecycle of the dweb serve, including:
+/// - Checking if dweb serve is already running
+/// - Starting the DwebService with appropriate port (5537)
+/// - Using the wallet key for authentication
 ///
-/// - stdout messages are logged at INFO level with "[dweb stdout]" prefix
-/// - stderr messages are logged at WARN level with "[dweb stderr]" prefix
-/// - Process termination and errors are logged at ERROR level
+/// # Arguments
+/// * `app` - The Tauri application handle (unused but kept for compatibility)
+/// * `state` - The application state containing the dweb service
+/// * `wallet_key` - The wallet secret key (unused in current implementation but kept for compatibility)
 ///
-/// The logging can be controlled through the existing tracing configuration.
+/// # Returns
+/// * `Ok(String)` - Success message indicating the serve was started or already running
+/// * `Err(Error)` - If the service failed to start or other errors occurred
+///
+/// # Behavior
+/// - If dweb serve is already running, it returns early without starting another instance
+/// - Uses DwebService.start() to start the service on port 5537
+/// - The service runs in the background and handles requests
 #[tauri::command]
 async fn dweb_serve(
-    app: AppHandle,
+    _app: AppHandle,
     state: State<'_, Mutex<AppState>>,
-    wallet_key: String,
+    _wallet_key: String,
 ) -> Result<String, Error> {
-    // Android doesn't support dweb sidecar - return early
-    if cfg!(target_os = "android") {
-        info!("Android: dweb_serve command called but not supported on Android");
-        return Ok("dweb_serve not supported on Android".to_string());
+    // Check if dweb serve is already running
+    if is_dweb_serve_running().await {
+        info!("dweb serve is already running, not starting another instance");
+        return Ok("dweb serve is already running".to_string());
     }
 
-    // Check if user's dweb serve is already running
-    let dweb_binary = determine_dweb_binary().await;
-
-    match dweb_binary {
-        DwebBinary::System => {
-            info!("Using existing dweb serve instance");
-            return Ok("Using existing dweb serve instance".to_string());
-        }
-        DwebBinary::ColonyDweb => {
-            info!("Starting colony-dweb serve");
-        }
-    }
-
-    // Stop any existing dweb process first
-    let _ = dweb_stop(state.clone()).await;
-
-    // Get the network setting from state
-    let network = {
-        let state_guard = state.lock().unwrap();
-        state_guard.network.clone()
-    };
-
-    // Build arguments based on network
-    let mut args = vec!["serve"];
-    match network.as_str() {
-        "local" => args.push("--local"),
-        "alpha" => args.push("--alpha"),
-        _ => {} // main network (default)
-    }
-
-    let sidecar_command = app.shell().sidecar("colony-dweb")?;
-    let (mut rx, child) = sidecar_command
-        .args(args)
-        .env("SECRET_KEY", wallet_key)
-        .spawn()
-        .expect("Failed to run dweb serve");
-
-    // Spawn a task to handle stdout/stderr logging
-    tokio::spawn(async move {
-        while let Some(event) = rx.recv().await {
-            match event {
-                tauri_plugin_shell::process::CommandEvent::Stdout(data) => {
-                    let output = String::from_utf8_lossy(&data);
-                    for line in output.lines() {
-                        if !line.trim().is_empty() {
-                            info!("[dweb stdout] {}", line.trim());
-                        }
-                    }
-                }
-                tauri_plugin_shell::process::CommandEvent::Stderr(data) => {
-                    let output = String::from_utf8_lossy(&data);
-                    for line in output.lines() {
-                        if !line.trim().is_empty() {
-                            warn!("[dweb stderr] {}", line.trim());
-                        }
-                    }
-                }
-                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                    if payload.code.unwrap_or(-1) != 0 {
-                        error!("[dweb] Process terminated with code: {:?}", payload.code);
-                    } else {
-                        info!("[dweb] Process terminated normally");
-                    }
-                    break;
-                }
-                tauri_plugin_shell::process::CommandEvent::Error(err) => {
-                    error!("[dweb] Process error: {}", err);
-                    break;
-                }
-                _ => {
-                    // Handle any other event types that might be added in the future
-                    debug!("[dweb] Received unhandled event type");
-                }
-            }
-        }
-    });
-
-    // Store the child process for later termination
+    // Get the DwebService from state and start it
     {
         let state_guard = state.lock().unwrap();
-        *state_guard.dweb_process.lock().unwrap() = Some(child);
+        let mut dweb_service_guard = state_guard.dweb_service.lock().unwrap();
+        if let Some(dweb_service) = dweb_service_guard.as_mut() {
+            dweb_service.start(5537, None);
+            info!("Started dweb serve on port 5537");
+            Ok("Started dweb serve on port 5537".to_string())
+        } else {
+            Err(Error::Message("DwebService not initialized".to_string()))
+        }
     }
-
-    info!("Started dweb serve with network: {}", network);
-    Ok(format!("Started dweb serve with network: {network}"))
 }
 
-/// Opens an address using the dweb sidecar with logging support.
+/// Opens an address using the dweb REST API.
 ///
-/// This function spawns the dweb sidecar to open a specific address and captures
-/// its output for debugging purposes. All output is logged with the address
-/// included in the log message for easier tracking.
+/// This function makes a REST API call to the dweb server to open a specific address,
+/// similar to the example.rs implementation. It constructs the URL and opens it in
+/// the default browser using tauri_plugin_opener for cross-platform compatibility.
 ///
-/// Note: This function always uses the colony-dweb sidecar when dweb serve is running
-/// from our sidecar, rather than re-determining which binary to use.
+/// # Arguments
+/// * `_app` - The Tauri application handle (unused but kept for compatibility)
+/// * `_state` - The application state (unused but kept for compatibility)
+/// * `address` - The address/name/link to open
+///
+/// # Returns
+/// * `Ok(String)` - Success message indicating the address was opened
+/// * `Err(Error)` - If the operation failed
 #[tauri::command]
 async fn dweb_open(
-    app: AppHandle,
-    state: State<'_, Mutex<AppState>>,
+    _app: AppHandle,
+    _state: State<'_, Mutex<AppState>>,
     address: String,
 ) -> Result<String, Error> {
-    // Android doesn't support dweb sidecar - return early
-    if cfg!(target_os = "android") {
-        info!(
-            "Android: dweb_open command called but not supported on Android - address: {}",
-            address
-        );
-        return Ok("dweb_open not supported on Android".to_string());
+    info!("Opening address with dweb: {}", address);
+
+    let main_server = "http://127.0.0.1:5537";
+    let url = format!("{main_server}/dweb-open/{address}");
+
+    info!("dweb_open() opening {}", url);
+
+    // Use tauri_plugin_opener to open the URL in the default browser
+    match tauri_plugin_opener::open_url(&url, None::<String>) {
+        Ok(_) => {
+            info!("Successfully opened dweb URL: {}", url);
+            Ok(format!("Opened address with dweb: {}", address))
+        }
+        Err(e) => {
+            error!("Failed to open dweb URL {}: {}", url, e);
+            Err(Error::Message(format!("Failed to open dweb URL: {}", e)))
+        }
+    }
+}
+
+/// Opens an anttp website by making a REST API call to the anttp server
+/// and then opening the resulting URL in the default web browser.
+///
+/// This function is similar to dweb_open but for anttp websites. Instead of
+/// directly opening a browser, it calls the anttp REST API to get the proper
+/// URL and then opens that in the default browser.
+#[tauri::command]
+async fn anttp_open(address: String) -> Result<String, Error> {
+    info!("Opening anttp address: {}", address);
+
+    // Check if anttp server is running
+    if !is_anttp_running().await {
+        return Err(Error::Message(
+            "anttp server is not running. Please start the anttp server first.".to_string(),
+        ));
     }
 
-    info!("Opening address with dweb: {}", address);
+    // Make REST API call to anttp server to get the proper URL
+    let client = reqwest::Client::new();
+    let anttp_url = format!("http://127.0.0.1:18888/{}", address);
 
-    // Check if we have a running dweb process from our sidecar
-    let has_sidecar_process = {
-        let state_guard = state.lock().unwrap();
-        let process_guard = state_guard.dweb_process.lock().unwrap();
-        process_guard.is_some()
-    };
-
-    let (mut rx, mut _child) = if has_sidecar_process {
-        info!("Using colony-dweb sidecar for open command (sidecar process running)");
-        // Use colony-dweb sidecar since we started it
-        app.shell()
-            .sidecar("colony-dweb")?
-            .args(["open", &address])
-            .spawn()
-            .map_err(Error::Shell)?
-    } else {
-        // Check if system dweb is running
-        if is_dweb_serve_running().await {
-            info!("Using system dweb binary for open command (system dweb detected)");
-            // Use system dweb binary directly
-            app.shell()
-                .command("dweb")
-                .args(["open", &address])
-                .spawn()
-                .map_err(Error::Shell)?
-        } else {
-            info!("No dweb serve detected, using colony-dweb sidecar for open command");
-            // Use colony-dweb sidecar as fallback
-            app.shell()
-                .sidecar("colony-dweb")?
-                .args(["open", &address])
-                .spawn()
-                .map_err(Error::Shell)?
-        }
-    };
-
-    // Spawn a task to handle stdout/stderr logging for the open command
-    let address_clone = address.clone();
-    tokio::spawn(async move {
-        while let Some(event) = rx.recv().await {
-            match event {
-                tauri_plugin_shell::process::CommandEvent::Stdout(data) => {
-                    let output = String::from_utf8_lossy(&data);
-                    for line in output.lines() {
-                        if !line.trim().is_empty() {
-                            info!("[dweb open {}] {}", address_clone, line.trim());
-                        }
-                    }
-                }
-                tauri_plugin_shell::process::CommandEvent::Stderr(data) => {
-                    let output = String::from_utf8_lossy(&data);
-                    for line in output.lines() {
-                        if !line.trim().is_empty() {
-                            warn!("[dweb open {}] {}", address_clone, line.trim());
-                        }
-                    }
-                }
-                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                    if payload.code.unwrap_or(-1) != 0 {
-                        error!(
-                            "[dweb open {}] Process terminated with code: {:?}",
-                            address_clone, payload.code
+    match client
+        .get(&anttp_url)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if response.status().is_success() {
+                // Open the URL in the default browser
+                match tauri_plugin_opener::open_url(&anttp_url, None::<String>) {
+                    Ok(_) => {
+                        info!(
+                            "Successfully opened anttp address in browser: {}",
+                            anttp_url
                         );
-                    } else {
-                        debug!(
-                            "[dweb open {}] Process completed successfully",
-                            address_clone
-                        );
+                        Ok(format!("Opened anttp address in browser: {}", address))
                     }
-                    break;
+                    Err(e) => {
+                        error!("Failed to open anttp URL in browser: {}", e);
+                        Err(Error::Message(format!(
+                            "Failed to open anttp URL in browser: {}",
+                            e
+                        )))
+                    }
                 }
-                tauri_plugin_shell::process::CommandEvent::Error(err) => {
-                    error!("[dweb open {}] Process error: {}", address_clone, err);
-                    break;
-                }
-                _ => {
-                    debug!(
-                        "[dweb open {}] Received unhandled event type",
-                        address_clone
-                    );
-                }
+            } else {
+                let error_msg =
+                    format!("anttp server returned error status: {}", response.status());
+                error!("{}", error_msg);
+                Err(Error::Message(error_msg))
             }
         }
-    });
-
-    info!("Opening address with dweb: {}", address);
-    Ok("Opened address with dweb".to_string())
+        Err(e) => {
+            let error_msg = format!("Failed to connect to anttp server: {}", e);
+            error!("{}", error_msg);
+            Err(Error::Message(error_msg))
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -2909,7 +2841,7 @@ fn run_with_network(network: &str) {
         session: Session {
             password: Mutex::new(None),
         },
-        dweb_process: Mutex::new(None),
+        dweb_service: Mutex::new(None),
         anttp_handle: Mutex::new(None),
     };
 
@@ -2939,9 +2871,18 @@ fn run_with_network(network: &str) {
                     .build(),
             );
 
+            // Make builtin names such as 'awesome' available (in addition to opening xor addresses)
+            dweb::web::name::register_builtin_names(false);
+
+            // Initialize DwebService in the app state
+            if let Some(app_state) = app.try_state::<Mutex<AppState>>() {
+                let state_guard = app_state.lock().unwrap();
+                *state_guard.dweb_service.lock().unwrap() =
+                    Some(DwebService::new(DwebClientConfig::default()));
+            }
+
             Ok(())
         })
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -2996,6 +2937,7 @@ fn run_with_network(network: &str) {
             dweb_open,
             anttp_start,
             anttp_stop,
+            anttp_open,
             open_file_with_default_app,
         ])
         .build(tauri::generate_context!())
@@ -3042,14 +2984,14 @@ fn cleanup_anttp_server(app: &AppHandle) {
     }
 }
 
-/// Helper function to cleanup dweb process during application shutdown.
+/// Helper function to cleanup dweb service during application shutdown.
 /// This function is called from various exit event handlers to ensure
-/// the dweb sidecar process is properly terminated.
+/// the dweb service is properly stopped.
 fn cleanup_dweb_process(app: &AppHandle) {
     if let Some(app_state) = app.try_state::<Mutex<AppState>>() {
-        match stop_dweb_process(&app_state) {
+        match stop_dweb_service(&app_state) {
             Ok(msg) => info!("Cleanup: {}", msg),
-            Err(e) => error!("Failed to stop dweb process during cleanup: {}", e),
+            Err(e) => error!("Failed to stop dweb service during cleanup: {}", e),
         }
     } else {
         warn!("Could not access app state during dweb cleanup");
@@ -3103,37 +3045,37 @@ mod tests {
             session: Session {
                 password: Mutex::new(None),
             },
-            dweb_process: Mutex::new(None),
+            dweb_service: Mutex::new(None),
             anttp_handle: Mutex::new(None),
         })
     }
 
     #[test]
-    fn test_stop_dweb_process_no_process() {
-        // Test stopping dweb when no process is running
+    fn test_stop_dweb_service_no_service() {
+        // Test stopping dweb when no service is running
         let app_state = create_test_app_state();
-        let result = stop_dweb_process(&app_state);
+        let result = stop_dweb_service(&app_state);
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "No dweb process running");
+        assert_eq!(result.unwrap(), "No dweb service running");
     }
 
     #[test]
-    fn test_stop_dweb_process_with_mock_process() {
-        // This test verifies the function structure but can't test actual process killing
-        // without creating a real process, which would be complex in a unit test
+    fn test_stop_dweb_service_with_mock_service() {
+        // This test verifies the function structure but can't test actual service stopping
+        // without creating a real service, which would be complex in a unit test
         let app_state = create_test_app_state();
 
-        // Verify that the function handles the case where no process is stored
-        let result = stop_dweb_process(&app_state);
+        // Verify that the function handles the case where no service is stored
+        let result = stop_dweb_service(&app_state);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "No dweb process running");
+        assert_eq!(result.unwrap(), "No dweb service running");
 
-        // Verify that the dweb_process field is properly accessed
+        // Verify that the dweb_service field is properly accessed
         {
             let state = app_state.lock().unwrap();
-            let process_guard = state.dweb_process.lock().unwrap();
-            assert!(process_guard.is_none());
+            let service_guard = state.dweb_service.lock().unwrap();
+            assert!(service_guard.is_none());
         }
     }
 
