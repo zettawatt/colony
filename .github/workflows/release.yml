@@ -23,6 +23,11 @@ jobs:
     name: Run checks
     runs-on: ubuntu-latest
     steps:
+      - name: Setup SSH key for submodules
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CODEBERG_SSH_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -94,6 +99,11 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: Setup SSH key for submodules
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CODEBERG_SSH_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
