@@ -2567,11 +2567,13 @@ fn initialize_dweb_service_with_wallet(app_state: &Mutex<AppState>) -> Result<St
         let network = state_guard.network.clone();
 
         // Get the active wallet
-        let (wallet_name, _wallet_address) = datastore.get_active_wallet()
+        let (wallet_name, _wallet_address) = datastore
+            .get_active_wallet()
             .map_err(|e| Error::Message(format!("Failed to get active wallet: {e}")))?;
 
         // Get the wallet private key
-        let wallet_key = keystore.get_wallet_key(&wallet_name)
+        let wallet_key = keystore
+            .get_wallet_key(&wallet_name)
             .map_err(|e| Error::Message(format!("Failed to get wallet key: {e}")))?;
 
         (wallet_key, network)
@@ -2590,10 +2592,12 @@ fn initialize_dweb_service_with_wallet(app_state: &Mutex<AppState>) -> Result<St
         .map_err(|e| Error::Message(format!("Failed to create wallet: {e}")))?;
 
     // Create DwebClientConfig with the wallet
-    let mut dweb_config = DwebClientConfig::default();
-    dweb_config.wallet = Some(wallet);
-    dweb_config.local_network = network == "local";
-    dweb_config.alpha_network = network == "alpha";
+    let dweb_config = DwebClientConfig {
+        wallet: Some(wallet),
+        local_network: network == "local",
+        alpha_network: network == "alpha",
+        ..DwebClientConfig::default()
+    };
 
     // Stop any existing service and create a new one with the wallet
     {
