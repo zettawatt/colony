@@ -411,6 +411,21 @@
         }
       });
       console.log('Success:', response);
+
+      // After refresh_ref completes, write the KeyStore to file to persist pointers, scratchpads, etc.
+      try {
+        const password = await getPassword();
+        if (password) {
+          await invoke('write_keystore_to_file', { password });
+          console.log('KeyStore written to file after sync');
+        } else {
+          console.warn('No password available to write KeyStore to file');
+        }
+      } catch (keystoreError) {
+        console.error('Failed to write KeyStore to file:', keystoreError);
+        // Don't fail the entire sync operation if KeyStore write fails
+      }
+
       podsSyncing.set(false);
       addToast("Pods have been synced", "info", 30000);
     } catch (e) {

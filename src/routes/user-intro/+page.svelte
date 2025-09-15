@@ -139,6 +139,21 @@
         try {
           // Run sync to populate local cache
           await invoke("refresh_ref", { request: { depth: "0" } });
+
+          // After refresh_ref completes, write the KeyStore to file to persist pointers, scratchpads, etc.
+          try {
+            const password = await getPassword();
+            if (password) {
+              await invoke('write_keystore_to_file', { password });
+              console.log('KeyStore written to file after initial sync');
+            } else {
+              console.warn('No password available to write KeyStore to file');
+            }
+          } catch (keystoreError) {
+            console.error('Failed to write KeyStore to file:', keystoreError);
+            // Don't fail the entire sync operation if KeyStore write fails
+          }
+
           // If there are no pods, create a default one
           const pods = await invoke("list_my_pods") as PodInfo[];
           if (pods.length === 0) {
@@ -152,6 +167,20 @@
               }
             });
             await invoke("refresh_ref", { request: { depth: "0" } });
+
+            // After second refresh_ref completes, write the KeyStore to file again
+            try {
+              const password = await getPassword();
+              if (password) {
+                await invoke('write_keystore_to_file', { password });
+                console.log('KeyStore written to file after second sync');
+              } else {
+                console.warn('No password available to write KeyStore to file');
+              }
+            } catch (keystoreError) {
+              console.error('Failed to write KeyStore to file:', keystoreError);
+              // Don't fail the entire sync operation if KeyStore write fails
+            }
           }
         } finally {
           // Hide syncing modal
